@@ -1,0 +1,70 @@
+from abc import ABC, abstractmethod
+from typing import Optional, List, Tuple, Any
+from ips_app.domain.models.auth import Auth
+
+class AuthRepositoryPort(ABC):
+    @abstractmethod
+    async def create_auth(
+        self, 
+        user_id: Any, 
+        username: str, 
+        password_hash: str, 
+        email: Optional[str] = None, 
+        phone: Optional[str] = None, 
+        created_by: Optional[int] = None
+    ) -> Auth:
+        """Create a new auth record."""
+        ...
+
+    @abstractmethod
+    async def read_auths_by_pagination(
+        self, 
+        page: int, 
+        limit: int, 
+        cursor_id: Optional[Any] = None, 
+        search: Optional[str] = None
+    ) -> Tuple[List[Auth], int]:
+        """Read auths with pagination and search."""
+        ...
+
+    @abstractmethod
+    async def read_auth_by_id(self, id: Any) -> Optional[Auth]:
+        """Read an auth record by its ID."""
+        ...
+
+    @abstractmethod
+    async def read_auth_by_user_id(self, user_id: Any) -> Optional[Auth]:
+        """Read an auth record by user ID."""
+        ...
+
+    @abstractmethod
+    async def read_auth_by_sign_in_identifier(self, sign_in_identifier: str) -> Optional[Auth]:
+        """Read an auth record by username, email, or phone."""
+        ...
+
+    @abstractmethod
+    async def update_auth_info_by_id(
+        self, 
+        id: Any, 
+        username: Optional[str] = None, 
+        email: Optional[str] = None, 
+        phone: Optional[str] = None, 
+        updated_by: Optional[int] = None
+    ) -> None:
+        """Update auth basic info."""
+        ...
+
+    @abstractmethod
+    async def update_auth_password_by_id(
+        self, 
+        id: Any, 
+        password_hash: str, 
+        updated_by: Optional[int] = None
+    ) -> None:
+        """Update auth password."""
+        ...
+
+    @abstractmethod
+    async def delete_auth_by_user_id(self, user_id: Any) -> None:
+        """Delete an auth record by user ID."""
+        ...
