@@ -1,11 +1,13 @@
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple, Any, Dict
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime, timezone
 from ips_app.domain.models.auth import Auth
+from ips_app.domain.models.user import User
 from ips_app.ports.driven.repository.auth import AuthRepositoryPort
 from ips_app.ports.driven.logging.generic import GenericLoggingPort
 from ips_app.domain.models.exception import NotFoundException, DuplicateException
 from ips_app.adapters.driven.repository.auth.beanie_model import AuthDocument
+from ips_app.adapters.driven.repository.user.beanie_model import UserDocument
 
 
 class BeanieAuthRepository(AuthRepositoryPort):
@@ -48,22 +50,72 @@ class BeanieAuthRepository(AuthRepositoryPort):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         **kwargs: Any,
-    ) -> Tuple[List[Auth], int]:
+    ) -> Tuple[List[Auth], List[User], int]:
         tag = f"{self.tag_class}.read_auths_by_pagination"
         session = kwargs.get("session")
         try:
-            query_filter = {}
-            if search:
-                query_filter["username"] = {"$regex": search, "$options": "i"}
+            # Match filter
+            match_filter: Dict[str, Any] = {}
             if cursor_id:
-                query_filter["_id"] = {"$gt": cursor_id}
+                match_filter["_id"] = {"$gt": cursor_id}
+            
+            search_filter: Dict[str, Any] = {}
+            if search:
+                search_filter = {
+                    "$or": [
+                        {"username": {"$regex": search, "$options": "i"}},
+                        {"user_data.name": {"$regex": search, "$options": "i"}}
+                    ]
+                }
 
-            query = AuthDocument.find(query_filter, fetch_links=True, session=session)
-            total = await query.count()
-            docs = await query.skip(page * limit).limit(limit).to_list()
-            return [doc.to_domain() for doc in docs], total
+            # Aggregation for search and lookup
+            pipeline = [
+                {"$match": match_filter},
+                {
+                    "$lookup": {
+                        "from": "users",
+                        "localField": "user.$id",
+                        "foreignField": "_id",
+                        "as": "user_data"
+                    }
+                },
+                {"$unwind": "$user_data"},
+                {"$match": search_filter},
+            ]
+
+            # Count total
+            count_pipeline = pipeline + [{"$count": "total"}]
+            count_result = await AuthDocument.aggregate(count_pipeline, session=session).to_list()
+            total = count_result[0]["total"] if count_result else 0
+
+            # Pagination
+            data_pipeline = pipeline + [
+                {"$skip": page * limit},
+                {"$limit": limit}
+            ]
+            
+            results = await AuthDocument.aggregate(data_pipeline, session=session).to_list()
+            
+            auths: List[Auth] = []
+            users: List[User] = []
+            
+            for res in results:
+                # Reconstruct documents to use to_domain()
+                user_doc = UserDocument(**res["user_data"])
+                user_doc.id = res["user_data"]["_id"]
+                
+                # Strip user_data to avoid validation issues in AuthDocument
+                res_auth = {k: v for k, v in res.items() if k != "user_data"}
+                auth_doc = AuthDocument(**res_auth)
+                auth_doc.id = res["_id"]
+                auth_doc.user = user_doc # type: ignore
+                
+                auths.append(auth_doc.to_domain())
+                users.append(user_doc.to_domain())
+                
+            return auths, users, total
         except Exception as e:
-            await self.log.error(tag, "Failed to read auths by pagination", {"error": str(e)})
+            await self.log.error(tag, "Failed to read auths and users by pagination", {"error": str(e)})
             raise e
 
     async def read_auth_by_id(self, id: Any, **kwargs: Any) -> Optional[Auth]:

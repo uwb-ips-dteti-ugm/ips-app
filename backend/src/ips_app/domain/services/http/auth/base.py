@@ -134,23 +134,27 @@ class AuthHTTPService(AuthHTTPPort):
 
     async def set_new_password_with_old_password(
         self,
-        auth_id: Any,
+        user_id: Any,
         old_password: str,
         new_password: str,
     ) -> None:
         tag = f"{self.tag_class}.set_new_password_with_old_password"
         try:
-            auth = await self.repo_auth.read_auth_by_id(auth_id)
+            auth = await self.repo_auth.read_auth_by_user_id(user_id)
             if not auth or not verify_password(old_password, auth.password_hash):
                 raise DomainException("Invalid credentials.")
 
-            await self.repo_auth.update_auth_password_by_id(auth_id, hash_password(new_password))
-            await self.log.info(tag, "Successfully updated password", {"auth_id": str(auth_id)})
+            await self.repo_auth.update_auth_password_by_id(auth.id, hash_password(new_password))
+            await self.log.info(tag, "Successfully updated password", {"user_id": str(user_id)})
         except Exception as e:
-            await self.log.error(tag, "Failed to update password", {"error": str(e), "auth_id": str(auth_id)})
+            await self.log.error(tag, "Failed to update password", {"error": str(e), "user_id": str(user_id)})
             raise e
 
-    async def set_auth_info(self, auth_id: Any, username: Optional[str] = None) -> None:
+    async def set_auth_info(
+        self, 
+        auth_id: Any, 
+        username: Optional[str] = None
+    ) -> None:
         tag = f"{self.tag_class}.set_auth_info"
         try:
             await self.repo_auth.update_auth_info_by_id(auth_id, username)
@@ -158,3 +162,21 @@ class AuthHTTPService(AuthHTTPPort):
         except Exception as e:
             await self.log.error(tag, "Failed to update auth info", {"error": str(e), "auth_id": str(auth_id)})
             raise e
+
+    async def set_auth_info_by_user_id(
+        self,
+        user_id: Any,
+        username: Optional[str] = None
+    ) -> None:
+        tag = f"{self.tag_class}.set_auth_info_by_user_id"
+        try:
+            auth = await self.repo_auth.read_auth_by_user_id(user_id)
+            if not auth:
+                raise NotFoundException(str(user_id), "auths")
+
+            await self.repo_auth.update_auth_info_by_id(auth.id, username)
+            await self.log.info(tag, "Successfully updated auth info by user id", {"user_id": str(user_id)})
+        except Exception as e:
+            await self.log.error(tag, "Failed to update auth info by user id", {"error": str(e), "user_id": str(user_id)})
+            raise e
+

@@ -50,7 +50,7 @@ class AuthHTTPPort(ABC):
     @abstractmethod
     async def set_new_password_with_old_password(
         self,
-        auth_id: Any,
+        user_id: Any,
         old_password: str,
         new_password: str
     ) -> None:
@@ -64,4 +64,13 @@ class AuthHTTPPort(ABC):
         username: Optional[str] = None
     ) -> None:
         """Update auth basic information."""
+        ...
+
+    @abstractmethod
+    async def set_auth_info_by_user_id(
+        self,
+        user_id: Any,
+        username: Optional[str] = None
+    ) -> None:
+        """Update auth basic information by user identity."""
         ...

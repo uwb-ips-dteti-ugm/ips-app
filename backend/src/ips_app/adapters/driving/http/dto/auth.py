@@ -58,6 +58,13 @@ class SetAuthInfoRequest(BaseModel):
         if self.username is not None:
             validate_username(self.username)
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+    def validate_fields(self) -> None:
+        if not self.refresh_token:
+            raise ValueError("refresh_token must not be empty.")
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str

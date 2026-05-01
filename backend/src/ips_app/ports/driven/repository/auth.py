@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any
 from ips_app.domain.models.auth import Auth
+from ips_app.domain.models.user import User
 
 
 class AuthRepositoryPort(ABC):
@@ -24,8 +25,8 @@ class AuthRepositoryPort(ABC):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         **kwargs: Any,
-    ) -> Tuple[List[Auth], int]:
-        """Read auths with pagination and search."""
+    ) -> Tuple[List[Auth], List[User], int]:
+        """Read auths and users with pagination and search."""
         ...
 
     @abstractmethod

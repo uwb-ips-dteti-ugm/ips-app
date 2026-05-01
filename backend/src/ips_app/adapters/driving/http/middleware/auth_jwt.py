@@ -3,10 +3,14 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+from contextvars import ContextVar
 from ips_app.adapters.driving.http.dto.common import ErrorResponse
 from ips_app.domain.models.user import UserAccessTokenClaims
 from ips_app.domain.models.exception import InvalidTokenException, ExpiredTokenException
 from ips_app.utils.token import validate_access_token
+
+# Global context variable for claims, isolated per request task
+claims_context: ContextVar[Optional[UserAccessTokenClaims]] = ContextVar("claims", default=None)
 
 class JwtMiddleware(BaseHTTPMiddleware):
     def __init__(
@@ -41,8 +45,15 @@ class JwtMiddleware(BaseHTTPMiddleware):
                 content=ErrorResponse(error="Invalid access token").model_dump(),
             )
 
-        request.state.claims = claims
-        return await call_next(request)
+        # Set the context variable and keep a token to reset it later
+        ctx_token = claims_context.set(claims)
+        try:
+            # Also keep it in request.state for backward compatibility
+            request.state.claims = claims
+            return await call_next(request)
+        finally:
+            # Reset after the request is finished
+            claims_context.reset(ctx_token)
         
     async def _extract_bearer_token(self, request: Request) -> str:
         authorization = request.headers.get("Authorization", "")
@@ -52,5 +63,6 @@ class JwtMiddleware(BaseHTTPMiddleware):
         return parts[1]
 
 
-def get_claims(request: Request) -> Optional[UserAccessTokenClaims]:
-    return getattr(request.state, "claims", None)
+def get_claims() -> Optional[UserAccessTokenClaims]:
+    """Retrieves claims from the current request context."""
+    return claims_context.get()
