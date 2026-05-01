@@ -1,4 +1,5 @@
 class DomainException(Exception):
+    """Base exception for all domain-related errors."""
     pass
 
 class EnvRequiredException(DomainException):
@@ -17,3 +18,7 @@ class DuplicateException(DomainException):
         self.data_name = data_name
         self.group_name = group_name
         super().__init__(f"Duplicate '{data_name}' data in `{group_name}`")
+
+class InternalServerException(DomainException):
+    def __init__(self, message: str = "Internal server error"):
+        super().__init__(message)

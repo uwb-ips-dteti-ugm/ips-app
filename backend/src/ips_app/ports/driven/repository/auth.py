@@ -9,8 +9,6 @@ class AuthRepositoryPort(ABC):
         user_id: Any, 
         username: str, 
         password_hash: str, 
-        email: Optional[str] = None, 
-        phone: Optional[str] = None, 
         created_by: Optional[int] = None
     ) -> Auth:
         """Create a new auth record."""
@@ -39,7 +37,7 @@ class AuthRepositoryPort(ABC):
 
     @abstractmethod
     async def read_auth_by_sign_in_identifier(self, sign_in_identifier: str) -> Optional[Auth]:
-        """Read an auth record by username, email, or phone."""
+        """Read an auth record by username."""
         ...
 
     @abstractmethod
@@ -47,8 +45,6 @@ class AuthRepositoryPort(ABC):
         self, 
         id: Any, 
         username: Optional[str] = None, 
-        email: Optional[str] = None, 
-        phone: Optional[str] = None, 
         updated_by: Optional[int] = None
     ) -> None:
         """Update auth basic info."""

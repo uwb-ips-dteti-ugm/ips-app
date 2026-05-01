@@ -3,7 +3,7 @@ from datetime import datetime
 from ips_app.ports.driven.logging.generic import GenericLoggingPort
 from ips_app.domain.models.logging import LogLevel
 
-class BasicGenericLoggingAdapter(GenericLoggingPort):
+class BasicGenericLogging(GenericLoggingPort):
     def __init__(self, level: LogLevel) -> None:
         self.level = level
         
