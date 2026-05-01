@@ -43,33 +43,18 @@ class AuthHTTPPort(ABC):
         ...
 
     @abstractmethod
-    async def forgot_password(self, username: str) -> None:
-        """Trigger forgot password flow for a username."""
-        ...
-
-    @abstractmethod
-    async def set_new_password(self, new_password: str) -> None:
-        """Set a new password (context-dependent)."""
+    async def set_new_password(self, auth_id: Any, new_password: str) -> None:
+        """Force-set a new password without verification. Admin/super-admin operation."""
         ...
 
     @abstractmethod
     async def set_new_password_with_old_password(
-        self, 
-        auth_id: Any, 
-        old_password: str, 
+        self,
+        auth_id: Any,
+        old_password: str,
         new_password: str
     ) -> None:
         """Update password by verifying the old one."""
-        ...
-
-    @abstractmethod
-    async def set_new_password_with_reset_token(
-        self, 
-        auth_id: Any, 
-        reset_token: str, 
-        new_password: str
-    ) -> None:
-        """Update password using a reset token."""
         ...
 
     @abstractmethod

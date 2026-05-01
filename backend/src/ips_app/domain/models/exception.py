@@ -19,6 +19,14 @@ class DuplicateException(DomainException):
         self.group_name = group_name
         super().__init__(f"Duplicate '{data_name}' data in `{group_name}`")
 
+class InvalidTokenException(DomainException):
+    def __init__(self):
+        super().__init__("Token is invalid.")
+
+class ExpiredTokenException(DomainException):
+    def __init__(self):
+        super().__init__("Token has expired.")
+
 class InternalServerException(DomainException):
     def __init__(self, message: str = "Internal server error"):
         super().__init__(message)
