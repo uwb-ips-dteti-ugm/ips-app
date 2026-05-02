@@ -1,5 +1,5 @@
 services:
-  api:
+  app:
     build: .
     ports:
       - "${PORT_APP}:8000"
