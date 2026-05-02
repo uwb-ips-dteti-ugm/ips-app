@@ -21,6 +21,11 @@ class FeatureRepositoryPort(ABC):
         ...
 
     @abstractmethod
+    async def read_feature_by_name(self, name: str, **kwargs: Any) -> Optional[Feature]:
+        """Read a feature by its name."""
+        ...
+
+    @abstractmethod
     async def read_features_by_pagination(
         self,
         page: int,

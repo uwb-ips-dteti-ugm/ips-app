@@ -180,3 +180,21 @@ class FeatureHTTPService(FeatureHTTPPort):
         except Exception as e:
             await self.log.error(tag, "Failed to check feature access", {"error": str(e), "user_id": str(user_id), "feature_id": str(feature_id)})
             raise e
+
+    async def can_access_feature_by_name(self, user_id: Any, feature_name: str) -> bool:
+        tag = f"{self.tag_class}.can_access_feature_by_name"
+        try:
+            role_permission_ids = await self._get_user_role_permission_ids(user_id)
+
+            feature = await self.repo.read_feature_by_name(feature_name)
+            if not feature:
+                raise NotFoundException(feature_name, "features")
+
+            feature_permission_ids = {str(p.id) for p in feature.permissions}
+            result = bool(role_permission_ids & feature_permission_ids)
+
+            await self.log.info(tag, "Checked feature access by name", {"user_id": str(user_id), "feature_name": feature_name, "result": result})
+            return result
+        except Exception as e:
+            await self.log.error(tag, "Failed to check feature access by name", {"error": str(e), "user_id": str(user_id), "feature_name": feature_name})
+            raise e
