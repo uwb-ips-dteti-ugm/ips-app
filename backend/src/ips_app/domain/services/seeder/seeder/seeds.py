@@ -20,6 +20,12 @@ class AccountSeed(TypedDict):
     role: str
 
 
+class FeatureSeed(TypedDict):
+    name: str
+    description: str
+    permissions: List[str]
+
+
 SEED_PERMISSIONS: List[PermissionSeed] = [
     {"name": "auth:manage",       "description": "Manage authentication records"},
     {"name": "user:manage",       "description": "Manage users"},
@@ -34,6 +40,75 @@ SEED_PERMISSIONS: List[PermissionSeed] = [
     {"name": "feature:manage",    "description": "Manage features"},
     {"name": "feature:view",      "description": "View features"},
     {"name": "feature:delete",    "description": "Delete features"},
+]
+
+
+SEED_FEATURES: List[FeatureSeed] = [
+    {
+        "name": "auth/manage",
+        "description": "Access to authentication management",
+        "permissions": ["auth:manage"],
+    },
+    {
+        "name": "user/manage",
+        "description": "Access to user management",
+        "permissions": ["user:manage"],
+    },
+    {
+        "name": "user/view",
+        "description": "Access to view users",
+        "permissions": ["user:view"],
+    },
+    {
+        "name": "user/delete",
+        "description": "Access to delete users",
+        "permissions": ["user:delete"],
+    },
+    {
+        "name": "role/manage",
+        "description": "Access to role management",
+        "permissions": ["role:manage"],
+    },
+    {
+        "name": "role/view",
+        "description": "Access to view roles",
+        "permissions": ["role:view"],
+    },
+    {
+        "name": "role/delete",
+        "description": "Access to delete roles",
+        "permissions": ["role:delete"],
+    },
+    {
+        "name": "permission/manage",
+        "description": "Access to permission management",
+        "permissions": ["permission:manage"],
+    },
+    {
+        "name": "permission/view",
+        "description": "Access to view permissions",
+        "permissions": ["permission:view"],
+    },
+    {
+        "name": "permission/delete",
+        "description": "Access to delete permissions",
+        "permissions": ["permission:delete"],
+    },
+    {
+        "name": "feature/manage",
+        "description": "Access to feature management",
+        "permissions": ["feature:manage"],
+    },
+    {
+        "name": "feature/view",
+        "description": "Access to view features",
+        "permissions": ["feature:view"],
+    },
+    {
+        "name": "feature/delete",
+        "description": "Access to delete features",
+        "permissions": ["feature:delete"],
+    },
 ]
 
 

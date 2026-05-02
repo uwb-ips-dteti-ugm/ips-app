@@ -9,6 +9,7 @@ from ips_app.utils.password import hash_password
 from ips_app.domain.services.seeder.seeder.seeds import (
     SEED_PERMISSIONS,
     SEED_ROLES,
+    SEED_FEATURES,
     SEED_TEST_ACCOUNTS,
     ADMIN_ROLE_NAME,
 )
@@ -79,22 +80,32 @@ class SeederService(SeederPort):
 
     async def seed_features(self) -> None:
         tag = f"{self.tag_class}.seed_features"
-        for perm_data in SEED_PERMISSIONS:
-            name = perm_data["name"]
-            perm = await self.repo_perm.read_permission_by_name(name)
+        for feat_data in SEED_FEATURES:
+            name = feat_data["name"]
             feat = await self.repo_feat.read_feature_by_name(name)
 
             if not feat:
-                feat = await self.repo_feat.create_feature(name=name, description=f"Feature gate for {name}")
-                if perm:
-                    await self.repo_feat.add_permissions_to_feature(id=feat.id, permission_ids=[perm.id])
+                feat = await self.repo_feat.create_feature(name=name, description=feat_data["description"])
                 await self.log.info(tag, "Created feature", {"name": name})
-            elif perm:
-                feat_detail = await self.repo_feat.read_feature_by_id(feat.id)
-                if feat_detail is not None:
-                    existing_perm_names = {p.name for p in feat_detail.permissions}
-                    if name not in existing_perm_names:
-                        await self.repo_feat.add_permissions_to_feature(id=feat.id, permission_ids=[perm.id])
+
+            if not feat_data["permissions"]:
+                continue
+
+            feat_detail = await self.repo_feat.read_feature_by_id(feat.id)
+            if feat_detail is None:
+                continue
+
+            existing_perm_names = {p.name for p in feat_detail.permissions}
+            missing_ids = []
+            for perm_name in feat_data["permissions"]:
+                if perm_name not in existing_perm_names:
+                    perm = await self.repo_perm.read_permission_by_name(perm_name)
+                    if perm:
+                        missing_ids.append(perm.id)
+
+            if missing_ids:
+                await self.repo_feat.add_permissions_to_feature(id=feat.id, permission_ids=missing_ids)
+                await self.log.info(tag, "Assigned permissions to feature", {"name": name})
 
     async def seed_accounts(self) -> None:
         tag = f"{self.tag_class}.seed_accounts"

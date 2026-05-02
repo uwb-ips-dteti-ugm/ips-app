@@ -23,7 +23,7 @@ def create_router(
     log: GenericLoggingPort,
 ) -> APIRouter:
     logdep = logger(log)
-    guard_manage = feature_guard("auth:manage", feature_service)
+    guard_manage = feature_guard("auth/manage", feature_service)
 
     router = APIRouter(prefix="/auth")
 

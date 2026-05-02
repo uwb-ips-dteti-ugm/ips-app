@@ -21,9 +21,9 @@ def create_router(
     log: GenericLoggingPort,
 ) -> APIRouter:
     logdep = logger(log)
-    guard_manage = feature_guard("user:manage", feature_service)
-    guard_view = feature_guard("user:view", feature_service)
-    guard_delete = feature_guard("user:delete", feature_service)
+    guard_manage = feature_guard("user/manage", feature_service)
+    guard_view = feature_guard("user/view", feature_service)
+    guard_delete = feature_guard("user/delete", feature_service)
 
     router = APIRouter(prefix="/users")
 
