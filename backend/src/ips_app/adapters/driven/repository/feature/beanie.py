@@ -45,6 +45,16 @@ class BeanieFeatureRepository(FeatureRepositoryPort):
             await self.log.error(tag, "Failed to read feature by id", {"error": str(e), "id": str(id)})
             raise e
 
+    async def read_feature_by_name(self, name: str, **kwargs: Any) -> Optional[Feature]:
+        tag = f"{self.tag_class}.read_feature_by_name"
+        session = kwargs.get("session")
+        try:
+            doc = await FeatureDocument.find_one({"name": name}, fetch_links=True, session=session)
+            return doc.to_domain() if doc else None
+        except Exception as e:
+            await self.log.error(tag, "Failed to read feature by name", {"error": str(e), "name": name})
+            raise e
+
     async def read_features_by_pagination(
         self,
         page: int,
