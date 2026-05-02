@@ -106,6 +106,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         JwtMiddleware,
         excluded_paths=[
+            "/docs",
+            "/redoc",
+            "/openapi.json",
             "/auth/sign-up",
             "/auth/sign-in",
             "/auth/refresh-token",
