@@ -1,15 +1,15 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ips_app.domain.models.user import User, UserState, UserStatus
 from ips_app.domain.models.role import Role
 from ips_app.adapters.driving.http.dto.common import PaginationMeta
 from ips_app.utils.validator import validate_name, validate_bio
 
 class SetUserInfoRequest(BaseModel):
-    name: Optional[str] = None
-    bio: Optional[str] = None
+    name: Optional[str] = Field(None, examples=["Johnny Doe"])
+    bio: Optional[str] = Field(None, examples=["Software Engineer and Tech Enthusiast"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -18,23 +18,23 @@ class SetUserInfoRequest(BaseModel):
             validate_bio(self.bio)
 
 class SetUserRoleRequest(BaseModel):
-    role_id: str
+    role_id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
 
     def validate_fields(self) -> None:
         if not self.role_id.strip():
             raise ValueError("role_id must not be empty.")
 
 class SetUserStateRequest(BaseModel):
-    state: UserState
+    state: UserState = Field(..., examples=[UserState.ONLINE])
 
 class SetUserStatusRequest(BaseModel):
-    status: UserStatus
+    status: UserStatus = Field(..., examples=[UserStatus.ACTIVE])
 
 class RoleSummaryResponse(BaseModel):
-    id: str
-    name: str
-    description: str
-    is_default: bool
+    id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
+    name: str = Field(..., examples=["admin"])
+    description: str = Field(..., examples=["Administrator role"])
+    is_default: bool = Field(..., examples=[False])
 
     @classmethod
     def from_domain(cls, role: Role) -> RoleSummaryResponse:
@@ -46,19 +46,19 @@ class RoleSummaryResponse(BaseModel):
         )
 
 class UserResponse(BaseModel):
-    id: str
-    name: str
-    bio: str
-    state: UserState
-    status: UserStatus
+    id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
+    name: str = Field(..., examples=["John Doe"])
+    bio: str = Field(..., examples=["Software Engineer"])
+    state: UserState = Field(..., examples=[UserState.ONLINE])
+    status: UserStatus = Field(..., examples=[UserStatus.ACTIVE])
     role: Optional[RoleSummaryResponse] = None
-    preferences: Dict[str, Any]
-    last_signed_in_at: Optional[datetime]
-    last_refreshed_at: Optional[datetime]
-    last_activity_at: Optional[datetime]
+    preferences: Dict[str, Any] = Field(default_factory=dict, examples=[{"theme": "dark"}])
+    last_signed_in_at: Optional[datetime] = None
+    last_refreshed_at: Optional[datetime] = None
+    last_activity_at: Optional[datetime] = None
     created_at: datetime
-    updated_at: Optional[datetime]
-    version: int
+    updated_at: Optional[datetime] = None
+    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, user: User) -> UserResponse:

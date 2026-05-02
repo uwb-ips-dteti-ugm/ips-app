@@ -15,6 +15,8 @@ from ips_app.adapters.driving.http.dto.permission import PermissionResponse
 from ips_app.adapters.driving.http.dto.common import PermissionIdsRequest
 
 
+from ips_app.adapters.driving.http.dto.common import ErrorResponse
+...
 def create_router(
     handler: FeatureHandler,
     feature_service: FeatureHTTPPort,
@@ -25,7 +27,17 @@ def create_router(
     guard_view = feature_guard("feature/view", feature_service)
     guard_delete = feature_guard("feature/delete", feature_service)
 
-    router = APIRouter(prefix="/features")
+    router = APIRouter(
+        prefix="/features",
+        tags=["Feature"],
+        responses={
+            401: {"model": ErrorResponse, "description": "Unauthorized"},
+            403: {"model": ErrorResponse, "description": "Forbidden"},
+            404: {"model": ErrorResponse, "description": "Not Found"},
+            409: {"model": ErrorResponse, "description": "Conflict"},
+            500: {"model": ErrorResponse, "description": "Internal Server Error"},
+        },
+    )
 
     @router.get("/me/accessible", response_model=List[FeatureResponse], dependencies=[logdep])
     async def get_feature_me_accessible() -> List[FeatureResponse]:

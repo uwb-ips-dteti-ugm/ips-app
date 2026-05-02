@@ -1,24 +1,24 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ips_app.domain.models.role import Role
 from ips_app.adapters.driving.http.dto.common import PaginationMeta
 from ips_app.adapters.driving.http.dto.permission import PermissionResponse
 from ips_app.utils.validator import validate_resource_name, validate_description
 
 class AddRoleRequest(BaseModel):
-    name: str
-    description: str = ""
-    is_default: bool = False
+    name: str = Field(..., examples=["admin"])
+    description: str = Field("", examples=["Administrator with full access"])
+    is_default: bool = Field(False, examples=[False])
 
     def validate_fields(self) -> None:
         validate_resource_name(self.name)
         validate_description(self.description)
 
 class SetRoleRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, examples=["superadmin"])
+    description: Optional[str] = Field(None, examples=["Root administrator"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -27,15 +27,15 @@ class SetRoleRequest(BaseModel):
             validate_description(self.description)
 
 class RoleResponse(BaseModel):
-    id: str
-    name: str
-    description: str
-    is_default: bool
-    permissions: List[PermissionResponse]
-    preferences: Dict[str, Any]
+    id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
+    name: str = Field(..., examples=["admin"])
+    description: str = Field(..., examples=["Administrator role"])
+    is_default: bool = Field(..., examples=[False])
+    permissions: List[PermissionResponse] = Field(default_factory=list)
+    preferences: Dict[str, Any] = Field(default_factory=dict, examples=[{"color": "red"}])
     created_at: datetime
-    updated_at: Optional[datetime]
-    version: int
+    updated_at: Optional[datetime] = None
+    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, role: Role) -> RoleResponse:

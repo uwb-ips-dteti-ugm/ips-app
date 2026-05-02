@@ -15,6 +15,8 @@ from ips_app.adapters.driving.http.dto.permission import PermissionResponse
 from ips_app.adapters.driving.http.dto.common import PermissionIdsRequest
 
 
+from ips_app.adapters.driving.http.dto.common import ErrorResponse
+...
 def create_router(
     handler: RoleHandler,
     feature_service: FeatureHTTPPort,
@@ -25,7 +27,17 @@ def create_router(
     guard_view = feature_guard("role/view", feature_service)
     guard_delete = feature_guard("role/delete", feature_service)
 
-    router = APIRouter(prefix="/roles")
+    router = APIRouter(
+        prefix="/roles",
+        tags=["Role"],
+        responses={
+            401: {"model": ErrorResponse, "description": "Unauthorized"},
+            403: {"model": ErrorResponse, "description": "Forbidden"},
+            404: {"model": ErrorResponse, "description": "Not Found"},
+            409: {"model": ErrorResponse, "description": "Conflict"},
+            500: {"model": ErrorResponse, "description": "Internal Server Error"},
+        },
+    )
 
     @router.post("", response_model=RoleResponse, dependencies=[logdep, guard_manage])
     async def post_role(request: AddRoleRequest) -> RoleResponse:

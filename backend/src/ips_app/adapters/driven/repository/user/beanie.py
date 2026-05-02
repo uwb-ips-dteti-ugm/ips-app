@@ -26,9 +26,6 @@ class BeanieUserRepository(UserRepositoryPort):
             doc = UserDocument(role=role_id, name=name, created_by=created_by)
             await doc.insert(session=session)
             return doc.to_domain()
-        except DuplicateKeyError as e:
-            await self.log.error(tag, "Duplicate user name", {"error": str(e), "name": name})
-            raise DuplicateException("name", "users")
         except Exception as e:
             await self.log.error(tag, "Failed to create user", {"error": str(e)})
             raise e

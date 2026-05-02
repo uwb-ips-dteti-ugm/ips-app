@@ -32,14 +32,6 @@ def validate_username(value: str) -> None:
 def validate_password(value: str) -> None:
     if len(value) < 8 or len(value) > 128:
         raise ValueError("Password must be between 8 and 128 characters.")
-    if not re.search(r"[A-Z]", value):
-        raise ValueError("Password must contain at least one uppercase letter.")
-    if not re.search(r"[a-z]", value):
-        raise ValueError("Password must contain at least one lowercase letter.")
-    if not re.search(r"\d", value):
-        raise ValueError("Password must contain at least one digit.")
-    if not re.search(r"[!@#$%^&*()\-_=+\[\]{};:'\",.<>?/\\|`~]", value):
-        raise ValueError("Password must contain at least one special character.")
 
 
 def validate_description(value: str) -> None:

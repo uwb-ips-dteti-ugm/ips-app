@@ -72,7 +72,21 @@ def create_app() -> FastAPI:
         yield
         motor.close()
 
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(
+        lifespan=lifespan,
+        title="IPS App API",
+        version="1.0.0",
+        openapi_components={
+            "securitySchemes": {
+                "BearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                }
+            }
+        },
+        security=[{"BearerAuth": []}],
+    )
 
     # repositories
     repo_auth = BeanieAuthRepository(log)

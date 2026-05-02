@@ -15,6 +15,8 @@ from ips_app.adapters.driving.http.dto.user import (
 )
 
 
+from ips_app.adapters.driving.http.dto.common import ErrorResponse
+...
 def create_router(
     handler: UserHandler,
     feature_service: FeatureHTTPPort,
@@ -25,7 +27,16 @@ def create_router(
     guard_view = feature_guard("user/view", feature_service)
     guard_delete = feature_guard("user/delete", feature_service)
 
-    router = APIRouter(prefix="/users")
+    router = APIRouter(
+        prefix="/users",
+        tags=["User"],
+        responses={
+            401: {"model": ErrorResponse, "description": "Unauthorized"},
+            403: {"model": ErrorResponse, "description": "Forbidden"},
+            404: {"model": ErrorResponse, "description": "Not Found"},
+            500: {"model": ErrorResponse, "description": "Internal Server Error"},
+        },
+    )
 
     @router.get("/me", response_model=UserResponse, dependencies=[logdep])
     async def get_user_me() -> UserResponse:

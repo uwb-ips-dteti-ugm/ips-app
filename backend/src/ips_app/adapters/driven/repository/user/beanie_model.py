@@ -9,7 +9,7 @@ from ips_app.adapters.driven.repository.role.beanie_model import RoleDocument
 
 class UserDocument(Document):
     role: Link[RoleDocument]
-    name: Annotated[str, Indexed(unique=True)]
+    name: Annotated[str, Indexed()]
     bio: str = Field(default="")
     state: UserState = Field(default=UserState.OFFLINE)
     status: UserStatus = Field(default=UserStatus.ACTIVE)

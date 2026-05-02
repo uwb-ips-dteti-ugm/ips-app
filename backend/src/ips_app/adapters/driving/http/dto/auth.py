@@ -1,20 +1,20 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional, List, TYPE_CHECKING
-from pydantic import BaseModel
+from typing import Optional, List, TYPE_CHECKING, Any
+from pydantic import BaseModel, Field
 from ips_app.utils.validator import validate_name, validate_username, validate_password
 from ips_app.adapters.driving.http.dto.common import PaginationMeta
+from ips_app.adapters.driving.http.dto.user import UserResponse
 
 if TYPE_CHECKING:
     from ips_app.domain.models.auth import Auth
     from ips_app.domain.models.user import User
-    from ips_app.adapters.driving.http.dto.user import UserResponse
 
 
 class SignUpRequest(BaseModel):
-    name: str
-    username: str
-    password: str
+    name: str = Field(..., examples=["John Doe"])
+    username: str = Field(..., examples=["johndoe"])
+    password: str = Field(..., examples=["password123"])
 
     def validate_fields(self) -> None:
         validate_name(self.name)
@@ -23,8 +23,8 @@ class SignUpRequest(BaseModel):
 
 
 class SignInRequest(BaseModel):
-    sign_in_identifier: str
-    password: str
+    sign_in_identifier: str = Field(..., examples=["johndoe"])
+    password: str = Field(..., examples=["password123"])
 
     def validate_fields(self) -> None:
         if not self.sign_in_identifier.strip():
@@ -34,10 +34,10 @@ class SignInRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    name: str
-    username: str
-    password: str
-    role_id: str
+    name: str = Field(..., examples=["Jane Smith"])
+    username: str = Field(..., examples=["janesmith"])
+    password: str = Field(..., examples=["securepass123"])
+    role_id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
 
     def validate_fields(self) -> None:
         validate_name(self.name)
@@ -48,15 +48,15 @@ class RegisterRequest(BaseModel):
 
 
 class SetNewPasswordRequest(BaseModel):
-    new_password: str
+    new_password: str = Field(..., examples=["newsecurepass456"])
 
     def validate_fields(self) -> None:
         validate_password(self.new_password)
 
 
 class SetNewPasswordWithOldPasswordRequest(BaseModel):
-    old_password: str
-    new_password: str
+    old_password: str = Field(..., examples=["password123"])
+    new_password: str = Field(..., examples=["newsecurepass456"])
 
     def validate_fields(self) -> None:
         if not self.old_password:
@@ -65,7 +65,7 @@ class SetNewPasswordWithOldPasswordRequest(BaseModel):
 
 
 class SetAuthInfoRequest(BaseModel):
-    username: Optional[str] = None
+    username: Optional[str] = Field(None, examples=["newusername"])
 
     def validate_fields(self) -> None:
         if self.username is not None:
@@ -73,7 +73,7 @@ class SetAuthInfoRequest(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(..., examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
 
     def validate_fields(self) -> None:
         if not self.refresh_token:
@@ -81,18 +81,17 @@ class RefreshTokenRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
+    access_token: str = Field(..., examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
+    refresh_token: str = Field(..., examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
 
 
 class AuthUserResponse(BaseModel):
-    auth_id: str
-    username: str
+    auth_id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
+    username: str = Field(..., examples=["johndoe"])
     user: UserResponse
 
     @classmethod
     def from_domain(cls, auth: Auth, user: User) -> AuthUserResponse:
-        from ips_app.adapters.driving.http.dto.user import UserResponse
         return cls(
             auth_id=str(auth.id),
             username=auth.username,
@@ -117,3 +116,7 @@ class AuthUsersResponse(BaseModel):
             data=[AuthUserResponse.from_domain(a, u) for a, u in zip(auths, users)],
             meta=PaginationMeta(page=page, limit=limit, total=total),
         )
+
+# Rebuild models to resolve forward references for Pydantic/FastAPI schema generation
+AuthUserResponse.model_rebuild()
+AuthUsersResponse.model_rebuild()

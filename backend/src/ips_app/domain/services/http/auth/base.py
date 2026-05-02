@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Any, List
 from motor.motor_asyncio import AsyncIOMotorClient
-from ips_app.domain.models.user import User
+from ips_app.domain.models.user import User, UserAccessTokenClaims, UserRefreshTokenClaims
 from ips_app.domain.models.auth import Auth
 from ips_app.ports.driving.http.auth import AuthHTTPPort
 from ips_app.ports.driven.repository.auth import AuthRepositoryPort
@@ -9,6 +9,7 @@ from ips_app.ports.driven.repository.role import RoleRepositoryPort
 from ips_app.ports.driven.logging.generic import GenericLoggingPort
 from ips_app.domain.models.exception import DomainException, NotFoundException
 from ips_app.utils.password import hash_password, verify_password
+from ips_app.utils.token import create_access_token, create_refresh_token, validate_refresh_token
 
 class AuthHTTPService(AuthHTTPPort):
     def __init__(
@@ -49,7 +50,13 @@ class AuthHTTPService(AuthHTTPPort):
                     )
             
             await self.log.info(tag, "Successfully signed up user", {"user_id": str(user.id), "username": username})
-            return "access_token_placeholder", "refresh_token_placeholder"
+            
+            # Fetch full user with role for claims
+            full_user = await self.repo_user.read_user_by_id(user.id)
+            if not full_user:
+                 raise NotFoundException(str(user.id), "users")
+                 
+            return self._generate_tokens(full_user)
         except Exception as e:
             await self.log.error(tag, "Failed to sign up", {"error": str(e), "username": username})
             raise e
@@ -89,10 +96,15 @@ class AuthHTTPService(AuthHTTPPort):
             if not auth or not verify_password(password, auth.password_hash):
                 raise DomainException("Invalid credentials")
 
-            await self.repo_user.update_user_last_signed_in_at_by_id(auth.user.id) # type: ignore
+            # auth.user is populated via fetch_links in repository
+            user = auth.user
+            if not user:
+                raise NotFoundException(sign_in_identifier, "users")
+
+            await self.repo_user.update_user_last_signed_in_at_by_id(user.id)
             
             await self.log.info(tag, "Successfully signed in user", {"username": sign_in_identifier})
-            return "access_token_placeholder", "refresh_token_placeholder"
+            return self._generate_tokens(user)
         except Exception as e:
             await self.log.error(tag, "Failed to sign in", {"error": str(e), "identifier": sign_in_identifier})
             raise e
@@ -100,7 +112,14 @@ class AuthHTTPService(AuthHTTPPort):
     async def refresh_token(self, refresh_token: str) -> Tuple[str, str]:
         tag = f"{self.tag_class}.refresh_token"
         try:
-            return "new_access_token", "new_refresh_token"
+            claims = validate_refresh_token(refresh_token)
+            user = await self.repo_user.read_user_by_id(claims.user_id)
+            if not user:
+                raise NotFoundException(claims.user_id, "users")
+
+            await self.repo_user.update_user_last_refreshed_at_by_id(user.id)
+            
+            return self._generate_tokens(user)
         except Exception as e:
             await self.log.error(tag, "Failed to refresh token", {"error": str(e)})
             raise e
@@ -171,3 +190,15 @@ class AuthHTTPService(AuthHTTPPort):
         except Exception as e:
             await self.log.error(tag, "Failed to get auths and users", {"error": str(e), "page": page, "limit": limit})
             raise e
+
+    def _generate_tokens(self, user: User) -> Tuple[str, str]:
+        """Helper to generate access and refresh tokens for a user."""
+        access_claims = UserAccessTokenClaims(
+            user_id=str(user.id),
+            name=user.name,
+            role_id=str(user.role.id) if user.role else ""
+        )
+        refresh_claims = UserRefreshTokenClaims(
+            user_id=str(user.id)
+        )
+        return create_access_token(access_claims), create_refresh_token(refresh_claims)

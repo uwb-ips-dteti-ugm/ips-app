@@ -7,6 +7,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
     restart: "no"
 
   app:
@@ -24,6 +26,16 @@ services:
 
   mongo:
     image: mongo:8
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        if [ ! -f /data/db/mongodb.key ]; then
+          openssl rand -base64 756 > /data/db/mongodb.key
+          chmod 400 /data/db/mongodb.key
+        fi
+        exec docker-entrypoint.sh "$$@"
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/data/db/mongodb.key"]
     ports:
       - "${PORT_MONGO}:27017"
     environment:
@@ -32,12 +44,19 @@ services:
     volumes:
       - ips_app_mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--username", "${MONGO_USERNAME}", "--password", "${MONGO_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     restart: unless-stopped
+
+  mongo-init:
+    image: mongo:8
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint: [ "mongosh", "--host", "mongo:27017", "--username", "${MONGO_USERNAME}", "--password", "${MONGO_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]})" ]
 
 volumes:
   ips_app_mongo_data:

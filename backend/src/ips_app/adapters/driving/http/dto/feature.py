@@ -1,23 +1,23 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ips_app.domain.models.feature import Feature
 from ips_app.adapters.driving.http.dto.common import PaginationMeta
 from ips_app.adapters.driving.http.dto.permission import PermissionResponse
 from ips_app.utils.validator import validate_resource_name, validate_description
 
 class AddFeatureRequest(BaseModel):
-    name: str
-    description: str = ""
+    name: str = Field(..., examples=["user/view"])
+    description: str = Field("", examples=["Feature gate for user viewing"])
 
     def validate_fields(self) -> None:
         validate_resource_name(self.name)
         validate_description(self.description)
 
 class SetFeatureRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, examples=["user/manage"])
+    description: Optional[str] = Field(None, examples=["Full feature management"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -26,14 +26,14 @@ class SetFeatureRequest(BaseModel):
             validate_description(self.description)
 
 class FeatureResponse(BaseModel):
-    id: str
-    name: str
-    description: str
-    permissions: List[PermissionResponse]
-    preferences: Dict[str, Any]
+    id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
+    name: str = Field(..., examples=["user/view"])
+    description: str = Field(..., examples=["User viewing feature gate"])
+    permissions: List[PermissionResponse] = Field(default_factory=list)
+    preferences: Dict[str, Any] = Field(default_factory=dict, examples=[{"enabled": True}])
     created_at: datetime
     updated_at: Optional[datetime]
-    version: int
+    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, feature: Feature) -> FeatureResponse:

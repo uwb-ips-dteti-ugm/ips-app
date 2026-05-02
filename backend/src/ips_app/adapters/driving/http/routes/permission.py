@@ -13,6 +13,8 @@ from ips_app.adapters.driving.http.dto.permission import (
 )
 
 
+from ips_app.adapters.driving.http.dto.common import ErrorResponse
+...
 def create_router(
     handler: PermissionHandler,
     feature_service: FeatureHTTPPort,
@@ -23,7 +25,17 @@ def create_router(
     guard_view = feature_guard("permission/view", feature_service)
     guard_delete = feature_guard("permission/delete", feature_service)
 
-    router = APIRouter(prefix="/permissions")
+    router = APIRouter(
+        prefix="/permissions",
+        tags=["Permission"],
+        responses={
+            401: {"model": ErrorResponse, "description": "Unauthorized"},
+            403: {"model": ErrorResponse, "description": "Forbidden"},
+            404: {"model": ErrorResponse, "description": "Not Found"},
+            409: {"model": ErrorResponse, "description": "Conflict"},
+            500: {"model": ErrorResponse, "description": "Internal Server Error"},
+        },
+    )
 
     @router.post("", response_model=PermissionResponse, dependencies=[logdep, guard_manage])
     async def post_permission(request: AddPermissionRequest) -> PermissionResponse:

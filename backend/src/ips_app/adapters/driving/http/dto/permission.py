@@ -1,22 +1,22 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ips_app.domain.models.permission import Permission
 from ips_app.adapters.driving.http.dto.common import PaginationMeta
 from ips_app.utils.validator import validate_resource_name, validate_description
 
 class AddPermissionRequest(BaseModel):
-    name: str
-    description: str = ""
+    name: str = Field(..., examples=["user:view"])
+    description: str = Field("", examples=["Ability to view user profiles"])
 
     def validate_fields(self) -> None:
         validate_resource_name(self.name)
         validate_description(self.description)
 
 class SetPermissionRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, examples=["user:manage"])
+    description: Optional[str] = Field(None, examples=["Full user management"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -25,13 +25,13 @@ class SetPermissionRequest(BaseModel):
             validate_description(self.description)
 
 class PermissionResponse(BaseModel):
-    id: str
-    name: str
-    description: str
-    preferences: Dict[str, Any]
+    id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
+    name: str = Field(..., examples=["user:view"])
+    description: str = Field(..., examples=["View user profiles"])
+    preferences: Dict[str, Any] = Field(default_factory=dict, examples=[{"internal": True}])
     created_at: datetime
-    updated_at: Optional[datetime]
-    version: int
+    updated_at: Optional[datetime] = None
+    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, permission: Permission) -> PermissionResponse:
