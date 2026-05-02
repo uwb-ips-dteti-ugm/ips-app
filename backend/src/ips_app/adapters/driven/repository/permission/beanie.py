@@ -126,6 +126,16 @@ class BeaniePermissionRepository(PermissionRepositoryPort):
             await self.log.error(tag, "Failed to update permission preferences", {"error": str(e), "id": str(id)})
             raise e
 
+    async def read_permission_by_name(self, name: str, **kwargs: Any) -> Optional[Permission]:
+        tag = f"{self.tag_class}.read_permission_by_name"
+        session = kwargs.get("session")
+        try:
+            doc = await PermissionDocument.find_one({"name": name}, session=session)
+            return doc.to_domain() if doc else None
+        except Exception as e:
+            await self.log.error(tag, "Failed to read permission by name", {"error": str(e), "name": name})
+            raise e
+
     async def delete_permission_by_id(self, id: Any, **kwargs: Any) -> None:
         tag = f"{self.tag_class}.delete_permission_by_id"
         session = kwargs.get("session")

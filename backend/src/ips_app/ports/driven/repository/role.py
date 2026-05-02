@@ -34,6 +34,11 @@ class RoleRepositoryPort(ABC):
         ...
 
     @abstractmethod
+    async def read_role_by_name(self, name: str, **kwargs: Any) -> Optional[Role]:
+        """Read a role by its name."""
+        ...
+
+    @abstractmethod
     async def read_role_default(self, **kwargs: Any) -> Optional[Role]:
         """Read the default role."""
         ...

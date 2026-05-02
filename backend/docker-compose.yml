@@ -1,4 +1,14 @@
 services:
+  seeder:
+    build: .
+    command: python -m ips_app.seeder
+    env_file:
+      - ./.env
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build: .
     ports:
@@ -8,6 +18,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      seeder:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   mongo:

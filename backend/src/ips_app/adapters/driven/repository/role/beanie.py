@@ -76,6 +76,16 @@ class BeanieRoleRepository(RoleRepositoryPort):
             await self.log.error(tag, "Failed to read roles by pagination", {"error": str(e)})
             raise e
 
+    async def read_role_by_name(self, name: str, **kwargs: Any) -> Optional[Role]:
+        tag = f"{self.tag_class}.read_role_by_name"
+        session = kwargs.get("session")
+        try:
+            doc = await RoleDocument.find_one({"name": name}, fetch_links=True, session=session)
+            return doc.to_domain() if doc else None
+        except Exception as e:
+            await self.log.error(tag, "Failed to read role by name", {"error": str(e), "name": name})
+            raise e
+
     async def read_role_default(self, **kwargs: Any) -> Optional[Role]:
         tag = f"{self.tag_class}.read_role_default"
         session = kwargs.get("session")

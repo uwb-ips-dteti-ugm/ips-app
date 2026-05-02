@@ -56,6 +56,11 @@ class PermissionRepositoryPort(ABC):
         ...
 
     @abstractmethod
+    async def read_permission_by_name(self, name: str, **kwargs: Any) -> Optional[Permission]:
+        """Read a permission by its name."""
+        ...
+
+    @abstractmethod
     async def delete_permission_by_id(self, id: Any, **kwargs: Any) -> None:
         """Delete a permission by its ID."""
         ...

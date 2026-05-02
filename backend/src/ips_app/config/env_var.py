@@ -13,6 +13,9 @@ class EnvVar:
     access_token_expiry: int
     refresh_token_secret: str
     refresh_token_expiry: int
+    admin_name: str
+    admin_username: str
+    admin_password: str
 
 def load_env_var() -> EnvVar:
     def require(key: str) -> str:
@@ -20,11 +23,11 @@ def load_env_var() -> EnvVar:
         if not val:
             raise EnvRequiredException(key)
         return val
-    
+
     def fallback(key: str, value: str) -> str:
         val = os.getenv(key, value)
         return val
-    
+
     load_dotenv()
 
     return EnvVar(
@@ -36,4 +39,7 @@ def load_env_var() -> EnvVar:
         access_token_expiry=int(fallback("ACCESS_TOKEN_EXPIRY", "3600")),
         refresh_token_secret=require("REFRESH_TOKEN_SECRET"),
         refresh_token_expiry=int(fallback("REFRESH_TOKEN_EXPIRY", "604800")),
+        admin_name=fallback("ADMIN_NAME", "admin"),
+        admin_username=require("ADMIN_USERNAME"),
+        admin_password=require("ADMIN_PASSWORD"),
     )
