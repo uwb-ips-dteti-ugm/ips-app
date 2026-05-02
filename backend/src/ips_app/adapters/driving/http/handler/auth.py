@@ -60,12 +60,12 @@ class AuthHandler:
 
     async def patch_new_password(
         self,
-        auth_id: str,
+        user_id: str,
         request: SetNewPasswordRequest
     ) -> Response:
         request.validate_fields()
         await self.service.set_new_password(
-            auth_id=auth_id,
+            user_id=user_id,
             new_password=request.new_password
         )
         return Response(content="Password set successfully", status_code=status.HTTP_200_OK)
@@ -88,12 +88,12 @@ class AuthHandler:
 
     async def patch_auth_info(
         self,
-        auth_id: str,
+        user_id: str,
         request: SetAuthInfoRequest
     ) -> Response:
         request.validate_fields()
         await self.service.set_auth_info(
-            auth_id=auth_id,
+            user_id=user_id,
             username=request.username
         )
         return Response(content="Auth info updated successfully", status_code=status.HTTP_200_OK)
@@ -106,8 +106,8 @@ class AuthHandler:
         if not claims:
             raise HTTPException(status_code=401, detail="Unauthorized")
         request.validate_fields()
-        
-        await self.service.set_auth_info_by_user_id(
+
+        await self.service.set_auth_info(
             user_id=claims.user_id,
             username=request.username
         )
