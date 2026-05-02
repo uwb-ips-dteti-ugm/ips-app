@@ -168,7 +168,10 @@ class BeanieFeatureRepository(FeatureRepositoryPort):
                 In(PermissionDocument.id, permission_ids), session=session
             ).to_list()
 
-            existing_ids = {str(link.ref.id) for link in doc.permissions}
+            existing_ids = {
+                str(link.id if isinstance(link, PermissionDocument) else link.ref.id)
+                for link in doc.permissions
+            }
             for perm in permissions:
                 if str(perm.id) not in existing_ids:
                     doc.permissions.append(perm)  # type: ignore
@@ -198,7 +201,10 @@ class BeanieFeatureRepository(FeatureRepositoryPort):
                 raise NotFoundException(str(id), "features")
 
             str_ids = {str(pid) for pid in permission_ids}
-            doc.permissions = [p for p in doc.permissions if str(p.ref.id) not in str_ids]
+            doc.permissions = [
+                p for p in doc.permissions 
+                if str(p.id if isinstance(p, PermissionDocument) else p.ref.id) not in str_ids
+            ]
 
             await doc.set({
                 "permissions": doc.permissions,
