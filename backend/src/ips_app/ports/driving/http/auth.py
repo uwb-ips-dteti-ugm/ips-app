@@ -1,33 +1,32 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, List
+from ips_app.domain.models.auth import Auth
+from ips_app.domain.models.user import User
+
 
 class AuthHTTPPort(ABC):
     @abstractmethod
     async def sign_up(
-        self, 
-        name: str, 
-        username: str, 
-        password: str
+        self,
+        name: str,
+        username: str,
+        password: str,
     ) -> Tuple[str, str]:
         """Sign up a new user and return (access_token, refresh_token)."""
         ...
 
     @abstractmethod
     async def register(
-        self,
-        name: str,
-        username: str,
-        password: str,
-        role_id: Any
+        self, name: str, username: str, password: str, role_id: Any
     ) -> Any:
         """Register a new user from the admin panel."""
         ...
 
     @abstractmethod
     async def sign_in(
-        self, 
-        sign_in_identifier: str, 
-        password: str
+        self,
+        sign_in_identifier: str,
+        password: str,
     ) -> Tuple[str, str]:
         """Sign in a user and return (access_token, refresh_token)."""
         ...
@@ -44,7 +43,7 @@ class AuthHTTPPort(ABC):
 
     @abstractmethod
     async def set_new_password(self, user_id: Any, new_password: str) -> None:
-        """Force-set a new password without verification. Admin/super-admin operation."""
+        """Force-set a new password by user identity without verification. Admin/super-admin operation."""
         ...
 
     @abstractmethod
@@ -52,16 +51,23 @@ class AuthHTTPPort(ABC):
         self,
         user_id: Any,
         old_password: str,
-        new_password: str
+        new_password: str,
     ) -> None:
         """Update password by verifying the old one."""
         ...
 
     @abstractmethod
-    async def set_auth_info(
+    async def set_auth_info(self, user_id: Any, username: Optional[str] = None) -> None:
+        """Update auth basic information by user identity."""
+        ...
+
+    @abstractmethod
+    async def get_auths_users(
         self,
-        user_id: Any,
-        username: Optional[str] = None
-    ) -> None:
-        """Update auth basic information."""
+        page: int,
+        limit: int,
+        cursor_id: Optional[Any] = None,
+        search: Optional[str] = None,
+    ) -> Tuple[List[Auth], List[User], int]:
+        """Get auths and users with pagination and search."""
         ...

@@ -20,7 +20,7 @@ class UserStatus(StrEnum):
 
 class User(BaseModel):
     id: Optional[Any] = None
-    role: Role
+    role: Optional[Role] = None
     name: str
     bio: str = ""
     state: UserState = UserState.OFFLINE

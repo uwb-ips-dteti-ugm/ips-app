@@ -133,11 +133,14 @@ class FeatureHTTPService(FeatureHTTPPort):
         if not user:
             raise NotFoundException(str(user_id), "users")
 
+        if not user.role:
+            return set()
+
         role = await self.repo_role.read_role_by_id(user.role.id)
         if not role:
             raise NotFoundException(str(user.role.id), "roles")
 
-        return {str(p.id) for p in role.permissions}
+        return {str(p.id) for p in role.permissions if p.id is not None}
 
     async def get_accessible_features(self, user_id: Any) -> List[Feature]:
         tag = f"{self.tag_class}.get_accessible_features"

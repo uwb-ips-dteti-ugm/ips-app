@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from fastapi import Request, Response, status, HTTPException
 from ips_app.ports.driving.http.auth import AuthHTTPPort
 from ips_app.adapters.driving.http.dto.auth import (
@@ -9,7 +9,8 @@ from ips_app.adapters.driving.http.dto.auth import (
     SetNewPasswordWithOldPasswordRequest,
     SetAuthInfoRequest,
     RefreshTokenRequest,
-    TokenResponse
+    TokenResponse,
+    AuthUsersResponse
 )
 from ips_app.adapters.driving.http.middleware.auth_jwt import get_claims
 from ips_app.adapters.driving.http.dto.user import UserResponse
@@ -49,6 +50,27 @@ class AuthHandler:
         request.validate_fields()
         access_token, refresh_token = await self.service.refresh_token(request.refresh_token)
         return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+    async def get_auths_users(
+        self,
+        page: int = 0,
+        limit: int = 10,
+        cursor_id: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> AuthUsersResponse:
+        auths, users, total = await self.service.get_auths_users(
+            page=page,
+            limit=limit,
+            cursor_id=cursor_id,
+            search=search
+        )
+        return AuthUsersResponse.from_domain(
+            auths=auths,
+            users=users,
+            page=page,
+            limit=limit,
+            total=total
+        )
 
     async def post_sign_out(self) -> Response:
         claims = get_claims()
@@ -106,7 +128,7 @@ class AuthHandler:
         if not claims:
             raise HTTPException(status_code=401, detail="Unauthorized")
         request.validate_fields()
-
+        
         await self.service.set_auth_info(
             user_id=claims.user_id,
             username=request.username

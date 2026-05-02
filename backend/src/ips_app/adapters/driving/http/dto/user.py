@@ -51,7 +51,7 @@ class UserResponse(BaseModel):
     bio: str
     state: UserState
     status: UserStatus
-    role: RoleSummaryResponse
+    role: Optional[RoleSummaryResponse] = None
     preferences: Dict[str, Any]
     last_signed_in_at: Optional[datetime]
     last_refreshed_at: Optional[datetime]
@@ -68,7 +68,7 @@ class UserResponse(BaseModel):
             bio=user.bio,
             state=user.state,
             status=user.status,
-            role=RoleSummaryResponse.from_domain(user.role),
+            role=RoleSummaryResponse.from_domain(user.role) if user.role else None,
             preferences=user.preferences,
             last_signed_in_at=user.last_signed_in_at,
             last_refreshed_at=user.last_refreshed_at,
