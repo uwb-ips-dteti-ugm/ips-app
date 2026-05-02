@@ -5,7 +5,7 @@ from ips_app.ports.driven.logging.generic import GenericLoggingPort
 
 def logger(
     log: GenericLoggingPort,
-    tag: str = "http/middleware/logger",
+    tag: str = "LoggerHTTPMiddleware",
     msg_2xx: str = "Request successful",
     msg_4xx: str = "Client error",
     msg_5xx: str = "Server error",

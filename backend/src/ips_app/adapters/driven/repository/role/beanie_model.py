@@ -8,7 +8,7 @@ from ips_app.adapters.driven.repository.permission.beanie_model import Permissio
 
 
 class RoleDocument(Document):
-    name: Annotated[str, Indexed(unique=True)]
+    name: Optional[Annotated[str, Indexed(unique=True)]] = None
     description: str = Field(default="")
     preferences: Dict[str, Any] = Field(default_factory=dict)
     is_default: bool = Field(default=False)
@@ -28,16 +28,22 @@ class RoleDocument(Document):
         ]
 
     def to_domain(self) -> Role:
+        perms: List[Permission] = []
+        for p in self.permissions:
+            if isinstance(p, PermissionDocument):
+                perms.append(p.to_domain())
+            elif hasattr(p, "ref") and p.ref:
+                perms.append(Permission(id=p.ref.id, name=""))
+            elif hasattr(p, "value") and p.value:
+                perms.append(p.value.to_domain())
+
         return Role(
             id=self.id,
-            name=self.name,
+            name=self.name or "",
             description=self.description,
             preferences=self.preferences,
             is_default=self.is_default,
-            permissions=[
-                link.to_domain() if isinstance(link, PermissionDocument) else Permission(id=link.ref.id, name="")
-                for link in self.permissions
-            ],
+            permissions=perms,
             created_at=self.created_at,
             created_by=self.created_by,
             updated_at=self.updated_at,

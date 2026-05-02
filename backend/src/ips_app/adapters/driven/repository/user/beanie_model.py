@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, Annotated
+from typing import Optional, Dict, Any, List, Annotated
 from beanie import Document, Indexed, Link
 from pydantic import Field
 from ips_app.domain.models.user import User, UserState, UserStatus
@@ -8,8 +8,8 @@ from ips_app.adapters.driven.repository.role.beanie_model import RoleDocument
 
 
 class UserDocument(Document):
-    role: Link[RoleDocument]
-    name: Annotated[str, Indexed()]
+    role: Optional[Link[RoleDocument]] = None
+    name: Optional[Annotated[str, Indexed()]] = None
     bio: str = Field(default="")
     state: UserState = Field(default=UserState.OFFLINE)
     status: UserStatus = Field(default=UserStatus.ACTIVE)
@@ -33,10 +33,19 @@ class UserDocument(Document):
         ]
 
     def to_domain(self) -> User:
+        role_domain = None
+        if self.role:
+            if isinstance(self.role, RoleDocument):
+                role_domain = self.role.to_domain()
+            elif hasattr(self.role, "ref") and self.role.ref:
+                role_domain = Role(id=self.role.ref.id, name="")
+            elif hasattr(self.role, "value") and self.role.value:
+                role_domain = self.role.value.to_domain()
+
         return User(
             id=self.id,
-            role=self.role.to_domain() if isinstance(self.role, RoleDocument) else Role(id=self.role.ref.id, name=""),
-            name=self.name,
+            role=role_domain,
+            name=self.name or "",
             bio=self.bio,
             state=self.state,
             status=self.status,

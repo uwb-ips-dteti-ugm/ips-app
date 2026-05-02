@@ -151,9 +151,9 @@ class FeatureHTTPService(FeatureHTTPPort):
             page = 0
             limit = 100
             while True:
-                features, _ = await self.repo.read_features_by_pagination(page, limit)
+                features, total = await self.repo.read_features_by_pagination(page, limit)
                 for feature in features:
-                    feature_permission_ids = {str(p.id) for p in feature.permissions}
+                    feature_permission_ids = {str(p.id) for p in feature.permissions if p.id is not None}
                     if role_permission_ids & feature_permission_ids:
                         accessible.append(feature)
                 if len(features) < limit:
@@ -175,7 +175,7 @@ class FeatureHTTPService(FeatureHTTPPort):
             if not feature:
                 raise NotFoundException(feature_name, "features")
 
-            feature_permission_ids = {str(p.id) for p in feature.permissions}
+            feature_permission_ids = {str(p.id) for p in feature.permissions if p.id is not None}
             result = bool(role_permission_ids & feature_permission_ids)
 
             await self.log.info(tag, "Checked feature access by name", {"user_id": str(user_id), "feature_name": feature_name, "result": result})

@@ -1,6 +1,7 @@
 from typing import Optional, List, Tuple, Any, Dict
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime, timezone
+from beanie import PydanticObjectId
 from ips_app.domain.models.user import User, UserState, UserStatus
 from ips_app.ports.driven.repository.user import UserRepositoryPort
 from ips_app.ports.driven.logging.generic import GenericLoggingPort
@@ -56,8 +57,12 @@ class BeanieUserRepository(UserRepositoryPort):
             if search:
                 query_filter["name"] = {"$regex": search, "$options": "i"}
             if role_id:
+                if isinstance(role_id, str) and PydanticObjectId.is_valid(role_id):
+                    role_id = PydanticObjectId(role_id)
                 query_filter["role.$id"] = role_id
             if cursor_id:
+                if isinstance(cursor_id, str) and PydanticObjectId.is_valid(cursor_id):
+                    cursor_id = PydanticObjectId(cursor_id)
                 query_filter["_id"] = {"$gt": cursor_id}
 
             query = UserDocument.find(query_filter, fetch_links=True, session=session)
@@ -94,9 +99,6 @@ class BeanieUserRepository(UserRepositoryPort):
                 update_data["bio"] = bio
 
             await doc.set(update_data, session=session)
-        except DuplicateKeyError as e:
-            await self.log.error(tag, "Duplicate user name on update", {"error": str(e), "id": str(id)})
-            raise DuplicateException("name", "users")
         except NotFoundException:
             raise
         except Exception as e:

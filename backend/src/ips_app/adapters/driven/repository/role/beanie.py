@@ -2,6 +2,7 @@ from typing import Optional, List, Tuple, Any, Dict
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime, timezone
 from beanie.operators import In
+from beanie import PydanticObjectId
 from ips_app.domain.models.role import Role
 from ips_app.ports.driven.repository.role import RoleRepositoryPort
 from ips_app.ports.driven.logging.generic import GenericLoggingPort
@@ -46,6 +47,8 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.read_role_by_id"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             doc = await RoleDocument.get(id, fetch_links=True, session=session)
             return doc.to_domain() if doc else None
         except Exception as e:
@@ -67,6 +70,8 @@ class BeanieRoleRepository(RoleRepositoryPort):
             if search:
                 query = RoleDocument.find({"name": {"$regex": search, "$options": "i"}}, session=session)
             if cursor_id:
+                if isinstance(cursor_id, str) and PydanticObjectId.is_valid(cursor_id):
+                    cursor_id = PydanticObjectId(cursor_id)
                 query = query.find({"_id": {"$gt": cursor_id}})
 
             total = await query.count()
@@ -107,6 +112,8 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.update_role_by_id"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             doc = await RoleDocument.get(id, session=session)
             if not doc:
                 raise NotFoundException(str(id), "roles")
@@ -140,6 +147,8 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.update_role_is_default_by_id"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             existing_default = await RoleDocument.find_one({"is_default": True}, session=session)
             if existing_default:
                 existing_default.is_default = False
@@ -171,6 +180,8 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.update_role_preferences_by_id"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             doc = await RoleDocument.get(id, session=session)
             if not doc:
                 raise NotFoundException(str(id), "roles")
@@ -189,6 +200,8 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.delete_role_by_id"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             doc = await RoleDocument.get(id, session=session)
             if not doc:
                 raise NotFoundException(str(id), "roles")
@@ -207,28 +220,37 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.add_permissions_to_role"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             doc = await RoleDocument.get(id, session=session)
             if not doc:
                 raise NotFoundException(str(id), "roles")
 
+            # Convert permission_ids to ObjectIds for the query
+            valid_ids = [PydanticObjectId(pid) if isinstance(pid, str) and PydanticObjectId.is_valid(pid) else pid for pid in permission_ids]
+            
             permissions = await PermissionDocument.find(
-                In(PermissionDocument.id, permission_ids), session=session
+                In(PermissionDocument.id, valid_ids), session=session
             ).to_list()
 
             existing_ids = {
                 str(link.id if isinstance(link, PermissionDocument) else link.ref.id)
                 for link in doc.permissions
             }
+            
+            added_count = 0
             for perm in permissions:
                 if str(perm.id) not in existing_ids:
                     doc.permissions.append(perm)  # type: ignore
+                    added_count += 1
 
-            await doc.set({
-                "permissions": doc.permissions,
-                "updated_at": datetime.now(timezone.utc),
-                "updated_by": updated_by,
-                "version": doc.version + 1,
-            }, session=session)
+            if added_count > 0:
+                doc.updated_at = datetime.now(timezone.utc)
+                doc.updated_by = updated_by
+                doc.version += 1
+                await doc.save(session=session)
+                await self.log.info(tag, f"Added {added_count} permissions to role", {"id": str(id), "count": added_count})
+            
         except Exception as e:
             await self.log.error(tag, "Failed to add permissions to role", {"error": str(e), "id": str(id)})
             raise e
@@ -243,22 +265,24 @@ class BeanieRoleRepository(RoleRepositoryPort):
         tag = f"{self.tag_class}.remove_permissions_from_role"
         session = kwargs.get("session")
         try:
+            if isinstance(id, str) and PydanticObjectId.is_valid(id):
+                id = PydanticObjectId(id)
             doc = await RoleDocument.get(id, session=session)
             if not doc:
                 raise NotFoundException(str(id), "roles")
 
             str_ids = {str(pid) for pid in permission_ids}
-            doc.permissions = [
+            new_permissions = [
                 p for p in doc.permissions 
                 if str(p.id if isinstance(p, PermissionDocument) else p.ref.id) not in str_ids
             ]
 
-            await doc.set({
-                "permissions": doc.permissions,
-                "updated_at": datetime.now(timezone.utc),
-                "updated_by": updated_by,
-                "version": doc.version + 1,
-            }, session=session)
+            if len(new_permissions) != len(doc.permissions):
+                doc.permissions = new_permissions
+                doc.updated_at = datetime.now(timezone.utc)
+                doc.updated_by = updated_by
+                doc.version += 1
+                await doc.save(session=session)
         except Exception as e:
             await self.log.error(tag, "Failed to remove permissions from role", {"error": str(e), "id": str(id)})
             raise e

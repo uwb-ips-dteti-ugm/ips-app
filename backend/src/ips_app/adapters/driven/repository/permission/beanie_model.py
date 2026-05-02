@@ -6,7 +6,7 @@ from ips_app.domain.models.permission import Permission
 
 
 class PermissionDocument(Document):
-    name: Annotated[str, Indexed(unique=True)]
+    name: Optional[Annotated[str, Indexed(unique=True)]] = None
     description: str = Field(default="")
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
@@ -22,7 +22,7 @@ class PermissionDocument(Document):
     def to_domain(self) -> Permission:
         return Permission(
             id=self.id,
-            name=self.name,
+            name=self.name or "",
             description=self.description,
             preferences=self.preferences,
             created_at=self.created_at,

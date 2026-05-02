@@ -1,6 +1,7 @@
 from typing import Optional, List, Tuple, Any, Dict
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime, timezone
+from beanie import PydanticObjectId
 from ips_app.domain.models.auth import Auth
 from ips_app.domain.models.user import User
 from ips_app.ports.driven.repository.auth import AuthRepositoryPort
@@ -15,6 +16,11 @@ class BeanieAuthRepository(AuthRepositoryPort):
         self.log = log
         self.tag_class = "BeanieAuthRepository"
 
+    def _to_obj_id(self, id_val: Any) -> Any:
+        if isinstance(id_val, str) and PydanticObjectId.is_valid(id_val):
+            return PydanticObjectId(id_val)
+        return id_val
+
     async def create_auth(
         self,
         user_id: Any,
@@ -26,8 +32,13 @@ class BeanieAuthRepository(AuthRepositoryPort):
         tag = f"{self.tag_class}.create_auth"
         session = kwargs.get("session")
         try:
+            user_id = self._to_obj_id(user_id)
+            
+            # Using UserDocument instance ensures Beanie stores it as a DBRef
+            user_doc = UserDocument(id=user_id) # type: ignore
+            
             doc = AuthDocument(
-                user=user_id,
+                user=user_doc, # type: ignore
                 username=username,
                 password_hash=password_hash,
                 created_by=created_by,
@@ -54,10 +65,9 @@ class BeanieAuthRepository(AuthRepositoryPort):
         tag = f"{self.tag_class}.read_auths_by_pagination"
         session = kwargs.get("session")
         try:
-            # Match filter
             match_filter: Dict[str, Any] = {}
             if cursor_id:
-                match_filter["_id"] = {"$gt": cursor_id}
+                match_filter["_id"] = {"$gt": self._to_obj_id(cursor_id)}
             
             search_filter: Dict[str, Any] = {}
             if search:
@@ -68,7 +78,6 @@ class BeanieAuthRepository(AuthRepositoryPort):
                     ]
                 }
 
-            # Aggregation for search and lookup
             pipeline = [
                 {"$match": match_filter},
                 {
@@ -83,12 +92,10 @@ class BeanieAuthRepository(AuthRepositoryPort):
                 {"$match": search_filter},
             ]
 
-            # Count total
             count_pipeline = pipeline + [{"$count": "total"}]
             count_result = await AuthDocument.aggregate(count_pipeline, session=session).to_list()
             total = count_result[0]["total"] if count_result else 0
 
-            # Pagination
             data_pipeline = pipeline + [
                 {"$skip": page * limit},
                 {"$limit": limit}
@@ -100,15 +107,17 @@ class BeanieAuthRepository(AuthRepositoryPort):
             users: List[User] = []
             
             for res in results:
-                # Reconstruct documents to use to_domain()
-                user_doc = UserDocument(**res["user_data"])
-                user_doc.id = res["user_data"]["_id"]
+                user_data = res["user_data"]
+                # Pass relationship keys explicitly to constructor if they are dicts
+                user_doc = UserDocument(
+                    role=user_data.get("role"), # type: ignore
+                    **{k: v for k, v in user_data.items() if k not in ["_id", "role"]}
+                )
+                user_doc.id = user_data["_id"]
                 
-                # Strip user_data to avoid validation issues in AuthDocument
-                res_auth = {k: v for k, v in res.items() if k != "user_data"}
-                auth_doc = AuthDocument(**res_auth)
+                res_auth = {k: v for k, v in res.items() if k not in ["user_data", "_id", "user"]}
+                auth_doc = AuthDocument(user=user_doc, **res_auth) # type: ignore
                 auth_doc.id = res["_id"]
-                auth_doc.user = user_doc # type: ignore
                 
                 auths.append(auth_doc.to_domain())
                 users.append(user_doc.to_domain())
@@ -122,7 +131,7 @@ class BeanieAuthRepository(AuthRepositoryPort):
         tag = f"{self.tag_class}.read_auth_by_id"
         session = kwargs.get("session")
         try:
-            doc = await AuthDocument.get(id, fetch_links=True, session=session)
+            doc = await AuthDocument.get(self._to_obj_id(id), fetch_links=True, session=session)
             return doc.to_domain() if doc else None
         except Exception as e:
             await self.log.error(tag, "Failed to read auth by id", {"error": str(e), "id": str(id)})
@@ -132,7 +141,9 @@ class BeanieAuthRepository(AuthRepositoryPort):
         tag = f"{self.tag_class}.read_auth_by_user_id"
         session = kwargs.get("session")
         try:
-            doc = await AuthDocument.find_one({"user.$id": user_id}, fetch_links=True, session=session)
+            user_id_obj = self._to_obj_id(user_id)
+            # Use Beanie fluent API which is designed for Link queries
+            doc = await AuthDocument.find_one(AuthDocument.user.id == user_id_obj, fetch_links=True, session=session) # type: ignore
             return doc.to_domain() if doc else None
         except Exception as e:
             await self.log.error(tag, "Failed to read auth by user id", {"error": str(e), "user_id": str(user_id)})
@@ -152,17 +163,11 @@ class BeanieAuthRepository(AuthRepositoryPort):
             await self.log.error(tag, "Failed to read auth by identifier", {"error": str(e), "identifier": sign_in_identifier})
             raise e
 
-    async def update_auth_info_by_id(
-        self,
-        id: Any,
-        username: Optional[str] = None,
-        updated_by: Optional[int] = None,
-        **kwargs: Any,
-    ) -> None:
+    async def update_auth_info_by_id(self, id: Any, username: Optional[str] = None, updated_by: Optional[int] = None, **kwargs: Any) -> None:
         tag = f"{self.tag_class}.update_auth_info_by_id"
         session = kwargs.get("session")
         try:
-            doc = await AuthDocument.get(id, session=session)
+            doc = await AuthDocument.get(self._to_obj_id(id), session=session)
             if not doc:
                 raise NotFoundException(str(id), "auths")
 
@@ -184,17 +189,11 @@ class BeanieAuthRepository(AuthRepositoryPort):
             await self.log.error(tag, "Failed to update auth info", {"error": str(e), "id": str(id)})
             raise e
 
-    async def update_auth_password_by_id(
-        self,
-        id: Any,
-        password_hash: str,
-        updated_by: Optional[int] = None,
-        **kwargs: Any,
-    ) -> None:
+    async def update_auth_password_by_id(self, id: Any, password_hash: str, updated_by: Optional[int] = None, **kwargs: Any) -> None:
         tag = f"{self.tag_class}.update_auth_password_by_id"
         session = kwargs.get("session")
         try:
-            doc = await AuthDocument.get(id, session=session)
+            doc = await AuthDocument.get(self._to_obj_id(id), session=session)
             if not doc:
                 raise NotFoundException(str(id), "auths")
 
@@ -212,7 +211,8 @@ class BeanieAuthRepository(AuthRepositoryPort):
         tag = f"{self.tag_class}.delete_auth_by_user_id"
         session = kwargs.get("session")
         try:
-            doc = await AuthDocument.find_one({"user.$id": user_id}, session=session)
+            user_id_obj = self._to_obj_id(user_id)
+            doc = await AuthDocument.find_one(AuthDocument.user.id == user_id_obj, session=session) # type: ignore
             if not doc:
                 raise NotFoundException(str(user_id), "auths")
             await doc.delete(session=session)

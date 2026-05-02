@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from fastapi.security import HTTPBearer
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -57,6 +58,9 @@ def create_app() -> FastAPI:
 
     motor = AsyncIOMotorClient(env_var.mongo_uri)
 
+    # Security scheme for Swagger UI
+    security_scheme = HTTPBearer(auto_error=False)
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         await init_beanie(
@@ -76,16 +80,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         title="IPS App API",
         version="1.0.0",
-        openapi_components={
-            "securitySchemes": {
-                "BearerAuth": {
-                    "type": "http",
-                    "scheme": "bearer",
-                    "bearerFormat": "JWT",
-                }
-            }
-        },
-        security=[{"BearerAuth": []}],
+        dependencies=[Depends(security_scheme)]
     )
 
     # repositories

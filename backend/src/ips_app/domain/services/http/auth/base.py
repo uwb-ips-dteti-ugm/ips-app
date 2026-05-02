@@ -155,7 +155,10 @@ class AuthHTTPService(AuthHTTPPort):
         tag = f"{self.tag_class}.set_new_password_with_old_password"
         try:
             auth = await self.repo_auth.read_auth_by_user_id(user_id)
-            if not auth or not verify_password(old_password, auth.password_hash):
+            if not auth:
+                raise NotFoundException(str(user_id), "auths")
+                
+            if not verify_password(old_password, auth.password_hash):
                 raise DomainException("Invalid credentials.")
 
             await self.repo_auth.update_auth_password_by_id(auth.id, hash_password(new_password))
