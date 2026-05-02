@@ -163,24 +163,6 @@ class FeatureHTTPService(FeatureHTTPPort):
             await self.log.error(tag, "Failed to get accessible features", {"error": str(e), "user_id": str(user_id)})
             raise e
 
-    async def can_access_feature(self, user_id: Any, feature_id: Any) -> bool:
-        tag = f"{self.tag_class}.can_access_feature"
-        try:
-            role_permission_ids = await self._get_user_role_permission_ids(user_id)
-
-            feature = await self.repo.read_feature_by_id(feature_id)
-            if not feature:
-                raise NotFoundException(str(feature_id), "features")
-
-            feature_permission_ids = {str(p.id) for p in feature.permissions}
-            result = bool(role_permission_ids & feature_permission_ids)
-
-            await self.log.info(tag, "Checked feature access", {"user_id": str(user_id), "feature_id": str(feature_id), "result": result})
-            return result
-        except Exception as e:
-            await self.log.error(tag, "Failed to check feature access", {"error": str(e), "user_id": str(user_id), "feature_id": str(feature_id)})
-            raise e
-
     async def can_access_feature_by_name(self, user_id: Any, feature_name: str) -> bool:
         tag = f"{self.tag_class}.can_access_feature_by_name"
         try:

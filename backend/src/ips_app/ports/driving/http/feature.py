@@ -66,11 +66,6 @@ class FeatureHTTPPort(ABC):
         ...
 
     @abstractmethod
-    async def can_access_feature(self, user_id: Any, feature_id: Any) -> bool:
-        """Check if a user can access a specific feature."""
-        ...
-
-    @abstractmethod
     async def can_access_feature_by_name(self, user_id: Any, feature_name: str) -> bool:
         """Check if a user can access a feature identified by name."""
         ...

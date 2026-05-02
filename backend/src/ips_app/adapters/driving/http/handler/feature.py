@@ -111,11 +111,3 @@ class FeatureHandler:
         features = await self.service.get_accessible_features(user_id=claims.user_id)
         return [FeatureResponse.from_domain(f) for f in features]
 
-    async def get_feature_me_can_access(self, feature_id: str) -> bool:
-        claims = get_claims()
-        if not claims:
-            return False
-        return await self.service.can_access_feature(
-            user_id=claims.user_id,
-            feature_id=feature_id
-        )
