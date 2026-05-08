@@ -60,5 +60,4 @@ class JwtMiddleware(BaseHTTPMiddleware):
 
 
 def get_claims() -> Optional[UserAccessTokenClaims]:
-    """Retrieves claims from the current request context."""
     return claims_context.get()
