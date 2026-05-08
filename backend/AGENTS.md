@@ -32,13 +32,14 @@ Startup begins in `src/ips_app/main.py`, which calls `create_app()` from `src/ip
 7. Instantiates HTTP services with repository and logging ports.
 8. Instantiates HTTP handlers with driving service ports.
 9. Includes FastAPI routers through each module's `create_router(...)` factory.
-10. Adds `JwtMiddleware` as the outer request middleware.
+10. Adds `JwtMiddleware` as the outer request middleware and `ActivityUpdaterMiddleware` inside it.
 
 A typical HTTP request flows through the system like this:
 
 ```text
 HTTP request
  -> JwtMiddleware
+ -> ActivityUpdaterMiddleware
  -> route dependencies, such as logger(...) and feature_guard(...)
  -> FastAPI route function
  -> HTTP handler
