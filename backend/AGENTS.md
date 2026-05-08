@@ -7,7 +7,7 @@ This backend is built with **Hexagonal Architecture (Ports and Adapters)** using
 - `src/ips_app/main.py`: ASGI entrypoint. Imports `create_app()` from `compositions/fastapi.py` and exposes `app`.
 - `src/ips_app/compositions/fastapi.py`: FastAPI composition root. Loads config, creates the Mongo client, initializes Beanie, wires repositories, services, handlers, routes, and middleware.
 - `src/ips_app/compositions/seeder.py`: Reserved for the seed composition entrypoint.
-- `src/ips_app/config/`: Environment variable loading.
+- `src/ips_app/config/`: Environment variable loading and default seed data.
 - `src/ips_app/domain/models/`: Pure domain models and domain exceptions. These must not depend on Beanie, FastAPI, Motor, or controller DTOs.
 - `src/ips_app/domain/ports/driving/`: Inbound interfaces, such as HTTP service contracts.
 - `src/ips_app/domain/ports/driven/`: Outbound interfaces, such as repositories and logging.
@@ -159,4 +159,4 @@ Keep new modules consistent with this wiring style.
 - **Role & Permission**: Granular access control. Roles link to permissions.
 - **Feature**: Runtime access gates for API capabilities. Features link to permissions.
 - **Composition**: Wires FastAPI, Beanie, repositories, services, handlers, routes, and middleware.
-- **Seeder**: Reserved for creating base permissions, roles, feature gates, admin account, and test accounts.
+- **Seeder**: Creates base permissions, roles, feature gates, admin account, and test accounts. Seeder behavior lives in services; default seed data lives in `config/seed_data.py`.
