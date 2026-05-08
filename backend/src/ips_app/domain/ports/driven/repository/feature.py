@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any, Dict
-from ips_app_old.domain.models.feature import Feature
+from ips_app.domain.models.feature import Feature
 
 
 class FeatureRepository(ABC):
@@ -16,12 +16,12 @@ class FeatureRepository(ABC):
         ...
 
     @abstractmethod
-    async def read_feature_by_id(self, id: Any, **kwargs: Any) -> Optional[Feature]:
+    async def read_feature_by_id(self, id: Any, **kwargs: Any) -> Feature:
         """Read a feature by its ID."""
         ...
 
     @abstractmethod
-    async def read_feature_by_name(self, name: str, **kwargs: Any) -> Optional[Feature]:
+    async def read_feature_by_name(self, name: str, **kwargs: Any) -> Feature:
         """Read a feature by its name."""
         ...
 

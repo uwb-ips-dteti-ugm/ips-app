@@ -2,12 +2,12 @@ import json
 from typing import Optional, List, Tuple, Any
 from ips_app_old.domain.models.user import User, UserState, UserStatus
 from ips_app_old.ports.driving.http.user import UserHTTPPort
-from ips_app_old.ports.driven.repository.user import UserRepositoryPort
+from ips_app_old.ports.driven.repository.user import UserRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException
 
 class UserHTTPService(UserHTTPPort):
-    def __init__(self, repo: UserRepositoryPort, log: GenericLoggingPort):
+    def __init__(self, repo: UserRepository, log: GenericLoggingPort):
         self.repo = repo
         self.log = log
         self.tag_class = "UserHTTPService"

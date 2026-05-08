@@ -3,9 +3,9 @@ from typing import Optional, List, Tuple, Any
 from ips_app_old.domain.models.feature import Feature
 from ips_app_old.domain.models.permission import Permission
 from ips_app_old.ports.driving.http.feature import FeatureHTTPPort
-from ips_app_old.ports.driven.repository.feature import FeatureRepositoryPort
-from ips_app_old.ports.driven.repository.user import UserRepositoryPort
-from ips_app_old.ports.driven.repository.role import RoleRepositoryPort
+from ips_app_old.ports.driven.repository.feature import FeatureRepository
+from ips_app_old.ports.driven.repository.user import UserRepository
+from ips_app_old.ports.driven.repository.role import RoleRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException
 
@@ -13,9 +13,9 @@ from ips_app_old.domain.models.exception import NotFoundException
 class FeatureHTTPService(FeatureHTTPPort):
     def __init__(
         self,
-        repo: FeatureRepositoryPort,
-        repo_user: UserRepositoryPort,
-        repo_role: RoleRepositoryPort,
+        repo: FeatureRepository,
+        repo_user: UserRepository,
+        repo_role: RoleRepository,
         log: GenericLoggingPort,
     ):
         self.repo = repo

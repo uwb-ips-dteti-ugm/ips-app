@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any, Dict
-from ips_app_old.domain.models.role import Role
+from ips_app.domain.models.role import Role
 
 
 class RoleRepository(ABC):
@@ -17,8 +17,13 @@ class RoleRepository(ABC):
         ...
 
     @abstractmethod
-    async def read_role_by_id(self, id: Any, **kwargs: Any) -> Optional[Role]:
+    async def read_role_by_id(self, id: Any, **kwargs: Any) -> Role:
         """Read a role by its ID."""
+        ...
+
+    @abstractmethod
+    async def read_role_by_name(self, name: str, **kwargs: Any) -> Role:
+        """Read a role by its name."""
         ...
 
     @abstractmethod
@@ -34,12 +39,7 @@ class RoleRepository(ABC):
         ...
 
     @abstractmethod
-    async def read_role_by_name(self, name: str, **kwargs: Any) -> Optional[Role]:
-        """Read a role by its name."""
-        ...
-
-    @abstractmethod
-    async def read_role_default(self, **kwargs: Any) -> Optional[Role]:
+    async def read_role_default(self, **kwargs: Any) -> Role:
         """Read the default role."""
         ...
 
@@ -62,7 +62,7 @@ class RoleRepository(ABC):
         updated_by: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
-        """Set a role as the default role."""
+        """Set a role as the default role and unset the previous default role."""
         ...
 
     @abstractmethod

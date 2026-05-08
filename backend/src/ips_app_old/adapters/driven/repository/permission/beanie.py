@@ -2,13 +2,13 @@ from typing import Optional, List, Tuple, Any, Dict
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime, timezone
 from ips_app_old.domain.models.permission import Permission
-from ips_app_old.ports.driven.repository.permission import PermissionRepositoryPort
+from ips_app_old.ports.driven.repository.permission import PermissionRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException, DuplicateException
 from ips_app_old.adapters.driven.repository.permission.beanie_model import PermissionDocument
 
 
-class BeaniePermissionRepository(PermissionRepositoryPort):
+class BeaniePermissionRepository(PermissionRepository):
     def __init__(self, log: GenericLoggingPort):
         self.log = log
         self.tag_class = "BeaniePermissionRepository"

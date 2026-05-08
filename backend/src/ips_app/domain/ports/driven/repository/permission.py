@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any, Dict
-from ips_app_old.domain.models.permission import Permission
+from ips_app.domain.models.permission import Permission
 
 
 class PermissionRepository(ABC):
@@ -16,8 +16,13 @@ class PermissionRepository(ABC):
         ...
 
     @abstractmethod
-    async def read_permission_by_id(self, id: Any, **kwargs: Any) -> Optional[Permission]:
+    async def read_permission_by_id(self, id: Any, **kwargs: Any) -> Permission:
         """Read a permission by its ID."""
+        ...
+
+    @abstractmethod
+    async def read_permission_by_name(self, name: str, **kwargs: Any) -> Permission:
+        """Read a permission by its name."""
         ...
 
     @abstractmethod
@@ -53,11 +58,6 @@ class PermissionRepository(ABC):
         **kwargs: Any,
     ) -> None:
         """Update permission preferences."""
-        ...
-
-    @abstractmethod
-    async def read_permission_by_name(self, name: str, **kwargs: Any) -> Optional[Permission]:
-        """Read a permission by its name."""
         ...
 
     @abstractmethod

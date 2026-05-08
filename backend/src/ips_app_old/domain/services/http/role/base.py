@@ -3,12 +3,12 @@ from typing import Optional, List, Tuple, Any
 from ips_app_old.domain.models.role import Role
 from ips_app_old.domain.models.permission import Permission
 from ips_app_old.ports.driving.http.role import RoleHTTPPort
-from ips_app_old.ports.driven.repository.role import RoleRepositoryPort
+from ips_app_old.ports.driven.repository.role import RoleRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException
 
 class RoleHTTPService(RoleHTTPPort):
-    def __init__(self, repo: RoleRepositoryPort, log: GenericLoggingPort):
+    def __init__(self, repo: RoleRepository, log: GenericLoggingPort):
         self.repo = repo
         self.log = log
         self.tag_class = "RoleHTTPService"

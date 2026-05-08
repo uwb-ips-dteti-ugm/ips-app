@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 from beanie.operators import In
 from beanie import PydanticObjectId
 from ips_app_old.domain.models.feature import Feature
-from ips_app_old.ports.driven.repository.feature import FeatureRepositoryPort
+from ips_app_old.ports.driven.repository.feature import FeatureRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException, DuplicateException
 from ips_app_old.adapters.driven.repository.feature.beanie_model import FeatureDocument
 from ips_app_old.adapters.driven.repository.permission.beanie_model import PermissionDocument
 
 
-class BeanieFeatureRepository(FeatureRepositoryPort):
+class BeanieFeatureRepository(FeatureRepository):
     def __init__(self, log: GenericLoggingPort):
         self.log = log
         self.tag_class = "BeanieFeatureRepository"

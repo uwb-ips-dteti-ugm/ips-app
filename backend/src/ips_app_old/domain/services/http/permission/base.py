@@ -2,12 +2,12 @@ import json
 from typing import Optional, List, Tuple, Any
 from ips_app_old.domain.models.permission import Permission
 from ips_app_old.ports.driving.http.permission import PermissionHTTPPort
-from ips_app_old.ports.driven.repository.permission import PermissionRepositoryPort
+from ips_app_old.ports.driven.repository.permission import PermissionRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException
 
 class PermissionHTTPService(PermissionHTTPPort):
-    def __init__(self, repo: PermissionRepositoryPort, log: GenericLoggingPort):
+    def __init__(self, repo: PermissionRepository, log: GenericLoggingPort):
         self.repo = repo
         self.log = log
         self.tag_class = "PermissionHTTPService"

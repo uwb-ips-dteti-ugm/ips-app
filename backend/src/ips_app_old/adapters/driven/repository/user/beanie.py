@@ -3,13 +3,13 @@ from pymongo.errors import DuplicateKeyError
 from datetime import datetime, timezone
 from beanie import PydanticObjectId
 from ips_app_old.domain.models.user import User, UserState, UserStatus
-from ips_app_old.ports.driven.repository.user import UserRepositoryPort
+from ips_app_old.ports.driven.repository.user import UserRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import NotFoundException, DuplicateException
 from ips_app_old.adapters.driven.repository.user.beanie_model import UserDocument
 
 
-class BeanieUserRepository(UserRepositoryPort):
+class BeanieUserRepository(UserRepository):
     def __init__(self, log: GenericLoggingPort):
         self.log = log
         self.tag_class = "BeanieUserRepository"

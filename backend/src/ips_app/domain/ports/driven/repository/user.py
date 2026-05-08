@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple, Any, Dict
-from ips_app_old.domain.models.user import User, UserState, UserStatus
+from typing import Any, Dict, List, Optional, Tuple
+
+from ips_app.domain.models.user import User, UserAuth, UserAuthType, UserState, UserStatus
 
 
 class UserRepository(ABC):
@@ -9,15 +10,25 @@ class UserRepository(ABC):
         self,
         role_id: Any,
         name: str,
+        auths: Optional[List[UserAuth]] = None,
         created_by: Optional[int] = None,
         **kwargs: Any,
     ) -> User:
-        """Create a new user."""
+        """Create a user, optionally with embedded auth records."""
         ...
 
     @abstractmethod
-    async def read_user_by_id(self, id: Any, **kwargs: Any) -> Optional[User]:
+    async def read_user_by_id(self, id: Any, **kwargs: Any) -> User:
         """Read a user by its ID."""
+        ...
+
+    @abstractmethod
+    async def read_user_by_username(
+        self,
+        username: str,
+        **kwargs: Any,
+    ) -> User:
+        """Read a user by password-auth username."""
         ...
 
     @abstractmethod
@@ -31,6 +42,50 @@ class UserRepository(ABC):
         **kwargs: Any,
     ) -> Tuple[List[User], int]:
         """Read users with pagination and filtering."""
+        ...
+
+    @abstractmethod
+    async def add_user_auth_by_id(
+        self,
+        id: Any,
+        auth: UserAuth,
+        updated_by: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Add an embedded auth record to a user."""
+        ...
+
+    @abstractmethod
+    async def update_user_password_auth_info_by_id(
+        self,
+        id: Any,
+        username: Optional[str] = None,
+        updated_by: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Update a user's password-auth profile fields."""
+        ...
+
+    @abstractmethod
+    async def update_user_password_auth_password_by_id(
+        self,
+        id: Any,
+        password_hash: str,
+        updated_by: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Update a user's password-auth password hash."""
+        ...
+
+    @abstractmethod
+    async def delete_user_auth_by_id(
+        self,
+        id: Any,
+        auth_type: UserAuthType,
+        updated_by: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Delete a user's embedded auth record by auth type."""
         ...
 
     @abstractmethod
@@ -53,7 +108,7 @@ class UserRepository(ABC):
         updated_by: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
-        """Update user state (online, offline, etc.)."""
+        """Update user state."""
         ...
 
     @abstractmethod
@@ -64,7 +119,7 @@ class UserRepository(ABC):
         updated_by: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
-        """Update user status (active, suspended, etc.)."""
+        """Update user status."""
         ...
 
     @abstractmethod
@@ -96,7 +151,7 @@ class UserRepository(ABC):
         updated_by: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
-        """Update user last signed in timestamp."""
+        """Update user last signed-in timestamp."""
         ...
 
     @abstractmethod

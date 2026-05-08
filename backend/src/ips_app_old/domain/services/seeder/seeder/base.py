@@ -1,8 +1,8 @@
 from ips_app_old.ports.driving.seeder.seeder import SeederPort
-from ips_app_old.ports.driven.repository.permission import PermissionRepositoryPort
-from ips_app_old.ports.driven.repository.role import RoleRepositoryPort
-from ips_app_old.ports.driven.repository.feature import FeatureRepositoryPort
-from ips_app_old.ports.driven.repository.user import UserRepositoryPort
+from ips_app_old.ports.driven.repository.permission import PermissionRepository
+from ips_app_old.ports.driven.repository.role import RoleRepository
+from ips_app_old.ports.driven.repository.feature import FeatureRepository
+from ips_app_old.ports.driven.repository.user import UserRepository
 from ips_app_old.ports.driven.repository.auth import AuthRepositoryPort
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.utils.password import hash_password
@@ -21,10 +21,10 @@ class SeederService(SeederPort):
         admin_name: str,
         admin_username: str,
         admin_password: str,
-        repo_perm: PermissionRepositoryPort,
-        repo_role: RoleRepositoryPort,
-        repo_feat: FeatureRepositoryPort,
-        repo_user: UserRepositoryPort,
+        repo_perm: PermissionRepository,
+        repo_role: RoleRepository,
+        repo_feat: FeatureRepository,
+        repo_user: UserRepository,
         repo_auth: AuthRepositoryPort,
         log: GenericLoggingPort,
     ):

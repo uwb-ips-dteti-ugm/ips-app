@@ -4,8 +4,8 @@ from ips_app_old.domain.models.user import User, UserAccessTokenClaims, UserRefr
 from ips_app_old.domain.models.auth import Auth
 from ips_app_old.ports.driving.http.auth import AuthHTTPPort
 from ips_app_old.ports.driven.repository.auth import AuthRepositoryPort
-from ips_app_old.ports.driven.repository.user import UserRepositoryPort
-from ips_app_old.ports.driven.repository.role import RoleRepositoryPort
+from ips_app_old.ports.driven.repository.user import UserRepository
+from ips_app_old.ports.driven.repository.role import RoleRepository
 from ips_app_old.ports.driven.logging.generic import GenericLoggingPort
 from ips_app_old.domain.models.exception import DomainException, NotFoundException
 from ips_app_old.utils.password import hash_password, verify_password
@@ -16,8 +16,8 @@ class AuthHTTPService(AuthHTTPPort):
         self, 
         client: AsyncIOMotorClient,
         repo_auth: AuthRepositoryPort, 
-        repo_user: UserRepositoryPort, 
-        repo_role: RoleRepositoryPort,
+        repo_user: UserRepository, 
+        repo_role: RoleRepository,
         log: GenericLoggingPort
     ):
         self.client = client

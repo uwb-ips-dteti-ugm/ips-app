@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
-from ips_app_old.domain.models.user import UserAccessTokenClaims, UserRefreshTokenClaims
-from ips_app_old.domain.models.exception import InvalidTokenException, ExpiredTokenException
+from ips_app.domain.models.user import UserAccessTokenClaims, UserRefreshTokenClaims
+from ips_app.domain.models.exception import (
+    ExpiredTokenDomainException,
+    InvalidTokenDomainException,
+)
 
 _ACCESS_TOKEN_PRIVATE_KEY: Optional[str] = None
 _ACCESS_TOKEN_EXPIRY: Optional[int] = None  # seconds
@@ -49,9 +52,9 @@ def validate_access_token(token: str) -> UserAccessTokenClaims:
     try:
         payload = jwt.decode(token, _ACCESS_TOKEN_PRIVATE_KEY, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
-        raise ExpiredTokenException()
+        raise ExpiredTokenDomainException()
     except jwt.InvalidTokenError:
-        raise InvalidTokenException()
+        raise InvalidTokenDomainException()
     return UserAccessTokenClaims(
         user_id=payload["user_id"],
         name=payload["name"],
@@ -65,7 +68,7 @@ def validate_refresh_token(token: str) -> UserRefreshTokenClaims:
     try:
         payload = jwt.decode(token, _REFRESH_TOKEN_PRIVATE_KEY, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
-        raise ExpiredTokenException()
+        raise ExpiredTokenDomainException()
     except jwt.InvalidTokenError:
-        raise InvalidTokenException()
+        raise InvalidTokenDomainException()
     return UserRefreshTokenClaims(user_id=payload["user_id"])
