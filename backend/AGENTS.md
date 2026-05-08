@@ -1,45 +1,162 @@
 # Project Overview: IPS App Backend
 
-This backend is built using **Hexagonal Architecture (Ports and Adapters)** with **FastAPI** and **MongoDB (Beanie ODM)**. It emphasizes decoupling business logic from infrastructure.
+This backend is built with **Hexagonal Architecture (Ports and Adapters)** using **FastAPI**, **MongoDB**, **Motor**, and **Beanie ODM**. Business/application logic depends on ports and domain models. Framework and database details stay in controllers, compositions, and adapters.
 
 ## Directory Structure
 
-- `src/ips_app/domain/models/`: Pure domain entities (Pydantic `BaseModel`) and Beanie Documents (`Document`).
-- `src/ips_app/domain/services/`: Business logic implementations that fulfill driving ports.
-- `src/ips_app/ports/driving/`: Inward-facing interfaces (e.g., HTTP Service interfaces).
-- `src/ips_app/ports/driven/`: Outward-facing interfaces (e.g., Repository, Logging).
-- `src/ips_app/adapters/driving/`: Entry point implementations (FastAPI Handlers, DTOs, Middlewares, Routes).
-- `src/ips_app/adapters/driven/`: Infrastructure implementations (Beanie Repositories, specific Loggers).
-- `src/ips_app/utils/`: Shared utilities (Password hashing, JWT, Validators).
+- `src/ips_app/main.py`: ASGI entrypoint. Imports `create_app()` from `compositions/fastapi.py` and exposes `app`.
+- `src/ips_app/compositions/fastapi.py`: FastAPI composition root. Loads config, creates the Mongo client, initializes Beanie, wires repositories, services, handlers, routes, and middleware.
+- `src/ips_app/compositions/seeder.py`: Reserved for the seed composition entrypoint.
+- `src/ips_app/config/`: Environment variable loading.
+- `src/ips_app/domain/models/`: Pure domain models and domain exceptions. These must not depend on Beanie, FastAPI, Motor, or controller DTOs.
+- `src/ips_app/domain/ports/driving/`: Inbound interfaces, such as HTTP service contracts.
+- `src/ips_app/domain/ports/driven/`: Outbound interfaces, such as repositories and logging.
+- `src/ips_app/services/http/`: Business/application service implementations for HTTP driving ports.
+- `src/ips_app/controllers/http/`: FastAPI-facing code: DTOs, handlers, middlewares, and route factories.
+- `src/ips_app/adapters/repository/`: Beanie document models and repository adapter implementations.
+- `src/ips_app/adapters/logging/`: Concrete logging adapter implementations.
+- `src/ips_app/utils/`: Shared utilities for password hashing, JWT tokens, and validation.
+
+## Application Flow
+
+Startup begins in `src/ips_app/main.py`, which calls `create_app()` from `src/ips_app/compositions/fastapi.py`.
+
+`create_app()` performs runtime wiring:
+
+1. Loads environment variables from `config/env_var.py`.
+2. Configures access-token and refresh-token settings.
+3. Creates the selected logger implementation.
+4. Creates a Motor `AsyncIOMotorClient`.
+5. Initializes Beanie in the FastAPI lifespan with current document models.
+6. Instantiates driven adapters, mainly Beanie repositories.
+7. Instantiates HTTP services with repository and logging ports.
+8. Instantiates HTTP handlers with driving service ports.
+9. Includes FastAPI routers through each module's `create_router(...)` factory.
+10. Adds `JwtMiddleware` as the outer request middleware.
+
+A typical HTTP request flows through the system like this:
+
+```text
+HTTP request
+ -> JwtMiddleware
+ -> route dependencies, such as logger(...) and feature_guard(...)
+ -> FastAPI route function
+ -> HTTP handler
+ -> HTTP service
+ -> driven repository port
+ -> Beanie repository adapter
+ -> MongoDB
+```
+
+Example: `POST /auth/sign-in`
+
+```text
+routes/auth.py
+ -> AuthHandler.post_sign_in()
+ -> BaseAuthHTTP.sign_in()
+ -> UserRepository.read_user_by_username()
+ -> BeanieUserRepository
+ -> UserDocument in the users collection
+ -> user.password_auth password verification
+ -> token generation
+ -> TokenResponse
+```
+
+There is no separate auth repository or auth collection in the new app. Password auth is embedded in `User.auths`.
 
 ## Key Patterns & Conventions
 
 ### 1. Decoupled Models
-Every entity has two representations in the domain layer:
-- **Domain Model**: A pure Pydantic `BaseModel` used for business logic.
-- **Document Model**: A Beanie `Document` with MongoDB-specific configurations (indexes, etc.). It includes a `to_domain()` method.
 
-### 2. Logging
-- **Tag Format**: `ClassName.function_name`.
-- **Implementation**: Classes define `self.tag_class = "ClassName"` in `__init__`. Methods define `tag = f"{self.tag_class}.function_name"` for use in `log.info/error` calls.
+Most persisted entities have two representations:
 
-### 3. Asynchronous everything
-All I/O operations (database, logging, services) are `async` and must be awaited.
+- **Domain model**: A pure Pydantic `BaseModel` in `domain/models/`, used by services and ports.
+- **Document model**: A Beanie `Document` in `adapters/repository/*/beanie_model.py`, with MongoDB-specific settings, indexes, links, and a `to_domain()` method.
 
-### 4. Database & Transactions
-- **ODM**: Beanie 2.x.
-- **Transactions**: Managed at the **Service Layer** using the Motor `AsyncIOMotorClient`. Sessions are passed to repository methods via `**kwargs`.
-- **Relationships**: Managed using Beanie `Link`. Access IDs using `link.ref.id` to avoid unnecessary database fetches.
+Do not put Beanie documents in the domain layer.
 
-### 5. API Naming Conventions
-- **Handlers**: Methods follow the `httpverb_resource` pattern (e.g., `post_user`, `patch_role_preferences`, `get_user_me`).
-- **Feature Guards**: Feature names use `/` as a separator (e.g., `user/manage`, `auth/view`).
+### 2. Ports and Adapters
 
-### 6. Dependency Injection
-Dependencies are injected via constructors (Services take Repository ports; Handlers take Service ports). In FastAPI routes, use the `create_router` factory pattern to wire these dependencies.
+- Driving ports define what the application can do from the outside, such as HTTP service operations.
+- Driven ports define what the application needs from infrastructure, such as repositories and logging.
+- HTTP services implement driving ports and depend on driven ports.
+- HTTP handlers depend on driving ports, not concrete service classes.
+- Beanie repositories implement driven repository ports.
+- Repository and HTTP port class names do not use the `Port` suffix.
+
+### 3. Controllers
+
+- DTOs live in `controllers/http/dto/`.
+- Handlers live in `controllers/http/handlers/`.
+- Middlewares live in `controllers/http/middlewares/`.
+- Route factories live in `controllers/http/routes/` and are named `create_router(...)`.
+- Handlers translate domain results into DTOs and map domain exceptions to HTTP responses through `handlers/exception.py`.
+- DTOs are HTTP transport shapes. Domain exceptions do not belong in DTO modules.
+
+### 4. Auth & User
+
+- Auth data is embedded on `User.auths`.
+- `UserAuth` is a discriminated union so future auth methods can be added cleanly.
+- Current supported auth type is password auth via `UserPasswordAuth`.
+- Do not add a separate `AuthDocument`, auth repository, or auth MongoDB collection.
+- Do not add an OAuth domain model until the product needs one.
+
+### 5. Feature Access
+
+- Feature CRUD belongs to `FeatureHTTP`.
+- User feature access checks belong to `UserHTTP`, including `get_accessible_features(...)` and `can_access_feature_by_name(...)`.
+- `feature_guard(...)` receives a `UserHTTP` service.
+- Feature guard names use `/` separators, such as `user/manage`, `auth/manage`, and `feature/view`.
+
+### 6. Logging
+
+- **Tag format**: `ClassName.function_name` for classes, and action-specific route tags such as `UserRoutes.get_user`.
+- Classes define `self.tag_class = "ClassName"` in `__init__`.
+- Methods define `tag = f"{self.tag_class}.function_name"` and pass that tag to `log.info(...)` or `log.error(...)`.
+- Route logger dependencies should be specific per route, with action-specific `2xx`, `4xx`, and `5xx` messages.
+
+### 7. Error Handling
+
+- Do not expose raw Python or library exceptions past adapters/services.
+- Domain-level errors should use domain exceptions from `domain/models/exception.py`.
+- Generic unexpected errors in adapters and services should be wrapped as `UnexpectedDomainException`.
+- Handlers convert domain exceptions into HTTP responses.
+
+### 8. Asynchronous I/O
+
+All database, logging, repository, and service I/O is async and must be awaited.
+
+### 9. Database & Transactions
+
+- **ODM**: Beanie `1.26.0` as pinned in `requirements.txt`.
+- **Mongo driver**: Motor `AsyncIOMotorClient`.
+- **Beanie initialization**: Done in `compositions/fastapi.py` lifespan.
+- **Document models**: `PermissionDocument`, `RoleDocument`, `UserDocument`, and `FeatureDocument`.
+- **Transactions**: Managed at the service layer when a multi-document operation requires them. Services pass `session=session` to repositories through `**kwargs`.
+- **Relationships**: Managed with Beanie `Link`. When only an ID is needed, prefer link reference IDs instead of fetching full documents.
+
+### 10. API Naming Conventions
+
+- Route factories are named `create_router(...)`.
+- Handlers use the `httpverb_resource` pattern, such as `post_sign_in`, `patch_auth_me_password`, and `get_auths_users`.
+- Base service implementations are named with the `Base...HTTP` pattern, such as `BaseAuthHTTP`, `BaseUserHTTP`, and `BasePermissionHTTP`.
+- Private helper methods should be placed at the bottom of adapter and service classes.
+
+### 11. Dependency Injection
+
+Dependencies are injected through constructors:
+
+- Services take repository and logging ports.
+- Handlers take service ports.
+- Routes receive handlers, the `UserHTTP` service for guards, and loggers through `create_router(...)`.
+
+Keep new modules consistent with this wiring style.
 
 ## Key Modules
-- **Auth**: Username-based authentication, JWT tokens, and password management.
-- **User**: Profile management, state (online/offline), and status (active/banned).
-- **Role & Permission**: Granular access control. Roles contain lists of permission links.
-- **Feature**: Access gates for specific system functionalities, mapped to permissions.
+
+- **Auth**: Username/password authentication, password hashing, JWT access/refresh tokens, sign-in, sign-up, sign-out, account management, and embedded auth metadata updates.
+- **User**: Profile data, preferences, role assignment, online/offline state, active/banned status, and feature access checks.
+- **Role & Permission**: Granular access control. Roles link to permissions.
+- **Feature**: Runtime access gates for API capabilities. Features link to permissions.
+- **Composition**: Wires FastAPI, Beanie, repositories, services, handlers, routes, and middleware.
+- **Seeder**: Reserved for creating base permissions, roles, feature gates, admin account, and test accounts.
