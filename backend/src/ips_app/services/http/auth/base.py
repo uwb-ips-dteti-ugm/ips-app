@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from ips_app.domain.models.exception import (
     DomainException,
@@ -256,31 +256,6 @@ class BaseAuthHTTP(AuthHTTP):
                 tag,
                 "Failed to update auth info",
                 {"error": str(e), "user_id": str(user_id)},
-            )
-            raise UnexpectedDomainException(str(e)) from e
-
-    async def get_auths_users(
-        self,
-        page: int,
-        limit: int,
-        cursor_id: Optional[Any] = None,
-        search: Optional[str] = None,
-    ) -> Tuple[List[User], int]:
-        tag = f"{self.tag_class}.get_auths_users"
-        try:
-            return await self.repo_user.read_users_by_pagination(
-                page=page,
-                limit=limit,
-                cursor_id=cursor_id,
-                search=search,
-            )
-        except DomainException:
-            raise
-        except Exception as e:
-            await self.log.error(
-                tag,
-                "Failed to get auth users",
-                {"error": str(e), "page": page, "limit": limit},
             )
             raise UnexpectedDomainException(str(e)) from e
 

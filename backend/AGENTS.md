@@ -138,7 +138,7 @@ All database, logging, repository, and service I/O is async and must be awaited.
 ### 10. API Naming Conventions
 
 - Route factories are named `create_router(...)`.
-- Handlers use the `httpverb_resource` pattern, such as `post_sign_in`, `patch_auth_me_password`, and `get_auths_users`.
+- Handlers use the `httpverb_resource` pattern, such as `post_sign_in`, `patch_auth_me_password`, and `get_users`.
 - Base service implementations are named with the `Base...HTTP` pattern, such as `BaseAuthHTTP`, `BaseUserHTTP`, and `BasePermissionHTTP`.
 - Private helper methods should be placed at the bottom of adapter and service classes.
 
@@ -154,7 +154,7 @@ Keep new modules consistent with this wiring style.
 
 ## Key Modules
 
-- **Auth**: Username/password authentication, password hashing, JWT access/refresh tokens, sign-in, sign-up, sign-out, account management, and embedded auth metadata updates.
+- **Auth**: Username/password authentication, password hashing, JWT access/refresh tokens, sign-in, sign-up, sign-out, password changes, and embedded auth metadata updates.
 - **User**: Profile data, preferences, role assignment, online/offline state, active/banned status, and feature access checks.
 - **Role & Permission**: Granular access control. Roles link to permissions.
 - **Feature**: Runtime access gates for API capabilities. Features link to permissions.

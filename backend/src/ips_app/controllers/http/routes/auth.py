@@ -1,9 +1,6 @@
-from typing import Optional
-
 from fastapi import APIRouter
 
 from ips_app.controllers.http.dto.auth import (
-    AuthUsersResponse,
     RefreshTokenRequest,
     RegisterRequest,
     SetAuthInfoRequest,
@@ -121,33 +118,6 @@ def create_router(
     )
     async def register(request: RegisterRequest):
         return await handler.post_register(request)
-
-    @router.get(
-        "/accounts",
-        response_model=AuthUsersResponse,
-        dependencies=[
-            logger(
-                log,
-                tag="AuthRoutes.get_accounts",
-                msg_2xx="Auth accounts fetched successfully",
-                msg_4xx="Auth accounts fetch rejected",
-                msg_5xx="Auth accounts fetch failed",
-            ),
-            guard_manage,
-        ],
-    )
-    async def get_auths_users(
-        page: int = 0,
-        limit: int = 10,
-        cursor_id: Optional[str] = None,
-        search: Optional[str] = None,
-    ):
-        return await handler.get_auths_users(
-            page=page,
-            limit=limit,
-            cursor_id=cursor_id,
-            search=search,
-        )
 
     @router.patch(
         "/me/password",

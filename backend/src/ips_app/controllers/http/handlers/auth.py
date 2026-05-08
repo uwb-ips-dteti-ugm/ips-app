@@ -1,10 +1,9 @@
-from typing import Optional, Union
+from typing import Union
 
 from fastapi import HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from ips_app.controllers.http.dto.auth import (
-    AuthUsersResponse,
     RefreshTokenRequest,
     RegisterRequest,
     SetAuthInfoRequest,
@@ -90,29 +89,6 @@ class AuthHandler:
             return TokenResponse(
                 access_token=access_token,
                 refresh_token=refresh_token,
-            )
-        except Exception as e:
-            return self._handle_exception(e)
-
-    async def get_auths_users(
-        self,
-        page: int = 0,
-        limit: int = 10,
-        cursor_id: Optional[str] = None,
-        search: Optional[str] = None,
-    ) -> Union[AuthUsersResponse, JSONResponse]:
-        try:
-            items, total = await self.service.get_auths_users(
-                page=page,
-                limit=limit,
-                cursor_id=cursor_id,
-                search=search,
-            )
-            return AuthUsersResponse.from_domain(
-                items=items,
-                page=page,
-                limit=limit,
-                total=total,
             )
         except Exception as e:
             return self._handle_exception(e)

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from ips_app.domain.models.user import User
 
@@ -63,15 +63,4 @@ class AuthHTTP(ABC):
     @abstractmethod
     async def set_auth_info(self, user_id: Any, username: Optional[str] = None) -> None:
         """Update embedded auth information by user identity."""
-        ...
-
-    @abstractmethod
-    async def get_auths_users(
-        self,
-        page: int,
-        limit: int,
-        cursor_id: Optional[Any] = None,
-        search: Optional[str] = None,
-    ) -> Tuple[List[User], int]:
-        """Get users with embedded auth data for auth management."""
         ...
