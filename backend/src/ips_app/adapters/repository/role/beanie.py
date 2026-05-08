@@ -22,40 +22,6 @@ class BeanieRoleRepository(RoleRepository):
         self.log = log
         self.tag_class = "BeanieRoleRepository"
 
-    def _to_obj_id(self, value: Any) -> Any:
-        if isinstance(value, str) and PydanticObjectId.is_valid(value):
-            return PydanticObjectId(value)
-        return value
-
-    def _permission_link_id(self, permission: Any) -> Any:
-        if isinstance(permission, PermissionDocument):
-            return permission.id
-        if hasattr(permission, "ref") and permission.ref:
-            return permission.ref.id
-        if hasattr(permission, "value") and permission.value:
-            return permission.value.id
-        return None
-
-    async def _read_permission_documents(
-        self,
-        permission_ids: List[Any],
-        session: Any,
-    ) -> List[PermissionDocument]:
-        ids = [self._to_obj_id(permission_id) for permission_id in permission_ids]
-        if not ids:
-            return []
-
-        docs = await PermissionDocument.find(
-            In(PermissionDocument.id, ids),
-            session=session,
-        ).to_list()
-        found_ids = {str(doc.id) for doc in docs}
-        missing_ids = [str(permission_id) for permission_id in ids if str(permission_id) not in found_ids]
-        if missing_ids:
-            raise NotFoundDomainException(", ".join(missing_ids), "permissions")
-
-        return docs
-
     async def create_role(
         self,
         name: str,
@@ -432,3 +398,37 @@ class BeanieRoleRepository(RoleRepository):
                 {"error": str(e), "id": str(id)},
             )
             raise UnexpectedDomainException(str(e)) from e
+
+    def _to_obj_id(self, value: Any) -> Any:
+        if isinstance(value, str) and PydanticObjectId.is_valid(value):
+            return PydanticObjectId(value)
+        return value
+
+    def _permission_link_id(self, permission: Any) -> Any:
+        if isinstance(permission, PermissionDocument):
+            return permission.id
+        if hasattr(permission, "ref") and permission.ref:
+            return permission.ref.id
+        if hasattr(permission, "value") and permission.value:
+            return permission.value.id
+        return None
+
+    async def _read_permission_documents(
+        self,
+        permission_ids: List[Any],
+        session: Any,
+    ) -> List[PermissionDocument]:
+        ids = [self._to_obj_id(permission_id) for permission_id in permission_ids]
+        if not ids:
+            return []
+
+        docs = await PermissionDocument.find(
+            In(PermissionDocument.id, ids),
+            session=session,
+        ).to_list()
+        found_ids = {str(doc.id) for doc in docs}
+        missing_ids = [str(permission_id) for permission_id in ids if str(permission_id) not in found_ids]
+        if missing_ids:
+            raise NotFoundDomainException(", ".join(missing_ids), "permissions")
+
+        return docs

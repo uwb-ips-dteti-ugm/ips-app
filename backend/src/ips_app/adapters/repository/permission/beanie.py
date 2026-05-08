@@ -20,11 +20,6 @@ class BeaniePermissionRepository(PermissionRepository):
         self.log = log
         self.tag_class = "BeaniePermissionRepository"
 
-    def _to_obj_id(self, value: Any) -> Any:
-        if isinstance(value, str) and PydanticObjectId.is_valid(value):
-            return PydanticObjectId(value)
-        return value
-
     async def create_permission(
         self,
         name: str,
@@ -243,3 +238,8 @@ class BeaniePermissionRepository(PermissionRepository):
                 {"error": str(e), "id": str(id)},
             )
             raise UnexpectedDomainException(str(e)) from e
+
+    def _to_obj_id(self, value: Any) -> Any:
+        if isinstance(value, str) and PydanticObjectId.is_valid(value):
+            return PydanticObjectId(value)
+        return value

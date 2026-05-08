@@ -31,60 +31,6 @@ class BeanieUserRepository(UserRepository):
         self.tag_class = "BeanieUserRepository"
         self.auth_adapter = TypeAdapter(UserAuth)
 
-    def _to_obj_id(self, value: Any) -> Any:
-        if isinstance(value, str) and PydanticObjectId.is_valid(value):
-            return PydanticObjectId(value)
-        return value
-
-    def _duplicate_field(self, error: DuplicateKeyError) -> str:
-        error_message = str(error)
-        if "auths.username" in error_message or "username" in error_message:
-            return "username"
-        return "auth"
-
-    async def _read_user_document(
-        self,
-        id: Any,
-        session: Any,
-        fetch_links: bool = False,
-    ) -> UserDocument:
-        doc = await UserDocument.get(
-            self._to_obj_id(id),
-            fetch_links=fetch_links,
-            session=session,
-        )
-        if not doc:
-            raise NotFoundDomainException(str(id), "users")
-        return doc
-
-    async def _read_role_document(
-        self,
-        role_id: Any,
-        session: Any,
-    ) -> Optional[RoleDocument]:
-        if role_id is None:
-            return None
-
-        role = await RoleDocument.get(self._to_obj_id(role_id), session=session)
-        if not role:
-            raise NotFoundDomainException(str(role_id), "roles")
-        return role
-
-    def _normalize_auths(self, auths: Optional[List[UserAuth]]) -> List[UserAuth]:
-        normalized = [self.auth_adapter.validate_python(auth) for auth in auths or []]
-        seen_types: set[UserAuthType] = set()
-        for auth in normalized:
-            if auth.type in seen_types:
-                raise DuplicateDomainException("auths.type", "users")
-            seen_types.add(auth.type)
-        return normalized
-
-    def _password_auth_index(self, doc: UserDocument) -> int:
-        for index, auth in enumerate(doc.auths):
-            if isinstance(auth, UserPasswordAuth):
-                return index
-        raise NotFoundDomainException(UserAuthType.PASSWORD.value, "auths")
-
     async def create_user(
         self,
         role_id: Any,
@@ -620,3 +566,57 @@ class BeanieUserRepository(UserRepository):
                 {"error": str(e), "id": str(id)},
             )
             raise UnexpectedDomainException(str(e)) from e
+
+    def _to_obj_id(self, value: Any) -> Any:
+        if isinstance(value, str) and PydanticObjectId.is_valid(value):
+            return PydanticObjectId(value)
+        return value
+
+    def _duplicate_field(self, error: DuplicateKeyError) -> str:
+        error_message = str(error)
+        if "auths.username" in error_message or "username" in error_message:
+            return "username"
+        return "auth"
+
+    async def _read_user_document(
+        self,
+        id: Any,
+        session: Any,
+        fetch_links: bool = False,
+    ) -> UserDocument:
+        doc = await UserDocument.get(
+            self._to_obj_id(id),
+            fetch_links=fetch_links,
+            session=session,
+        )
+        if not doc:
+            raise NotFoundDomainException(str(id), "users")
+        return doc
+
+    async def _read_role_document(
+        self,
+        role_id: Any,
+        session: Any,
+    ) -> Optional[RoleDocument]:
+        if role_id is None:
+            return None
+
+        role = await RoleDocument.get(self._to_obj_id(role_id), session=session)
+        if not role:
+            raise NotFoundDomainException(str(role_id), "roles")
+        return role
+
+    def _normalize_auths(self, auths: Optional[List[UserAuth]]) -> List[UserAuth]:
+        normalized = [self.auth_adapter.validate_python(auth) for auth in auths or []]
+        seen_types: set[UserAuthType] = set()
+        for auth in normalized:
+            if auth.type in seen_types:
+                raise DuplicateDomainException("auths.type", "users")
+            seen_types.add(auth.type)
+        return normalized
+
+    def _password_auth_index(self, doc: UserDocument) -> int:
+        for index, auth in enumerate(doc.auths):
+            if isinstance(auth, UserPasswordAuth):
+                return index
+        raise NotFoundDomainException(UserAuthType.PASSWORD.value, "auths")
