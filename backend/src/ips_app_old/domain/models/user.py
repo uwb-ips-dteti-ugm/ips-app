@@ -1,31 +1,8 @@
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
-from ips_app.domain.models.role import Role
-
-
-class UserAuthType(StrEnum):
-    PASSWORD = "password"
-
-
-class UserPasswordAuth(BaseModel):
-    type: Literal[UserAuthType.PASSWORD] = UserAuthType.PASSWORD
-    username: str
-    password_hash: str
-
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[int] = None
-    updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
-
-
-UserAuth = Annotated[
-    Union[
-        UserPasswordAuth,
-    ],
-    Field(discriminator="type"),
-]
+from ips_app_old.domain.models.role import Role
 
 
 class UserState(StrEnum):
@@ -46,7 +23,6 @@ class User(BaseModel):
     role: Optional[Role] = None
     name: str
     bio: str = ""
-    auths: List[UserAuth] = Field(default_factory=list)
     state: UserState = UserState.OFFLINE
     status: UserStatus = UserStatus.ACTIVE
     preferences: Dict[str, Any] = Field(default_factory=dict)
@@ -60,17 +36,6 @@ class User(BaseModel):
     updated_at: Optional[datetime] = None
     updated_by: Optional[int] = None
     version: int = 0
-
-    @property
-    def password_auth(self) -> Optional[UserPasswordAuth]:
-        return next(
-            (
-                auth
-                for auth in self.auths
-                if isinstance(auth, UserPasswordAuth)
-            ),
-            None,
-        )
 
 
 class UserAccessTokenClaims(BaseModel):
