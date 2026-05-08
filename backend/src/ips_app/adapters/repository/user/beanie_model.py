@@ -48,10 +48,10 @@ class UserDocument(Document):
         if self.role:
             if isinstance(self.role, RoleDocument):
                 role = self.role.to_domain()
-            elif hasattr(self.role, "ref") and self.role.ref:
-                role = Role(id=self.role.ref.id, name="")
-            elif hasattr(self.role, "value") and self.role.value:
-                role = self.role.value.to_domain()
+            elif role_ref := getattr(self.role, "ref", None):
+                role = Role(id=role_ref.id, name="")
+            elif role_value := getattr(self.role, "value", None):
+                role = role_value.to_domain()
 
         return User(
             id=self.id,

@@ -407,10 +407,10 @@ class BeanieRoleRepository(RoleRepository):
     def _permission_link_id(self, permission: Any) -> Any:
         if isinstance(permission, PermissionDocument):
             return permission.id
-        if hasattr(permission, "ref") and permission.ref:
-            return permission.ref.id
-        if hasattr(permission, "value") and permission.value:
-            return permission.value.id
+        if permission_ref := getattr(permission, "ref", None):
+            return permission_ref.id
+        if permission_value := getattr(permission, "value", None):
+            return permission_value.id
         return None
 
     async def _read_permission_documents(

@@ -29,10 +29,10 @@ class FeatureDocument(Document):
         for permission in self.permissions:
             if isinstance(permission, PermissionDocument):
                 permissions.append(permission.to_domain())
-            elif hasattr(permission, "ref") and permission.ref:
-                permissions.append(Permission(id=permission.ref.id, name=""))
-            elif hasattr(permission, "value") and permission.value:
-                permissions.append(permission.value.to_domain())
+            elif permission_ref := getattr(permission, "ref", None):
+                permissions.append(Permission(id=permission_ref.id, name=""))
+            elif permission_value := getattr(permission, "value", None):
+                permissions.append(permission_value.to_domain())
 
         return Feature(
             id=self.id,
