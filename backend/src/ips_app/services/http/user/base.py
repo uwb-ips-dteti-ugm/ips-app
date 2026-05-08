@@ -177,6 +177,20 @@ class BaseUserHTTP(UserHTTP):
             )
             raise UnexpectedDomainException(str(e)) from e
 
+    async def set_user_last_activity(self, user_id: Any) -> None:
+        tag = f"{self.tag_class}.set_user_last_activity"
+        try:
+            await self.repo.update_user_last_activity_at_by_id(user_id)
+        except DomainException:
+            raise
+        except Exception as e:
+            await self.log.error(
+                tag,
+                "Failed to set user last activity",
+                {"error": str(e), "id": str(user_id)},
+            )
+            raise UnexpectedDomainException(str(e)) from e
+
     async def remove_user(self, user_id: Any) -> str:
         tag = f"{self.tag_class}.remove_user"
         try:

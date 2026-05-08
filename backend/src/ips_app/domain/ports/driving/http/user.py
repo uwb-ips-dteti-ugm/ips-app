@@ -54,6 +54,11 @@ class UserHTTP(ABC):
         ...
 
     @abstractmethod
+    async def set_user_last_activity(self, user_id: Any) -> None:
+        """Update a user's last activity timestamp."""
+        ...
+
+    @abstractmethod
     async def remove_user(self, user_id: Any) -> str:
         """Remove a user."""
         ...

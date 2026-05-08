@@ -53,7 +53,10 @@ class BaseAuthHTTP(AuthHTTP):
                 auths=[auth],
             )
 
+            await self.repo_user.update_user_last_signed_in_at_by_id(user.id)
+            await self.repo_user.update_user_last_activity_at_by_id(user.id)
             full_user = await self.repo_user.read_user_by_id(user.id)
+
             await self.log.info(
                 tag,
                 "Successfully signed up user",
@@ -121,6 +124,7 @@ class BaseAuthHTTP(AuthHTTP):
                 raise DomainException("Invalid credentials")
 
             await self.repo_user.update_user_last_signed_in_at_by_id(user.id)
+            await self.repo_user.update_user_last_activity_at_by_id(user.id)
             full_user = await self.repo_user.read_user_by_id(user.id)
 
             await self.log.info(
@@ -146,6 +150,7 @@ class BaseAuthHTTP(AuthHTTP):
             user = await self.repo_user.read_user_by_id(claims.user_id)
 
             await self.repo_user.update_user_last_refreshed_at_by_id(user.id)
+            await self.repo_user.update_user_last_activity_at_by_id(user.id)
             full_user = await self.repo_user.read_user_by_id(user.id)
 
             await self.log.info(

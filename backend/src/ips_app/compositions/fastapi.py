@@ -21,6 +21,7 @@ from ips_app.controllers.http.handlers.feature import FeatureHandler
 from ips_app.controllers.http.handlers.permission import PermissionHandler
 from ips_app.controllers.http.handlers.role import RoleHandler
 from ips_app.controllers.http.handlers.user import UserHandler
+from ips_app.controllers.http.middlewares.activity_updater import ActivityUpdaterMiddleware
 from ips_app.controllers.http.middlewares.auth_jwt import JwtMiddleware
 from ips_app.controllers.http.routes import auth, feature, permission, role, user
 from ips_app.domain.models.exception import ValidatorDomainException
@@ -95,17 +96,23 @@ def create_app() -> FastAPI:
     app.include_router(permission.create_router(permission_handler, user_service, log))
     app.include_router(feature.create_router(feature_handler, user_service, log))
 
+    excluded_middleware_paths = [
+        "/docs",
+        "/docs/oauth2-redirect",
+        "/redoc",
+        "/openapi.json",
+        "/auth/sign-up",
+        "/auth/sign-in",
+        "/auth/refresh-token",
+    ]
+    app.add_middleware(
+        ActivityUpdaterMiddleware,
+        user_service=user_service,
+        excluded_paths=excluded_middleware_paths,
+    )
     app.add_middleware(
         JwtMiddleware,
-        excluded_paths=[
-            "/docs",
-            "/docs/oauth2-redirect",
-            "/redoc",
-            "/openapi.json",
-            "/auth/sign-up",
-            "/auth/sign-in",
-            "/auth/refresh-token",
-        ],
+        excluded_paths=excluded_middleware_paths,
     )
 
     return app
