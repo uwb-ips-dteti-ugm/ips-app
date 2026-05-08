@@ -551,6 +551,80 @@ class BeanieUserRepository(UserRepository):
             )
             raise UnexpectedDomainException(str(e)) from e
 
+    async def update_users_state_with_cutoffs(
+        self,
+        away_cutoff: datetime,
+        offline_cutoff: datetime,
+        updated_by: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
+        tag = f"{self.tag_class}.update_users_state_with_cutoffs"
+        session = kwargs.get("session")
+        try:
+            now = datetime.now(timezone.utc)
+            collection = UserDocument.get_motor_collection()
+
+            away_result = await collection.update_many(
+                {
+                    "last_activity_at": {
+                        "$ne": None,
+                        "$lt": away_cutoff,
+                        "$gt": offline_cutoff,
+                    },
+                    "state": {
+                        "$nin": [
+                            UserState.AWAY.value,
+                            UserState.DND.value,
+                        ],
+                    },
+                },
+                {
+                    "$set": {
+                        "state": UserState.AWAY.value,
+                        "updated_at": now,
+                        "updated_by": updated_by,
+                    },
+                    "$inc": {"version": 1},
+                },
+                session=session,
+            )
+            offline_result = await collection.update_many(
+                {
+                    "last_activity_at": {
+                        "$ne": None,
+                        "$lt": offline_cutoff,
+                    },
+                    "state": {
+                        "$nin": [
+                            UserState.OFFLINE.value,
+                            UserState.DND.value,
+                        ],
+                    },
+                },
+                {
+                    "$set": {
+                        "state": UserState.OFFLINE.value,
+                        "updated_at": now,
+                        "updated_by": updated_by,
+                    },
+                    "$inc": {"version": 1},
+                },
+                session=session,
+            )
+        except DomainException:
+            raise
+        except Exception as e:
+            await self.log.error(
+                tag,
+                "Failed to update user states with cutoffs",
+                {
+                    "error": str(e),
+                    "away_cutoff": away_cutoff.isoformat(),
+                    "offline_cutoff": offline_cutoff.isoformat(),
+                },
+            )
+            raise UnexpectedDomainException(str(e)) from e
+
     async def delete_user_by_id(self, id: Any, **kwargs: Any) -> None:
         tag = f"{self.tag_class}.delete_user_by_id"
         session = kwargs.get("session")

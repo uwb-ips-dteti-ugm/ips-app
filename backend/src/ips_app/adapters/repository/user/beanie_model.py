@@ -34,6 +34,7 @@ class UserDocument(Document):
         indexes = [
             [("status", 1)],
             [("state", 1)],
+            [("last_activity_at", 1), ("state", 1)],
             [("role.$id", 1)],
             IndexModel(
                 [("auths.username", 1)],

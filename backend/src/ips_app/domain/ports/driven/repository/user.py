@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from ips_app.domain.models.user import User, UserAuth, UserAuthType, UserState, UserStatus
@@ -172,6 +173,17 @@ class UserRepository(ABC):
         **kwargs: Any,
     ) -> None:
         """Update user last activity timestamp."""
+        ...
+
+    @abstractmethod
+    async def update_users_state_with_cutoffs(
+        self,
+        away_cutoff: datetime,
+        offline_cutoff: datetime,
+        updated_by: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Update users' state from the provided away and offline cutoffs."""
         ...
 
     @abstractmethod

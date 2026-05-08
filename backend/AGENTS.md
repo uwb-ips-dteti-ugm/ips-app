@@ -5,14 +5,16 @@ This backend is built with **Hexagonal Architecture (Ports and Adapters)** using
 ## Directory Structure
 
 - `src/ips_app/main.py`: ASGI entrypoint. Imports `create_app()` from `compositions/fastapi.py` and exposes `app`.
-- `src/ips_app/compositions/fastapi.py`: FastAPI composition root. Loads config, creates the Mongo client, initializes Beanie, wires repositories, services, handlers, routes, and middleware.
+- `src/ips_app/compositions/fastapi.py`: FastAPI composition root. Loads config, creates the Mongo client, initializes Beanie, wires repositories, services, handlers, routes, middleware, and APScheduler cron jobs.
 - `src/ips_app/compositions/seeder.py`: Reserved for the seed composition entrypoint.
 - `src/ips_app/config/`: Environment variable loading and default seed data.
 - `src/ips_app/domain/models/`: Pure domain models and domain exceptions. These must not depend on Beanie, FastAPI, Motor, or controller DTOs.
 - `src/ips_app/domain/ports/driving/`: Inbound interfaces, such as HTTP service contracts.
 - `src/ips_app/domain/ports/driven/`: Outbound interfaces, such as repositories and logging.
 - `src/ips_app/services/http/`: Business/application service implementations for HTTP driving ports.
+- `src/ips_app/services/cron/`: Business/application service implementations for cron driving ports.
 - `src/ips_app/controllers/http/`: FastAPI-facing code: DTOs, handlers, middlewares, and route factories.
+- `src/ips_app/controllers/cron/`: Scheduler-facing code: cron handlers and job factories.
 - `src/ips_app/adapters/repository/`: Beanie document models and repository adapter implementations.
 - `src/ips_app/adapters/logging/`: Concrete logging adapter implementations.
 - `src/ips_app/utils/`: Shared utilities for password hashing, JWT tokens, and validation.
@@ -33,6 +35,7 @@ Startup begins in `src/ips_app/main.py`, which calls `create_app()` from `src/ip
 8. Instantiates HTTP handlers with driving service ports.
 9. Includes FastAPI routers through each module's `create_router(...)` factory.
 10. Adds `JwtMiddleware` as the outer request middleware and `ActivityUpdaterMiddleware` inside it.
+11. Starts APScheduler cron jobs in the FastAPI lifespan after Beanie initialization.
 
 A typical HTTP request flows through the system like this:
 
@@ -93,6 +96,9 @@ Do not put Beanie documents in the domain layer.
 - Route factories live in `controllers/http/routes/` and are named `create_router(...)`.
 - Handlers translate domain results into DTOs and map domain exceptions to HTTP responses through `handlers/exception.py`.
 - DTOs are HTTP transport shapes. Domain exceptions do not belong in DTO modules.
+- Cron handlers live in `controllers/cron/handlers/` and call cron driving ports.
+- Cron job factories live in `controllers/cron/jobs/` and expose scheduler-friendly callables.
+- Keep APScheduler setup in composition code, not in cron services.
 
 ### 4. Auth & User
 
@@ -141,6 +147,7 @@ All database, logging, repository, and service I/O is async and must be awaited.
 - Route factories are named `create_router(...)`.
 - Handlers use the `httpverb_resource` pattern, such as `post_sign_in`, `patch_auth_me_password`, and `get_users`.
 - Base service implementations are named with the `Base...HTTP` pattern, such as `BaseAuthHTTP`, `BaseUserHTTP`, and `BasePermissionHTTP`.
+- Cron base service implementations are named with the `Base...Cron` pattern, such as `BaseUserStateUpdaterCron`.
 - Private helper methods should be placed at the bottom of adapter and service classes.
 
 ### 11. Dependency Injection
@@ -150,6 +157,7 @@ Dependencies are injected through constructors:
 - Services take repository and logging ports.
 - Handlers take service ports.
 - Routes receive handlers, the `UserHTTP` service for guards, and loggers through `create_router(...)`.
+- Cron jobs receive cron handlers through `create_job(...)`.
 
 Keep new modules consistent with this wiring style.
 

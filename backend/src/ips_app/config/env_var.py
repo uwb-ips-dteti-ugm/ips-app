@@ -22,6 +22,9 @@ class EnvVar:
     admin_name: str
     admin_username: str
     admin_password: str
+    user_state_to_away_after: int
+    user_state_to_offline_after: int
+    user_state_updater_cron_period: int
 
 
 def load_env_var() -> EnvVar:
@@ -39,6 +42,18 @@ def load_env_var() -> EnvVar:
         admin_name=_fallback("ADMIN_NAME", "admin"),
         admin_username=_require("ADMIN_USERNAME"),
         admin_password=_require("ADMIN_PASSWORD"),
+        user_state_to_away_after=_fallback_int(
+            "USER_STATE_TO_AWAY_AFTER",
+            300,
+        ),
+        user_state_to_offline_after=_fallback_int(
+            "USER_STATE_TO_OFFLINE_AFTER",
+            1200,
+        ),
+        user_state_updater_cron_period=_fallback_int(
+            "USER_STATE_UPDATER_CRON_PERIOD",
+            300,
+        ),
     )
 
 

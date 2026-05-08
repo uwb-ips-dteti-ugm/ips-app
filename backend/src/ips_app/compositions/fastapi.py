@@ -1,5 +1,8 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Awaitable, Callable
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from beanie import init_beanie
 from fastapi import Depends, FastAPI
 from fastapi.security import HTTPBearer
@@ -16,6 +19,12 @@ from ips_app.adapters.repository.role.beanie_model import RoleDocument
 from ips_app.adapters.repository.user.beanie import BeanieUserRepository
 from ips_app.adapters.repository.user.beanie_model import UserDocument
 from ips_app.config.env_var import EnvVar, load_env_var
+from ips_app.controllers.cron.handlers.user_state_updater import (
+    UserStateUpdaterCronHandler,
+)
+from ips_app.controllers.cron.jobs.user_state_updater import (
+    create_job as create_user_state_updater_job,
+)
 from ips_app.controllers.http.handlers.auth import AuthHandler
 from ips_app.controllers.http.handlers.feature import FeatureHandler
 from ips_app.controllers.http.handlers.permission import PermissionHandler
@@ -27,6 +36,7 @@ from ips_app.controllers.http.routes import auth, feature, permission, role, use
 from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.log import LogLevel
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
+from ips_app.services.cron.user_state_updater.base import BaseUserStateUpdaterCron
 from ips_app.services.http.auth.base import BaseAuthHTTP
 from ips_app.services.http.feature.base import BaseFeatureHTTP
 from ips_app.services.http.permission.base import BasePermissionHTTP
@@ -38,10 +48,12 @@ from ips_app.utils.token import config_access_token, config_refresh_token
 def create_app() -> FastAPI:
     env_var = load_env_var()
     _config_tokens(env_var)
+    _validate_cron_period(env_var.user_state_updater_cron_period)
 
     log = _create_logger(env_var)
     motor = AsyncIOMotorClient(env_var.mongo_uri)
     security_scheme = HTTPBearer(auto_error=False)
+    cron_jobs: list[tuple[str, Callable[[], Awaitable[None]], int]] = []
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -54,8 +66,15 @@ def create_app() -> FastAPI:
                 FeatureDocument,
             ],
         )
-        yield
-        motor.close()
+        scheduler = AsyncIOScheduler(timezone="UTC")
+        _schedule_cron_jobs(scheduler, cron_jobs)
+        scheduler.start()
+        try:
+            yield
+        finally:
+            if scheduler.running:
+                scheduler.shutdown(wait=False)
+            motor.close()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -83,12 +102,29 @@ def create_app() -> FastAPI:
         repo_role=repo_role,
         log=log,
     )
+    user_state_updater_service = BaseUserStateUpdaterCron(
+        repo_user=repo_user,
+        log=log,
+        away_after_seconds=env_var.user_state_to_away_after,
+        offline_after_seconds=env_var.user_state_to_offline_after,
+    )
 
     permission_handler = PermissionHandler(permission_service)
     role_handler = RoleHandler(role_service)
     feature_handler = FeatureHandler(feature_service)
     user_handler = UserHandler(user_service)
     auth_handler = AuthHandler(auth_service)
+    user_state_updater_handler = UserStateUpdaterCronHandler(
+        service=user_state_updater_service,
+        log=log,
+    )
+    cron_jobs.append(
+        (
+            "user_state_updater",
+            create_user_state_updater_job(user_state_updater_handler),
+            env_var.user_state_updater_cron_period,
+        )
+    )
 
     app.include_router(auth.create_router(auth_handler, user_service, log))
     app.include_router(user.create_router(user_handler, user_service, log))
@@ -121,6 +157,30 @@ def create_app() -> FastAPI:
 def _config_tokens(env_var: EnvVar) -> None:
     config_access_token(env_var.access_token_secret, env_var.access_token_expiry)
     config_refresh_token(env_var.refresh_token_secret, env_var.refresh_token_expiry)
+
+
+def _validate_cron_period(period_seconds: int) -> None:
+    if period_seconds <= 0:
+        raise ValidatorDomainException(
+            "USER_STATE_UPDATER_CRON_PERIOD must be greater than 0 seconds."
+        )
+
+
+def _schedule_cron_jobs(
+    scheduler: AsyncIOScheduler,
+    cron_jobs: list[tuple[str, Callable[[], Awaitable[None]], int]],
+) -> None:
+    for name, job, period_seconds in cron_jobs:
+        scheduler.add_job(
+            job,
+            trigger="interval",
+            seconds=period_seconds,
+            id=name,
+            name=name,
+            coalesce=True,
+            max_instances=1,
+            next_run_time=datetime.now(timezone.utc),
+        )
 
 
 def _create_logger(env_var: EnvVar) -> GenericLogging:
