@@ -1,0 +1,132 @@
+from contextlib import asynccontextmanager
+
+from beanie import init_beanie
+from fastapi import Depends, FastAPI
+from fastapi.security import HTTPBearer
+from motor.motor_asyncio import AsyncIOMotorClient
+
+from ips_app.adapters.logging.generic.basic import BasicGenericLogging
+from ips_app.adapters.logging.generic.json import JSONGenericLogging
+from ips_app.adapters.repository.feature.beanie import BeanieFeatureRepository
+from ips_app.adapters.repository.feature.beanie_model import FeatureDocument
+from ips_app.adapters.repository.permission.beanie import BeaniePermissionRepository
+from ips_app.adapters.repository.permission.beanie_model import PermissionDocument
+from ips_app.adapters.repository.role.beanie import BeanieRoleRepository
+from ips_app.adapters.repository.role.beanie_model import RoleDocument
+from ips_app.adapters.repository.user.beanie import BeanieUserRepository
+from ips_app.adapters.repository.user.beanie_model import UserDocument
+from ips_app.config.env_var import EnvVar, load_env_var
+from ips_app.controllers.http.handlers.auth import AuthHandler
+from ips_app.controllers.http.handlers.feature import FeatureHandler
+from ips_app.controllers.http.handlers.permission import PermissionHandler
+from ips_app.controllers.http.handlers.role import RoleHandler
+from ips_app.controllers.http.handlers.user import UserHandler
+from ips_app.controllers.http.middlewares.auth_jwt import JwtMiddleware
+from ips_app.controllers.http.routes import auth, feature, permission, role, user
+from ips_app.domain.models.exception import ValidatorDomainException
+from ips_app.domain.models.log import LogLevel
+from ips_app.domain.ports.driven.logging.generic import GenericLogging
+from ips_app.services.http.auth.base import BaseAuthHTTP
+from ips_app.services.http.feature.base import BaseFeatureHTTP
+from ips_app.services.http.permission.base import BasePermissionHTTP
+from ips_app.services.http.role.base import BaseRoleHTTP
+from ips_app.services.http.user.base import BaseUserHTTP
+from ips_app.utils.token import config_access_token, config_refresh_token
+
+
+def create_app() -> FastAPI:
+    env_var = load_env_var()
+    _config_tokens(env_var)
+
+    log = _create_logger(env_var)
+    motor = AsyncIOMotorClient(env_var.mongo_uri)
+    security_scheme = HTTPBearer(auto_error=False)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        await init_beanie(
+            database=motor[env_var.mongo_db],  # type: ignore[arg-type]
+            document_models=[
+                PermissionDocument,
+                RoleDocument,
+                UserDocument,
+                FeatureDocument,
+            ],
+        )
+        yield
+        motor.close()
+
+    app = FastAPI(
+        lifespan=lifespan,
+        title="IPS App API",
+        version="1.0.0",
+        dependencies=[Depends(security_scheme)],
+    )
+
+    repo_permission = BeaniePermissionRepository(log)
+    repo_role = BeanieRoleRepository(log)
+    repo_user = BeanieUserRepository(log)
+    repo_feature = BeanieFeatureRepository(log)
+
+    permission_service = BasePermissionHTTP(repo_permission, log)
+    role_service = BaseRoleHTTP(repo_role, log)
+    feature_service = BaseFeatureHTTP(repo_feature, log)
+    user_service = BaseUserHTTP(
+        repo=repo_user,
+        repo_feature=repo_feature,
+        repo_role=repo_role,
+        log=log,
+    )
+    auth_service = BaseAuthHTTP(
+        repo_user=repo_user,
+        repo_role=repo_role,
+        log=log,
+    )
+
+    permission_handler = PermissionHandler(permission_service)
+    role_handler = RoleHandler(role_service)
+    feature_handler = FeatureHandler(feature_service)
+    user_handler = UserHandler(user_service)
+    auth_handler = AuthHandler(auth_service)
+
+    app.include_router(auth.create_router(auth_handler, user_service, log))
+    app.include_router(user.create_router(user_handler, user_service, log))
+    app.include_router(role.create_router(role_handler, user_service, log))
+    app.include_router(permission.create_router(permission_handler, user_service, log))
+    app.include_router(feature.create_router(feature_handler, user_service, log))
+
+    app.add_middleware(
+        JwtMiddleware,
+        excluded_paths=[
+            "/docs",
+            "/docs/oauth2-redirect",
+            "/redoc",
+            "/openapi.json",
+            "/auth/sign-up",
+            "/auth/sign-in",
+            "/auth/refresh-token",
+        ],
+    )
+
+    return app
+
+
+def _config_tokens(env_var: EnvVar) -> None:
+    config_access_token(env_var.access_token_secret, env_var.access_token_expiry)
+    config_refresh_token(env_var.refresh_token_secret, env_var.refresh_token_expiry)
+
+
+def _create_logger(env_var: EnvVar) -> GenericLogging:
+    try:
+        log_level = LogLevel[env_var.log_level]
+    except KeyError as e:
+        raise ValidatorDomainException(
+            "LOG_LEVEL must be one of NONE, ERROR, WARN, INFO, or DEBUG."
+        ) from e
+
+    if env_var.log_style == "json":
+        return JSONGenericLogging(log_level)
+    if env_var.log_style == "basic":
+        return BasicGenericLogging(log_level)
+
+    raise ValidatorDomainException("LOG_FORMAT must be either 'basic' or 'json'.")
