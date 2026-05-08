@@ -33,4 +33,4 @@ class JSONGenericLogging(GenericLogging):
             "message": message,
             "meta": meta if meta is not None else {}
         }
-        print(json.dumps(log_entry))
+        print(json.dumps(log_entry), flush=True)

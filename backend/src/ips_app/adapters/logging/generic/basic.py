@@ -28,4 +28,4 @@ class BasicGenericLogging(GenericLogging):
         timestamp = now.strftime("%d-%m-%Y %H:%M:%S") + f".{now.microsecond // 1000:03d}"
         level_str = level.label.upper()
         meta_str = json.dumps(meta) if meta else "{}"
-        print(f"{timestamp} [{level_str}] [{tag}] {message} | {meta_str}")
+        print(f"{timestamp} [{level_str}] [{tag}] {message} | {meta_str}", flush=True)

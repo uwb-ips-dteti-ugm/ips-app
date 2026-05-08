@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from typing import Awaitable, Callable
+from datetime import datetime, timedelta, timezone
+from typing import Awaitable, Callable, cast
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from beanie import init_beanie
@@ -45,36 +45,47 @@ from ips_app.services.http.user.base import BaseUserHTTP
 from ips_app.utils.token import config_access_token, config_refresh_token
 
 
+CronJob = tuple[str, Callable[[], Awaitable[None]], int]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    env_var = cast(EnvVar, app.state.env_var)
+    motor = cast(AsyncIOMotorClient, app.state.motor)
+    cron_jobs = cast(list[CronJob], app.state.cron_jobs)
+
+    await init_beanie(
+        database=motor[env_var.mongo_db],  # type: ignore[arg-type]
+        document_models=[
+            PermissionDocument,
+            RoleDocument,
+            UserDocument,
+            FeatureDocument,
+        ],
+    )
+
+    await _run_cron_jobs_at_init(cron_jobs)
+    scheduler = AsyncIOScheduler(timezone="UTC")
+    _schedule_cron_jobs(scheduler, cron_jobs)
+    scheduler.start()
+    try:
+        yield
+    finally:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+        motor.close()
+
+
 def create_app() -> FastAPI:
     env_var = load_env_var()
-    _config_tokens(env_var)
     _validate_cron_period(env_var.user_state_updater_cron_period)
+   
+    _config_tokens(env_var)
 
     log = _create_logger(env_var)
     motor = AsyncIOMotorClient(env_var.mongo_uri)
     security_scheme = HTTPBearer(auto_error=False)
-    cron_jobs: list[tuple[str, Callable[[], Awaitable[None]], int]] = []
-
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        await init_beanie(
-            database=motor[env_var.mongo_db],  # type: ignore[arg-type]
-            document_models=[
-                PermissionDocument,
-                RoleDocument,
-                UserDocument,
-                FeatureDocument,
-            ],
-        )
-        scheduler = AsyncIOScheduler(timezone="UTC")
-        _schedule_cron_jobs(scheduler, cron_jobs)
-        scheduler.start()
-        try:
-            yield
-        finally:
-            if scheduler.running:
-                scheduler.shutdown(wait=False)
-            motor.close()
+    cron_jobs: list[CronJob] = []
 
     app = FastAPI(
         lifespan=lifespan,
@@ -126,6 +137,10 @@ def create_app() -> FastAPI:
         )
     )
 
+    app.state.env_var = env_var
+    app.state.motor = motor
+    app.state.cron_jobs = cron_jobs
+
     app.include_router(auth.create_router(auth_handler, user_service, log))
     app.include_router(user.create_router(user_handler, user_service, log))
     app.include_router(role.create_router(role_handler, user_service, log))
@@ -168,8 +183,9 @@ def _validate_cron_period(period_seconds: int) -> None:
 
 def _schedule_cron_jobs(
     scheduler: AsyncIOScheduler,
-    cron_jobs: list[tuple[str, Callable[[], Awaitable[None]], int]],
+    cron_jobs: list[CronJob],
 ) -> None:
+    now = datetime.now(timezone.utc)
     for name, job, period_seconds in cron_jobs:
         scheduler.add_job(
             job,
@@ -179,8 +195,15 @@ def _schedule_cron_jobs(
             name=name,
             coalesce=True,
             max_instances=1,
-            next_run_time=datetime.now(timezone.utc),
+            next_run_time=now + timedelta(seconds=period_seconds),
         )
+
+
+async def _run_cron_jobs_at_init(
+    cron_jobs: list[CronJob],
+) -> None:
+    for _, job, _ in cron_jobs:
+        await job()
 
 
 def _create_logger(env_var: EnvVar) -> GenericLogging:
