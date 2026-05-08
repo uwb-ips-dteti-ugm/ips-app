@@ -1,4 +1,5 @@
 import re
+from datetime import timedelta
 from typing import List
 from ips_app.domain.models.exception import ValidatorDomainException
 
@@ -53,3 +54,28 @@ def validate_ids_list(ids: List[str], field: str = "ids") -> None:
     for item in ids:
         if not item.strip():
             raise ValidatorDomainException(f"Each entry in '{field}' must be a non-empty string.")
+
+
+def validate_user_state_cutoffs(
+    away_after: timedelta,
+    offline_after: timedelta,
+) -> None:
+    if away_after.total_seconds() <= 0:
+        raise ValidatorDomainException(
+            "Away cutoff duration must be greater than 0 seconds."
+        )
+    if offline_after.total_seconds() <= 0:
+        raise ValidatorDomainException(
+            "Offline cutoff duration must be greater than 0 seconds."
+        )
+    if offline_after <= away_after:
+        raise ValidatorDomainException(
+            "Offline cutoff duration must be greater than away cutoff duration."
+        )
+
+
+def validate_cron_period(period_seconds: int) -> None:
+    if period_seconds <= 0:
+        raise ValidatorDomainException(
+            "USER_STATE_UPDATER_CRON_PERIOD must be greater than 0 seconds."
+        )

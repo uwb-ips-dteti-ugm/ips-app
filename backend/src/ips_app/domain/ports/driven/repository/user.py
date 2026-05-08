@@ -182,8 +182,8 @@ class UserRepository(ABC):
         offline_cutoff: datetime,
         updated_by: Optional[int] = None,
         **kwargs: Any,
-    ) -> None:
-        """Update users' state from the provided away and offline cutoffs."""
+    ) -> Tuple[int, int]:
+        """Update users' state and return away/offline modified counts."""
         ...
 
     @abstractmethod

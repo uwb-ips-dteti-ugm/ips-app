@@ -43,6 +43,7 @@ from ips_app.services.http.permission.base import BasePermissionHTTP
 from ips_app.services.http.role.base import BaseRoleHTTP
 from ips_app.services.http.user.base import BaseUserHTTP
 from ips_app.utils.token import config_access_token, config_refresh_token
+from ips_app.utils.validator import validate_cron_period
 
 
 CronJob = tuple[str, Callable[[], Awaitable[None]], int]
@@ -78,8 +79,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     env_var = load_env_var()
-    _validate_cron_period(env_var.user_state_updater_cron_period)
-   
+    validate_cron_period(env_var.user_state_updater_cron_period)
+
     _config_tokens(env_var)
 
     log = _create_logger(env_var)
@@ -172,13 +173,6 @@ def create_app() -> FastAPI:
 def _config_tokens(env_var: EnvVar) -> None:
     config_access_token(env_var.access_token_secret, env_var.access_token_expiry)
     config_refresh_token(env_var.refresh_token_secret, env_var.refresh_token_expiry)
-
-
-def _validate_cron_period(period_seconds: int) -> None:
-    if period_seconds <= 0:
-        raise ValidatorDomainException(
-            "USER_STATE_UPDATER_CRON_PERIOD must be greater than 0 seconds."
-        )
 
 
 def _schedule_cron_jobs(

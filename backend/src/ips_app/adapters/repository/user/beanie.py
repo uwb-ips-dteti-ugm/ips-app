@@ -557,7 +557,7 @@ class BeanieUserRepository(UserRepository):
         offline_cutoff: datetime,
         updated_by: Optional[int] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> Tuple[int, int]:
         tag = f"{self.tag_class}.update_users_state_with_cutoffs"
         session = kwargs.get("session")
         try:
@@ -611,6 +611,7 @@ class BeanieUserRepository(UserRepository):
                 },
                 session=session,
             )
+            return away_result.modified_count, offline_result.modified_count
         except DomainException:
             raise
         except Exception as e:
