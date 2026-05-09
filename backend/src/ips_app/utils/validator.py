@@ -1,7 +1,13 @@
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import List
 from ips_app.domain.models.exception import ValidatorDomainException
+from ips_app.domain.models.record import (
+    RecordData,
+    RecordDataLabel,
+    RecordDataMultilateration,
+    RecordDataRanging,
+)
 
 
 def validate_name(value: str) -> None:
@@ -78,4 +84,35 @@ def validate_cron_period(period_seconds: int) -> None:
     if period_seconds <= 0:
         raise ValidatorDomainException(
             "USER_STATE_UPDATER_CRON_PERIOD must be greater than 0 seconds."
+        )
+
+
+def validate_record_interval(
+    interval_field: str,
+    start: datetime,
+    end: datetime,
+) -> None:
+    if interval_field not in ("recorded_at", "created_at"):
+        raise ValidatorDomainException(
+            "'interval_field' must be either 'recorded_at' or 'created_at'."
+        )
+    if start > end:
+        raise ValidatorDomainException("'start' must be before or equal to 'end'.")
+
+
+def validate_record_data(
+    label: RecordDataLabel,
+    data: RecordData,
+) -> None:
+    if label == RecordDataLabel.RANGING and not isinstance(
+        data,
+        RecordDataRanging,
+    ):
+        raise ValidatorDomainException("Ranging records must use ranging record data.")
+    if label == RecordDataLabel.MULTILATERATION and not isinstance(
+        data,
+        RecordDataMultilateration,
+    ):
+        raise ValidatorDomainException(
+            "Multilateration records must use multilateration record data."
         )
