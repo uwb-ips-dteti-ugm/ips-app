@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any
 
 
-class NodeControl(ABC):
+class ControlNode(ABC):
     @abstractmethod
     async def register(self, device_id: str, connection: Any) -> None:
         """Register an active node command connection."""
@@ -42,7 +42,7 @@ class NodeControl(ABC):
     async def initiate_ranging(
         self,
         initiator_device_id: str,
-        target_device_ids: str,
+        target_device_id: str,
         wait_for: int,
     ) -> None:
         """Command a node to range against a target node."""

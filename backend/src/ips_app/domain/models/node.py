@@ -1,8 +1,14 @@
 from datetime import datetime, timezone
-from enum import StrEnum
+from enum import StrEnum, IntEnum
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
+
+
+class NodeCommandCode(IntEnum):
+    RESTART = 1
+    LISTEN_RANGING = 2
+    INITIATE_RANGING = 3
 
 
 class NodeStatus(StrEnum):
