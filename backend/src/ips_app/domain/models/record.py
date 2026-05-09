@@ -41,7 +41,6 @@ class Record(BaseModel):
 
     recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[Any] = None
 
     @model_validator(mode="before")
     @classmethod
