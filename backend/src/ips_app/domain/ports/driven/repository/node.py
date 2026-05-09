@@ -65,16 +65,6 @@ class NodeRepository(ABC):
         ...
 
     @abstractmethod
-    async def approve_node_by_id(
-        self,
-        id: Any,
-        approved_by: Optional[Any] = None,
-        **kwargs: Any,
-    ) -> None:
-        """Approve a pending node registration."""
-        ...
-
-    @abstractmethod
     async def update_node_preferences_by_id(
         self,
         id: Any,
