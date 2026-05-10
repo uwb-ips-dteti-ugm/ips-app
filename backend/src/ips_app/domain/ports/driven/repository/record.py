@@ -28,6 +28,8 @@ class RecordRepository(ABC):
         interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[Record]:
         """Read records by label and recorded/created time interval."""
@@ -40,6 +42,7 @@ class RecordRepository(ABC):
         interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
+        source_node_device_ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> int:
         """Delete records by label and recorded/created time interval."""

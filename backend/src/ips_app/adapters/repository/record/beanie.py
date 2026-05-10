@@ -16,7 +16,11 @@ from ips_app.domain.ports.driven.repository.record import (
     RecordIntervalField,
     RecordRepository,
 )
-from ips_app.utils.validator import validate_record_data, validate_record_interval
+from ips_app.utils.validator import (
+    validate_ids_list,
+    validate_record_data,
+    validate_record_interval,
+)
 
 
 class BeanieRecordRepository(RecordRepository):
@@ -59,6 +63,8 @@ class BeanieRecordRepository(RecordRepository):
         interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[Record]:
         tag = f"{self.tag_class}.read_records_by_interval"
@@ -69,6 +75,8 @@ class BeanieRecordRepository(RecordRepository):
                 interval_field=interval_field,
                 start=start,
                 end=end,
+                source_node_device_ids=source_node_device_ids,
+                target_node_device_ids=target_node_device_ids,
             )
             docs = (
                 await RecordDocument.find(query_filter, session=session)
@@ -88,6 +96,8 @@ class BeanieRecordRepository(RecordRepository):
                     "interval_field": str(interval_field),
                     "start": start.isoformat(),
                     "end": end.isoformat(),
+                    "source_node_device_ids": source_node_device_ids,
+                    "target_node_device_ids": target_node_device_ids,
                 },
             )
             raise UnexpectedDomainException(str(e)) from e
@@ -98,6 +108,7 @@ class BeanieRecordRepository(RecordRepository):
         interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
+        source_node_device_ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> int:
         tag = f"{self.tag_class}.delete_records_by_interval"
@@ -108,6 +119,7 @@ class BeanieRecordRepository(RecordRepository):
                 interval_field=interval_field,
                 start=start,
                 end=end,
+                source_node_device_ids=source_node_device_ids,
             )
             result = await RecordDocument.get_motor_collection().delete_many(
                 query_filter,
@@ -126,6 +138,7 @@ class BeanieRecordRepository(RecordRepository):
                     "interval_field": str(interval_field),
                     "start": start.isoformat(),
                     "end": end.isoformat(),
+                    "source_node_device_ids": source_node_device_ids,
                 },
             )
             raise UnexpectedDomainException(str(e)) from e
@@ -136,12 +149,54 @@ class BeanieRecordRepository(RecordRepository):
         interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         validate_record_interval(interval_field, start, end)
-        return {
+        query_filter: Dict[str, Any] = {
             "label": label,
             interval_field: {
                 "$gte": start,
                 "$lte": end,
             },
         }
+        self._add_node_device_filters(
+            query_filter=query_filter,
+            label=label,
+            source_node_device_ids=source_node_device_ids,
+            target_node_device_ids=target_node_device_ids,
+        )
+        return query_filter
+
+    def _add_node_device_filters(
+        self,
+        query_filter: Dict[str, Any],
+        label: RecordDataLabel,
+        source_node_device_ids: Optional[List[str]],
+        target_node_device_ids: Optional[List[str]] = None,
+    ) -> None:
+        if source_node_device_ids is not None:
+            validate_ids_list(source_node_device_ids, "source_node_device_ids")
+            query_filter[self._source_node_device_path(label)] = {
+                "$in": source_node_device_ids,
+            }
+
+        if target_node_device_ids is not None:
+            validate_ids_list(target_node_device_ids, "target_node_device_ids")
+            query_filter[self._target_node_device_path(label)] = {
+                "$in": target_node_device_ids,
+            }
+
+    def _source_node_device_path(self, label: RecordDataLabel) -> str:
+        if label == RecordDataLabel.RANGING:
+            return "data.source_node_device_id"
+        if label == RecordDataLabel.MULTILATERATION:
+            return "data.ref_node_device_id"
+        return "data.source_node_device_id"
+
+    def _target_node_device_path(self, label: RecordDataLabel) -> str:
+        if label == RecordDataLabel.RANGING:
+            return "data.distances.target_node_device_id"
+        if label == RecordDataLabel.MULTILATERATION:
+            return "data.coordinates.node_device_id"
+        return "data.distances.target_node_device_id"
