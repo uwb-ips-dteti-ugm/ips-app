@@ -40,5 +40,5 @@ class Node(BaseModel):
     version: int = 0
 
     @property
-    def can_record(self) -> bool:
+    def is_approved(self) -> bool:
         return self.status == NodeStatus.APPROVED

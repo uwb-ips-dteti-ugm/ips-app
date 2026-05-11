@@ -6,6 +6,7 @@ from ips_app.domain.models.exception import (
     DomainException,
     DuplicateDomainException,
     ExpiredTokenDomainException,
+    ForbiddenDomainException,
     InvalidTokenDomainException,
     NotFoundDomainException,
     UnexpectedDomainException,
@@ -32,6 +33,9 @@ def handle_exception(
     elif isinstance(error, DuplicateDomainException):
         status_code = status.HTTP_409_CONFLICT
         message = f"Resource '{error.data_label}' in '{error.group_name}' already exists"
+    elif isinstance(error, ForbiddenDomainException):
+        status_code = status.HTTP_403_FORBIDDEN
+        message = str(error)
     elif isinstance(error, (ExpiredTokenDomainException, InvalidTokenDomainException)):
         status_code = status.HTTP_401_UNAUTHORIZED
         message = str(error)
