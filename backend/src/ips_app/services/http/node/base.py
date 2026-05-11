@@ -8,15 +8,13 @@ from ips_app.domain.models.exception import (
     UnexpectedDomainException,
 )
 from ips_app.domain.models.node import Node, NodeStatus
-from ips_app.domain.models.record import (
-    RecordDataLabel,
-    RecordDataRanging,
-)
+from ips_app.domain.models.record import RecordDataLabel, RecordDataRanging
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.node.control import ControlNode
 from ips_app.domain.ports.driven.repository.node import NodeRepository
 from ips_app.domain.ports.driven.repository.record import RecordRepository
 from ips_app.domain.ports.driving.http.node import NodeHTTP
+from ips_app.utils.validator import validate_optional_non_negative_float
 
 
 class BaseNodeHTTP(NodeHTTP):
@@ -318,92 +316,6 @@ class BaseNodeHTTP(NodeHTTP):
             )
             raise UnexpectedDomainException(str(e)) from e
 
-    async def listen_ranging(
-        self,
-        listener_device_id: str,
-        initiator_device_id: str,
-        listen_for: int,
-    ) -> None:
-        tag = f"{self.tag_class}.listen_ranging"
-        try:
-            await self._ensure_approved_node(listener_device_id)
-            await self._ensure_approved_node(initiator_device_id)
-            await self.control.listen_ranging(
-                listener_device_id=listener_device_id,
-                initiator_device_id=initiator_device_id,
-                listen_for=listen_for,
-            )
-            await self._set_nodes_last_seen(
-                [
-                    listener_device_id,
-                    initiator_device_id,
-                ]
-            )
-            await self.log.info(
-                tag,
-                "Successfully sent node listen ranging command",
-                {
-                    "listener_device_id": listener_device_id,
-                    "initiator_device_id": initiator_device_id,
-                },
-            )
-        except DomainException:
-            raise
-        except Exception as e:
-            await self.log.error(
-                tag,
-                "Failed to send node listen ranging command",
-                {
-                    "error": str(e),
-                    "listener_device_id": listener_device_id,
-                    "initiator_device_id": initiator_device_id,
-                },
-            )
-            raise UnexpectedDomainException(str(e)) from e
-
-    async def initiate_ranging(
-        self,
-        initiator_device_id: str,
-        target_device_id: str,
-        wait_for: int,
-    ) -> None:
-        tag = f"{self.tag_class}.initiate_ranging"
-        try:
-            await self._ensure_approved_node(initiator_device_id)
-            await self._ensure_approved_node(target_device_id)
-            await self.control.initiate_ranging(
-                initiator_device_id=initiator_device_id,
-                target_device_id=target_device_id,
-                wait_for=wait_for,
-            )
-            await self._set_nodes_last_seen(
-                [
-                    initiator_device_id,
-                    target_device_id,
-                ]
-            )
-            await self.log.info(
-                tag,
-                "Successfully sent node initiate ranging command",
-                {
-                    "initiator_device_id": initiator_device_id,
-                    "target_device_id": target_device_id,
-                },
-            )
-        except DomainException:
-            raise
-        except Exception as e:
-            await self.log.error(
-                tag,
-                "Failed to send node initiate ranging command",
-                {
-                    "error": str(e),
-                    "initiator_device_id": initiator_device_id,
-                    "target_device_id": target_device_id,
-                },
-            )
-            raise UnexpectedDomainException(str(e)) from e
-
     async def add_ranging_record(
         self,
         source_node_device_id: Optional[str],
@@ -414,15 +326,10 @@ class BaseNodeHTTP(NodeHTTP):
     ) -> None:
         tag = f"{self.tag_class}.add_ranging_record"
         try:
-            device_ids = self._present_device_ids(
-                [
-                    source_node_device_id,
-                    target_node_device_id,
-                ]
+            validate_optional_non_negative_float(distance, "distance")
+            await self._ensure_approved_nodes(
+                (source_node_device_id, target_node_device_id)
             )
-            for device_id in device_ids:
-                await self._ensure_approved_node(device_id)
-
             await self.repo_record.create_record(
                 label=RecordDataLabel.RANGING,
                 data=RecordDataRanging(
@@ -433,13 +340,16 @@ class BaseNodeHTTP(NodeHTTP):
                 recorded_at=recorded_at,
                 metadata=metadata,
             )
-            await self._set_nodes_last_seen(device_ids)
+            await self._set_nodes_last_seen(
+                (source_node_device_id, target_node_device_id)
+            )
             await self.log.info(
                 tag,
                 "Successfully added ranging record",
                 {
                     "source_node_device_id": source_node_device_id,
                     "target_node_device_id": target_node_device_id,
+                    "distance": distance,
                     "recorded_at": recorded_at.isoformat(),
                 },
             )
@@ -453,6 +363,7 @@ class BaseNodeHTTP(NodeHTTP):
                     "error": str(e),
                     "source_node_device_id": source_node_device_id,
                     "target_node_device_id": target_node_device_id,
+                    "recorded_at": recorded_at.isoformat(),
                 },
             )
             raise UnexpectedDomainException(str(e)) from e
@@ -463,19 +374,31 @@ class BaseNodeHTTP(NodeHTTP):
             raise ForbiddenDomainException("Node is not approved.")
         return node
 
-    async def _set_nodes_last_seen(self, device_ids: Sequence[Optional[str]]) -> None:
-        for device_id in self._present_device_ids(device_ids):
+    async def _ensure_approved_nodes(
+        self,
+        device_ids: Sequence[Optional[str]],
+    ) -> None:
+        for device_id in self._unique_device_ids(device_ids):
+            await self._ensure_approved_node(device_id)
+
+    async def _set_nodes_last_seen(
+        self,
+        device_ids: Sequence[Optional[str]],
+    ) -> None:
+        for device_id in self._unique_device_ids(device_ids):
             await self.repo.update_node_last_seen_at_by_device_id(device_id)
 
-    def _present_device_ids(
+    def _unique_device_ids(
         self,
         device_ids: Sequence[Optional[str]],
     ) -> List[str]:
+        unique_device_ids: List[str] = []
         seen_device_ids: set[str] = set()
-        present_device_ids: List[str] = []
         for device_id in device_ids:
             if device_id is None or device_id in seen_device_ids:
                 continue
+
+            unique_device_ids.append(device_id)
             seen_device_ids.add(device_id)
-            present_device_ids.append(device_id)
-        return present_device_ids
+
+        return unique_device_ids

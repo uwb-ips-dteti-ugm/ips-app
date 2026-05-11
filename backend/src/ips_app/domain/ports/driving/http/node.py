@@ -98,26 +98,6 @@ class NodeHTTP(ABC):
         ...
 
     @abstractmethod
-    async def listen_ranging(
-        self,
-        listener_device_id: str,
-        initiator_device_id: str,
-        listen_for: int,
-    ) -> None:
-        """Command a connected node to listen for a ranging request."""
-        ...
-
-    @abstractmethod
-    async def initiate_ranging(
-        self,
-        initiator_device_id: str,
-        target_device_id: str,
-        wait_for: int,
-    ) -> None:
-        """Command a connected node to range against a target node."""
-        ...
-
-    @abstractmethod
     async def add_ranging_record(
         self,
         source_node_device_id: Optional[str],
@@ -126,5 +106,5 @@ class NodeHTTP(ABC):
         recorded_at: datetime,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Add a ranging time-series record from a node."""
+        """Add a ranging time-series record reported through HTTP."""
         ...

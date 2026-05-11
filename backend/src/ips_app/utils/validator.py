@@ -1,6 +1,6 @@
 import re
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.record import (
     RecordData,
@@ -60,6 +60,19 @@ def validate_ids_list(ids: List[str], field: str = "ids") -> None:
     for item in ids:
         if not item.strip():
             raise ValidatorDomainException(f"Each entry in '{field}' must be a non-empty string.")
+
+
+def validate_positive_integer(value: int, field: str) -> None:
+    if value <= 0:
+        raise ValidatorDomainException(f"'{field}' must be greater than 0.")
+
+
+def validate_optional_non_negative_float(
+    value: Optional[float],
+    field: str,
+) -> None:
+    if value is not None and value < 0:
+        raise ValidatorDomainException(f"'{field}' must be greater than or equal to 0.")
 
 
 def validate_user_state_cutoffs(

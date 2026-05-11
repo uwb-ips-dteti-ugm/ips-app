@@ -13,6 +13,7 @@ This backend is built with **Hexagonal Architecture (Ports and Adapters)** using
 - `src/ips_app/domain/ports/driven/`: Outbound interfaces, such as repositories and logging.
 - `src/ips_app/services/http/`: Business/application service implementations for HTTP driving ports.
 - `src/ips_app/services/cron/`: Business/application service implementations for cron driving ports.
+- `src/ips_app/services/seeder/`: Business/application service implementations for seeder driving ports.
 - `src/ips_app/controllers/http/`: FastAPI-facing code: DTOs, handlers, middlewares, and route factories.
 - `src/ips_app/controllers/cron/`: Scheduler-facing code: cron handlers and job factories.
 - `src/ips_app/adapters/repository/`: Beanie document models and repository adapter implementations.
@@ -168,4 +169,4 @@ Keep new modules consistent with this wiring style.
 - **Role & Permission**: Granular access control. Roles link to permissions.
 - **Feature**: Runtime access gates for API capabilities. Features link to permissions.
 - **Composition**: Wires FastAPI, Beanie, repositories, services, handlers, routes, and middleware.
-- **Seeder**: Creates base permissions, roles, feature gates, admin account, and test accounts. Seeder behavior lives in services; default seed data lives in `config/seed_data.py`.
+- **Seeder**: Creates base permissions, roles, feature gates, admin account, and test accounts. Seeder behavior lives in `services/seeder/`; default seed data lives in `config/seed_data.py`.
