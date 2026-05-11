@@ -22,6 +22,11 @@ SEED_PERMISSIONS: List[PermissionSeed] = [
     {"name": "feature:manage", "description": "Manage features"},
     {"name": "feature:view", "description": "View features"},
     {"name": "feature:delete", "description": "Delete features"},
+    {"name": "node:manage", "description": "Manage nodes"},
+    {"name": "node:view", "description": "View nodes"},
+    {"name": "node:delete", "description": "Delete nodes"},
+    {"name": "record:view", "description": "View records"},
+    {"name": "record:delete", "description": "Delete records"},
 ]
 
 
@@ -91,6 +96,31 @@ SEED_FEATURES: List[FeatureSeed] = [
         "description": "Access to delete features",
         "permissions": ["feature:delete"],
     },
+    {
+        "name": "node/manage",
+        "description": "Access to node management",
+        "permissions": ["node:manage"],
+    },
+    {
+        "name": "node/view",
+        "description": "Access to view nodes",
+        "permissions": ["node:view"],
+    },
+    {
+        "name": "node/delete",
+        "description": "Access to delete nodes",
+        "permissions": ["node:delete"],
+    },
+    {
+        "name": "record/view",
+        "description": "Access to view records",
+        "permissions": ["record:view"],
+    },
+    {
+        "name": "record/delete",
+        "description": "Access to delete records",
+        "permissions": ["record:delete"],
+    },
 ]
 
 
@@ -116,6 +146,11 @@ SEED_ROLES: List[RoleSeed] = [
             "feature:manage",
             "feature:view",
             "feature:delete",
+            "node:manage",
+            "node:view",
+            "node:delete",
+            "record:view",
+            "record:delete",
         ],
     },
     {
