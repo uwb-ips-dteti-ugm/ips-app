@@ -4,7 +4,6 @@ from typing import Generic, List, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.utils.validator import validate_ids_list
 
 
@@ -40,8 +39,3 @@ class PermissionIdsRequest(BaseModel):
 
     def validate_fields(self) -> None:
         validate_ids_list(self.permission_ids, "permission_ids")
-
-
-def validate_non_empty_string(value: str, field: str) -> None:
-    if not value.strip():
-        raise ValidatorDomainException(f"{field} must not be empty.")

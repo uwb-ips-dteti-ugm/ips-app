@@ -5,13 +5,14 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ips_app.controllers.http.dto.common import (
-    PaginationMeta,
-    validate_non_empty_string,
-)
+from ips_app.controllers.http.dto.common import PaginationMeta
 from ips_app.domain.models.role import Role
 from ips_app.domain.models.user import User, UserState, UserStatus
-from ips_app.utils.validator import validate_bio, validate_name
+from ips_app.utils.validator import (
+    validate_bio,
+    validate_name,
+    validate_non_empty_string,
+)
 
 
 class SetUserInfoRequest(BaseModel):

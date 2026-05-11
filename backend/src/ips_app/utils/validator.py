@@ -54,6 +54,11 @@ def validate_bio(value: str) -> None:
         raise ValidatorDomainException("Bio must not exceed 500 characters.")
 
 
+def validate_non_empty_string(value: str, field: str) -> None:
+    if not value.strip():
+        raise ValidatorDomainException(f"{field} must not be empty.")
+
+
 def validate_ids_list(ids: List[str], field: str = "ids") -> None:
     if not ids:
         raise ValidatorDomainException(f"'{field}' must not be empty.")

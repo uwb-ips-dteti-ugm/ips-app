@@ -2,10 +2,12 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ips_app.controllers.http.dto.common import (
+from ips_app.utils.validator import (
+    validate_name,
     validate_non_empty_string,
+    validate_password,
+    validate_username,
 )
-from ips_app.utils.validator import validate_name, validate_password, validate_username
 
 
 class SignUpRequest(BaseModel):
