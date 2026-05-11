@@ -238,6 +238,7 @@ class BaseSeeder(Seeder):
             for permission in existing_permissions
         }
         missing_ids: List[Any] = []
+
         for permission_name in required_permission_names:
             if permission_name in existing_permission_names:
                 continue

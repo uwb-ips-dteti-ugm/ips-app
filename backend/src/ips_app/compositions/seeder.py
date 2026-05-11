@@ -17,7 +17,7 @@ from ips_app.config.env_var import EnvVar, load_env_var
 from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.log import LogLevel
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
-from ips_app.services.seeder.base import BaseSeeder
+from ips_app.services.seeder.seeder.base import BaseSeeder
 
 
 async def main() -> None:
