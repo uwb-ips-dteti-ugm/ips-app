@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from ips_app.domain.models.node import Node, NodeStatus
 
@@ -114,4 +115,16 @@ class NodeHTTP(ABC):
         wait_for: int,
     ) -> None:
         """Command a connected node to range against a target node."""
+        ...
+
+    @abstractmethod
+    async def add_ranging_record(
+        self,
+        source_node_device_id: Optional[str],
+        target_node_device_id: Optional[str],
+        distance: Optional[float],
+        recorded_at: datetime,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Add a ranging time-series record from a node."""
         ...

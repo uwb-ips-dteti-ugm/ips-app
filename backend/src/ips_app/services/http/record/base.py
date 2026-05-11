@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from ips_app.domain.models.exception import DomainException, UnexpectedDomainException
-from ips_app.domain.models.record import Record, RecordData, RecordDataLabel
+from ips_app.domain.models.record import Record, RecordDataLabel
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.repository.record import (
     RecordIntervalField,
@@ -16,36 +16,6 @@ class BaseRecordHTTP(RecordHTTP):
         self.repo = repo
         self.log = log
         self.tag_class = "BaseRecordHTTP"
-
-    async def add_record(
-        self,
-        label: RecordDataLabel,
-        data: RecordData,
-        recorded_at: datetime,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        tag = f"{self.tag_class}.add_record"
-        try:
-            await self.repo.create_record(
-                label=label,
-                data=data,
-                recorded_at=recorded_at,
-                metadata=metadata,
-            )
-            await self.log.info(
-                tag,
-                "Successfully added record",
-                {"label": str(label), "recorded_at": recorded_at.isoformat()},
-            )
-        except DomainException:
-            raise
-        except Exception as e:
-            await self.log.error(
-                tag,
-                "Failed to add record",
-                {"error": str(e), "label": str(label)},
-            )
-            raise UnexpectedDomainException(str(e)) from e
 
     async def get_records_by_interval(
         self,

@@ -1,5 +1,6 @@
 import json
-from typing import Any, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ips_app.domain.models.exception import (
     DomainException,
@@ -7,9 +8,14 @@ from ips_app.domain.models.exception import (
     UnexpectedDomainException,
 )
 from ips_app.domain.models.node import Node, NodeStatus
+from ips_app.domain.models.record import (
+    RecordDataLabel,
+    RecordDataRanging,
+)
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.node.control import ControlNode
 from ips_app.domain.ports.driven.repository.node import NodeRepository
+from ips_app.domain.ports.driven.repository.record import RecordRepository
 from ips_app.domain.ports.driving.http.node import NodeHTTP
 
 
@@ -17,10 +23,12 @@ class BaseNodeHTTP(NodeHTTP):
     def __init__(
         self,
         repo: NodeRepository,
+        repo_record: RecordRepository,
         control: ControlNode,
         log: GenericLogging,
     ):
         self.repo = repo
+        self.repo_record = repo_record
         self.control = control
         self.log = log
         self.tag_class = "BaseNodeHTTP"
@@ -396,16 +404,78 @@ class BaseNodeHTTP(NodeHTTP):
             )
             raise UnexpectedDomainException(str(e)) from e
 
+    async def add_ranging_record(
+        self,
+        source_node_device_id: Optional[str],
+        target_node_device_id: Optional[str],
+        distance: Optional[float],
+        recorded_at: datetime,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        tag = f"{self.tag_class}.add_ranging_record"
+        try:
+            device_ids = self._present_device_ids(
+                [
+                    source_node_device_id,
+                    target_node_device_id,
+                ]
+            )
+            for device_id in device_ids:
+                await self._ensure_approved_node(device_id)
+
+            await self.repo_record.create_record(
+                label=RecordDataLabel.RANGING,
+                data=RecordDataRanging(
+                    source_node_device_id=source_node_device_id,
+                    target_node_device_id=target_node_device_id,
+                    distance=distance,
+                ),
+                recorded_at=recorded_at,
+                metadata=metadata,
+            )
+            await self._set_nodes_last_seen(device_ids)
+            await self.log.info(
+                tag,
+                "Successfully added ranging record",
+                {
+                    "source_node_device_id": source_node_device_id,
+                    "target_node_device_id": target_node_device_id,
+                    "recorded_at": recorded_at.isoformat(),
+                },
+            )
+        except DomainException:
+            raise
+        except Exception as e:
+            await self.log.error(
+                tag,
+                "Failed to add ranging record",
+                {
+                    "error": str(e),
+                    "source_node_device_id": source_node_device_id,
+                    "target_node_device_id": target_node_device_id,
+                },
+            )
+            raise UnexpectedDomainException(str(e)) from e
+
     async def _ensure_approved_node(self, device_id: str) -> Node:
         node = await self.repo.read_node_by_device_id(device_id)
         if not node.is_approved:
             raise ForbiddenDomainException("Node is not approved.")
         return node
 
-    async def _set_nodes_last_seen(self, device_ids: List[str]) -> None:
+    async def _set_nodes_last_seen(self, device_ids: Sequence[Optional[str]]) -> None:
+        for device_id in self._present_device_ids(device_ids):
+            await self.repo.update_node_last_seen_at_by_device_id(device_id)
+
+    def _present_device_ids(
+        self,
+        device_ids: Sequence[Optional[str]],
+    ) -> List[str]:
         seen_device_ids: set[str] = set()
+        present_device_ids: List[str] = []
         for device_id in device_ids:
-            if device_id in seen_device_ids:
+            if device_id is None or device_id in seen_device_ids:
                 continue
             seen_device_ids.add(device_id)
-            await self.repo.update_node_last_seen_at_by_device_id(device_id)
+            present_device_ids.append(device_id)
+        return present_device_ids
