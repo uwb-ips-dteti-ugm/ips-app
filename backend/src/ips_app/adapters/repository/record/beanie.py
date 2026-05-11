@@ -196,7 +196,7 @@ class BeanieRecordRepository(RecordRepository):
 
     def _target_node_device_path(self, label: RecordDataLabel) -> str:
         if label == RecordDataLabel.RANGING:
-            return "data.distances.target_node_device_id"
+            return "data.target_node_device_id"
         if label == RecordDataLabel.MULTILATERATION:
             return "data.coordinates.node_device_id"
-        return "data.distances.target_node_device_id"
+        return "data.target_node_device_id"

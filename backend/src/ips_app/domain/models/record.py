@@ -11,12 +11,9 @@ class RecordDataLabel(StrEnum):
 
 
 class RecordDataRanging(BaseModel):
-    class RangingDistance(BaseModel):
-        target_node_device_id: str
-        distance: Optional[float] = Field(None, ge=0)
-
-    source_node_device_id: str
-    distances: List[RangingDistance] = Field(default_factory=list)
+    source_node_device_id: Optional[str] = None
+    target_node_device_id: Optional[str] = None
+    distance: Optional[float] = Field(None, ge=0)
 
 
 class RecordDataMultilateration(BaseModel):
