@@ -2,6 +2,7 @@ from typing import Any, Optional, Tuple
 
 from ips_app.domain.models.exception import (
     DomainException,
+    ForbiddenDomainException,
     NotFoundDomainException,
     UnexpectedDomainException,
 )
@@ -11,6 +12,7 @@ from ips_app.domain.models.user import (
     UserPasswordAuth,
     UserRefreshTokenClaims,
     UserState,
+    UserStatus,
 )
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.repository.role import RoleRepository
@@ -124,6 +126,7 @@ class BaseAuthHTTP(AuthHTTP):
             if not verify_password(password, auth.password_hash):
                 raise DomainException("Invalid credentials")
 
+            self._ensure_user_can_authenticate(user)
             await self.repo_user.update_user_last_signed_in_at_by_id(user.id)
             await self.repo_user.update_user_last_activity_at_by_id(user.id)
             await self._set_user_online_unless_dnd(user)
@@ -151,6 +154,7 @@ class BaseAuthHTTP(AuthHTTP):
             claims = validate_refresh_token(refresh_token)
             user = await self.repo_user.read_user_by_id(claims.user_id)
 
+            self._ensure_user_can_authenticate(user)
             await self.repo_user.update_user_last_refreshed_at_by_id(user.id)
             await self.repo_user.update_user_last_activity_at_by_id(user.id)
             await self._set_user_online_unless_dnd(user)
@@ -308,3 +312,9 @@ class BaseAuthHTTP(AuthHTTP):
         if user.state == UserState.DND:
             return
         await self.repo_user.update_user_state_by_id(user.id, UserState.ONLINE)
+
+    def _ensure_user_can_authenticate(self, user: User) -> None:
+        if user.status == UserStatus.SUSPENDED:
+            raise ForbiddenDomainException("User is suspended.")
+        if user.status == UserStatus.BANNED:
+            raise ForbiddenDomainException("User is banned.")
