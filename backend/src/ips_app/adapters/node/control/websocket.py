@@ -9,7 +9,10 @@ from ips_app.domain.models.exception import (
 from ips_app.domain.models.node import NodeCommandCode
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.node.control import ControlNode
-from ips_app.utils.validator import validate_uwb_network_value
+from ips_app.utils.validator import (
+    validate_positive_integer,
+    validate_uwb_network_value,
+)
 
 
 class WebSocketNodeControl(ControlNode):
@@ -114,19 +117,23 @@ class WebSocketNodeControl(ControlNode):
         device_id: str,
         listener_pan_id: int,
         initiator_pan_id: int,
-        listen_for: int,
+        listen_for_ms: int,
     ) -> None:
         tag = f"{self.tag_class}.listen_ranging"
         try:
             validate_uwb_network_value(listener_pan_id, "listener_pan_id")
             validate_uwb_network_value(initiator_pan_id, "initiator_pan_id")
+            validate_positive_integer(
+                listen_for_ms,
+                "listen_for_ms",
+            )
             await self._send_command(
                 device_id=device_id,
                 command=NodeCommandCode.LISTEN_RANGING,
                 payload={
                     "listener_pan_id": listener_pan_id,
                     "initiator_pan_id": initiator_pan_id,
-                    "listen_for": listen_for,
+                    "listen_for_ms": listen_for_ms,
                 },
             )
         except DomainException:
@@ -140,6 +147,7 @@ class WebSocketNodeControl(ControlNode):
                     "device_id": device_id,
                     "listener_pan_id": listener_pan_id,
                     "initiator_pan_id": initiator_pan_id,
+                    "listen_for_ms": listen_for_ms,
                 },
             )
             raise UnexpectedDomainException(str(e)) from e
@@ -149,19 +157,23 @@ class WebSocketNodeControl(ControlNode):
         device_id: str,
         initiator_pan_id: int,
         listener_pan_id: int,
-        wait_for: int,
+        wait_for_ms: int,
     ) -> None:
         tag = f"{self.tag_class}.initiate_ranging"
         try:
             validate_uwb_network_value(initiator_pan_id, "initiator_pan_id")
             validate_uwb_network_value(listener_pan_id, "listener_pan_id")
+            validate_positive_integer(
+                wait_for_ms,
+                "wait_for_ms",
+            )
             await self._send_command(
                 device_id=device_id,
                 command=NodeCommandCode.INITIATE_RANGING,
                 payload={
                     "initiator_pan_id": initiator_pan_id,
                     "listener_pan_id": listener_pan_id,
-                    "wait_for": wait_for,
+                    "wait_for_ms": wait_for_ms,
                 },
             )
         except DomainException:
@@ -175,6 +187,7 @@ class WebSocketNodeControl(ControlNode):
                     "device_id": device_id,
                     "initiator_pan_id": initiator_pan_id,
                     "listener_pan_id": listener_pan_id,
+                    "wait_for_ms": wait_for_ms,
                 },
             )
             raise UnexpectedDomainException(str(e)) from e

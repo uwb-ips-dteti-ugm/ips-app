@@ -34,7 +34,7 @@ class ControlNode(ABC):
         device_id: str,
         listener_pan_id: int,
         initiator_pan_id: int,
-        listen_for: int,
+        listen_for_ms: int,
     ) -> None:
         """Command the connected node to listen with listener and initiator PAN IDs."""
         ...
@@ -45,7 +45,7 @@ class ControlNode(ABC):
         device_id: str,
         initiator_pan_id: int,
         listener_pan_id: int,
-        wait_for: int,
+        wait_for_ms: int,
     ) -> None:
         """Command the connected node to initiate ranging with initiator and listener PAN IDs."""
         ...

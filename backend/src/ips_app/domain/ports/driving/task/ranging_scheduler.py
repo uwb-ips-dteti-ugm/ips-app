@@ -1,11 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Tuple
 
 
 class RangingSchedulerTask(ABC):
     @abstractmethod
-    async def get_registered_nodes(self) -> List[str]:
-        """Get device IDs with active node control connections."""
+    async def refresh_registered_nodes(self) -> None:
+        """Refresh the scheduler's eligible registered-node snapshot."""
+        ...
+
+    @abstractmethod
+    async def get_next_node_pair(self) -> Tuple[str, str, bool]:
+        """Get the next listener/initiator device IDs and whether the cycle is done."""
         ...
 
     @abstractmethod
@@ -13,7 +18,7 @@ class RangingSchedulerTask(ABC):
         self,
         listener_device_id: str,
         initiator_device_id: str,
-        listen_for: int,
+        listen_for_ms: int,
     ) -> None:
         """Command a connected node to listen for a ranging request."""
         ...
@@ -23,7 +28,7 @@ class RangingSchedulerTask(ABC):
         self,
         initiator_device_id: str,
         target_device_id: str,
-        wait_for: int,
+        wait_for_ms: int,
     ) -> None:
         """Command a connected node to range against a target node."""
         ...

@@ -25,6 +25,9 @@ class EnvVar:
     user_state_to_away_after: int
     user_state_to_offline_after: int
     user_state_updater_cron_period: int
+    ranging_scheduler_sleep_ms: int
+    ranging_scheduler_listen_for_ms: int
+    ranging_scheduler_wait_for_ms: int
 
 
 def load_env_var() -> EnvVar:
@@ -53,6 +56,18 @@ def load_env_var() -> EnvVar:
         user_state_updater_cron_period=_fallback_int(
             "USER_STATE_UPDATER_CRON_PERIOD",
             300,
+        ),
+        ranging_scheduler_sleep_ms=_fallback_int(
+            "RANGING_SCHEDULER_SLEEP_MS",
+            60,
+        ),
+        ranging_scheduler_listen_for_ms=_fallback_int(
+            "RANGING_SCHEDULER_LISTEN_FOR_MS",
+            40,
+        ),
+        ranging_scheduler_wait_for_ms=_fallback_int(
+            "RANGING_SCHEDULER_WAIT_FOR_MS",
+            40,
         ),
     )
 
