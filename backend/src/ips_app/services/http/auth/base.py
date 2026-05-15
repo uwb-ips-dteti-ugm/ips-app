@@ -55,6 +55,7 @@ class BaseAuthHTTP(AuthHTTP):
 
             await self.repo_user.update_user_last_signed_in_at_by_id(user.id)
             await self.repo_user.update_user_last_activity_at_by_id(user.id)
+            await self._set_user_online_unless_dnd(user)
             full_user = await self.repo_user.read_user_by_id(user.id)
 
             await self.log.info(
@@ -125,6 +126,7 @@ class BaseAuthHTTP(AuthHTTP):
 
             await self.repo_user.update_user_last_signed_in_at_by_id(user.id)
             await self.repo_user.update_user_last_activity_at_by_id(user.id)
+            await self._set_user_online_unless_dnd(user)
             full_user = await self.repo_user.read_user_by_id(user.id)
 
             await self.log.info(
@@ -151,6 +153,7 @@ class BaseAuthHTTP(AuthHTTP):
 
             await self.repo_user.update_user_last_refreshed_at_by_id(user.id)
             await self.repo_user.update_user_last_activity_at_by_id(user.id)
+            await self._set_user_online_unless_dnd(user)
             full_user = await self.repo_user.read_user_by_id(user.id)
 
             await self.log.info(
@@ -300,3 +303,8 @@ class BaseAuthHTTP(AuthHTTP):
         )
         refresh_claims = UserRefreshTokenClaims(user_id=str(user.id))
         return create_access_token(access_claims), create_refresh_token(refresh_claims)
+
+    async def _set_user_online_unless_dnd(self, user: User) -> None:
+        if user.state == UserState.DND:
+            return
+        await self.repo_user.update_user_state_by_id(user.id, UserState.ONLINE)

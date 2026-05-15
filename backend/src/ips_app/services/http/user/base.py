@@ -180,7 +180,9 @@ class BaseUserHTTP(UserHTTP):
     async def set_user_last_activity(self, user_id: Any) -> None:
         tag = f"{self.tag_class}.set_user_last_activity"
         try:
+            user = await self.repo.read_user_by_id(user_id)
             await self.repo.update_user_last_activity_at_by_id(user_id)
+            await self._set_user_online_unless_dnd(user)
         except DomainException:
             raise
         except Exception as e:
@@ -312,3 +314,8 @@ class BaseUserHTTP(UserHTTP):
             if permission.id is not None
         }
         return bool(role_permission_ids & feature_permission_ids)
+
+    async def _set_user_online_unless_dnd(self, user: User) -> None:
+        if user.state == UserState.DND:
+            return
+        await self.repo.update_user_state_by_id(user.id, UserState.ONLINE)
