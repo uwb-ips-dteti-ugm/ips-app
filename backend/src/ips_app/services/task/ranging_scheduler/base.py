@@ -42,14 +42,6 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
             self._registered_nodes = nodes
             self._node_pairs = list(combinations(nodes, 2))
             self._node_pair_index = 0
-            await self.log.debug(
-                tag,
-                "Successfully refreshed registered node pairs",
-                {
-                    "node_count": len(self._registered_nodes),
-                    "pair_count": len(self._node_pairs),
-                },
-            )
         except DomainException:
             raise
         except Exception as e:
@@ -60,16 +52,13 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
             )
             raise UnexpectedDomainException(str(e)) from e
 
-    async def get_next_node_pair(self) -> Tuple[str, str, bool]:
+    async def get_next_node_pair(self) -> Optional[Tuple[str, str, bool]]:
         tag = f"{self.tag_class}.get_next_node_pair"
         try:
             if not self._node_pairs:
                 await self.refresh_registered_nodes()
             if not self._node_pairs:
-                raise NotFoundDomainException(
-                    "registered node pairs",
-                    "node connections",
-                )
+                return None
 
             listener, initiator = self._node_pairs[self._node_pair_index]
             cycle_done = self._node_pair_index >= len(self._node_pairs) - 1
@@ -77,16 +66,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                 self._node_pair_index = 0
             else:
                 self._node_pair_index += 1
-
-            await self.log.debug(
-                tag,
-                "Successfully fetched next node pair",
-                {
-                    "listener_device_id": listener.device_id,
-                    "initiator_device_id": initiator.device_id,
-                    "cycle_done": cycle_done,
-                },
-            )
+                
             return listener.device_id, initiator.device_id, cycle_done
         except DomainException:
             raise

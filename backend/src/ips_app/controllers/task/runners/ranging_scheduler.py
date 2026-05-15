@@ -7,6 +7,9 @@ from ips_app.controllers.task.handlers.ranging_scheduler import (
 from ips_app.utils.validator import validate_positive_integer
 
 
+WAIT_FOR_NODE_PAIR_SLEEP_MS = 3000
+
+
 def create_runner(
     handler: RangingSchedulerTaskHandler,
     sleep_ms: int,
@@ -28,6 +31,9 @@ def create_runner(
                 listen_for_ms=listen_for_ms,
                 wait_for_ms=wait_for_ms,
             )
+            if cycle_done is None:
+                await asyncio.sleep(WAIT_FOR_NODE_PAIR_SLEEP_MS / 1000)
+                continue
             if cycle_done:
                 await handler.refresh_registered_nodes()
 

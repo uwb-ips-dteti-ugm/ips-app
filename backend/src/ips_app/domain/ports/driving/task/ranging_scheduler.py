@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 class RangingSchedulerTask(ABC):
@@ -9,8 +9,8 @@ class RangingSchedulerTask(ABC):
         ...
 
     @abstractmethod
-    async def get_next_node_pair(self) -> Tuple[str, str, bool]:
-        """Get the next listener/initiator device IDs and whether the cycle is done."""
+    async def get_next_node_pair(self) -> Optional[Tuple[str, str, bool]]:
+        """Get the next pair, or None until at least two eligible nodes are connected."""
         ...
 
     @abstractmethod
