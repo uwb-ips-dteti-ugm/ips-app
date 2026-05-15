@@ -31,19 +31,21 @@ class ControlNode(ABC):
     @abstractmethod
     async def listen_ranging(
         self,
-        listener_device_id: str,
-        initiator_device_id: str,
+        device_id: str,
+        listener_pan_id: int,
+        initiator_pan_id: int,
         listen_for: int,
     ) -> None:
-        """Command a node to listen for a ranging request from another node."""
+        """Command the connected node to listen with listener and initiator PAN IDs."""
         ...
 
     @abstractmethod
     async def initiate_ranging(
         self,
-        initiator_device_id: str,
-        target_device_id: str,
+        device_id: str,
+        initiator_pan_id: int,
+        listener_pan_id: int,
         wait_for: int,
     ) -> None:
-        """Command a node to range against a target node."""
+        """Command the connected node to initiate ranging with initiator and listener PAN IDs."""
         ...

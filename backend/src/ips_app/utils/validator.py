@@ -85,6 +85,13 @@ def validate_uwb_network_value(value: int, field: str) -> None:
         raise ValidatorDomainException(f"'{field}' must be between 0 and 65535.")
 
 
+def validate_required_uwb_network_value(value: Optional[int], field: str) -> int:
+    if value is None:
+        raise ValidatorDomainException(f"'{field}' is required.")
+    validate_uwb_network_value(value, field)
+    return value
+
+
 def validate_optional_uwb_network_address(
     pan_id: Optional[int],
     network_address: Optional[int],

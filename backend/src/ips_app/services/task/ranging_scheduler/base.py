@@ -11,7 +11,10 @@ from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.node.control import ControlNode
 from ips_app.domain.ports.driven.repository.node import NodeRepository
 from ips_app.domain.ports.driving.task.ranging_scheduler import RangingSchedulerTask
-from ips_app.utils.validator import validate_positive_integer
+from ips_app.utils.validator import (
+    validate_positive_integer,
+    validate_required_uwb_network_value,
+)
 
 
 class BaseRangingSchedulerTask(RangingSchedulerTask):
@@ -55,15 +58,23 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         tag = f"{self.tag_class}.listen_ranging"
         try:
             validate_positive_integer(listen_for, "listen_for")
-            await self._ensure_approved_nodes(
-                (listener_device_id, initiator_device_id)
+            listener = await self._ensure_approved_node(listener_device_id)
+            initiator = await self._ensure_approved_node(initiator_device_id)
+            listener_pan_id = validate_required_uwb_network_value(
+                listener.pan_id,
+                "listener_pan_id",
+            )
+            initiator_pan_id = validate_required_uwb_network_value(
+                initiator.pan_id,
+                "initiator_pan_id",
             )
             await self._ensure_registered_nodes(
                 (listener_device_id, initiator_device_id)
             )
             await self.control.listen_ranging(
-                listener_device_id=listener_device_id,
-                initiator_device_id=initiator_device_id,
+                device_id=listener_device_id,
+                listener_pan_id=listener_pan_id,
+                initiator_pan_id=initiator_pan_id,
                 listen_for=listen_for,
             )
             await self._set_nodes_last_seen(
@@ -75,6 +86,8 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                 {
                     "listener_device_id": listener_device_id,
                     "initiator_device_id": initiator_device_id,
+                    "listener_pan_id": listener_pan_id,
+                    "initiator_pan_id": initiator_pan_id,
                     "listen_for": listen_for,
                 },
             )
@@ -101,15 +114,23 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         tag = f"{self.tag_class}.initiate_ranging"
         try:
             validate_positive_integer(wait_for, "wait_for")
-            await self._ensure_approved_nodes(
-                (initiator_device_id, target_device_id)
+            initiator = await self._ensure_approved_node(initiator_device_id)
+            target = await self._ensure_approved_node(target_device_id)
+            initiator_pan_id = validate_required_uwb_network_value(
+                initiator.pan_id,
+                "initiator_pan_id",
+            )
+            listener_pan_id = validate_required_uwb_network_value(
+                target.pan_id,
+                "listener_pan_id",
             )
             await self._ensure_registered_nodes(
                 (initiator_device_id, target_device_id)
             )
             await self.control.initiate_ranging(
-                initiator_device_id=initiator_device_id,
-                target_device_id=target_device_id,
+                device_id=initiator_device_id,
+                initiator_pan_id=initiator_pan_id,
+                listener_pan_id=listener_pan_id,
                 wait_for=wait_for,
             )
             await self._set_nodes_last_seen(
@@ -121,6 +142,8 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                 {
                     "initiator_device_id": initiator_device_id,
                     "target_device_id": target_device_id,
+                    "initiator_pan_id": initiator_pan_id,
+                    "listener_pan_id": listener_pan_id,
                     "wait_for": wait_for,
                 },
             )
@@ -143,13 +166,6 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         if not node.is_approved:
             raise ForbiddenDomainException(f"Node '{device_id}' is not approved.")
         return node
-
-    async def _ensure_approved_nodes(
-        self,
-        device_ids: Sequence[Optional[str]],
-    ) -> None:
-        for device_id in self._unique_device_ids(device_ids):
-            await self._ensure_approved_node(device_id)
 
     async def _ensure_registered_nodes(self, device_ids: Sequence[str]) -> None:
         for device_id in self._unique_device_ids(device_ids):
