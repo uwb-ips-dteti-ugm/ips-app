@@ -11,6 +11,8 @@ class NodeRepository(ABC):
         device_id: str,
         name: str,
         description: str = "",
+        pan_id: Optional[int] = None,
+        network_address: Optional[int] = None,
         preferences: Optional[Dict[str, Any]] = None,
         created_by: Optional[Any] = None,
         **kwargs: Any,
@@ -36,6 +38,7 @@ class NodeRepository(ABC):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         status: Optional[NodeStatus] = None,
+        network_address: Optional[int] = None,
         **kwargs: Any,
     ) -> Tuple[List[Node], int]:
         """Read nodes with pagination and filtering."""

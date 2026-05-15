@@ -45,7 +45,7 @@ class BaseSeeder(Seeder):
         self.repo_feature = repo_feature
         self.repo_user = repo_user
         self.log = log
-        self.tag_class = "BaseSeeder"
+        self.tag_class = self.__class__.__name__
 
     async def seed_permissions(self) -> None:
         tag = f"{self.tag_class}.seed_permissions"

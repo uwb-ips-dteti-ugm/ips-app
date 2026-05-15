@@ -28,7 +28,7 @@ from ips_app.domain.ports.driven.repository.user import UserRepository
 class BeanieUserRepository(UserRepository):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "BeanieUserRepository"
+        self.tag_class = self.__class__.__name__
         self.auth_adapter = TypeAdapter(UserAuth)
 
     async def create_user(

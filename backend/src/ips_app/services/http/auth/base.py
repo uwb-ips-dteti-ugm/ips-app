@@ -36,7 +36,7 @@ class BaseAuthHTTP(AuthHTTP):
         self.repo_user = repo_user
         self.repo_role = repo_role
         self.log = log
-        self.tag_class = "BaseAuthHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def sign_up(
         self,

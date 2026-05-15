@@ -26,7 +26,7 @@ class BaseUserStateUpdaterCron(UserStateUpdaterCron):
         self.log = log
         self.away_after = away_after
         self.offline_after = offline_after
-        self.tag_class = "BaseUserStateUpdaterCron"
+        self.tag_class = self.__class__.__name__
 
     async def update_user_states(self) -> None:
         tag = f"{self.tag_class}.update_user_states"

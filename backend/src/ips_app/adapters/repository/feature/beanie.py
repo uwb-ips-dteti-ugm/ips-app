@@ -20,7 +20,7 @@ from ips_app.domain.ports.driven.repository.feature import FeatureRepository
 class BeanieFeatureRepository(FeatureRepository):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "BeanieFeatureRepository"
+        self.tag_class = self.__class__.__name__
 
     async def create_feature(
         self,

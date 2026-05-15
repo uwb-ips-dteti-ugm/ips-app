@@ -12,7 +12,7 @@ class BasePermissionHTTP(PermissionHTTP):
     def __init__(self, repo: PermissionRepository, log: GenericLogging):
         self.repo = repo
         self.log = log
-        self.tag_class = "BasePermissionHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def add_permission(self, name: str, description: str) -> Permission:
         tag = f"{self.tag_class}.add_permission"

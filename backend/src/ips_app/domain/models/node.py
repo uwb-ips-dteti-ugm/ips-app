@@ -21,6 +21,8 @@ class NodeStatus(StrEnum):
 class Node(BaseModel):
     id: Optional[Any] = None
     device_id: str
+    pan_id: Optional[int] = Field(None, ge=0, le=0xFFFF)
+    network_address: Optional[int] = Field(None, ge=0, le=0xFFFF)
     name: str
     description: str = ""
     preferences: Dict[str, Any] = Field(default_factory=dict)

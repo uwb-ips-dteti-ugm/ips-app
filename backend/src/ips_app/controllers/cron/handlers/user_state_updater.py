@@ -11,7 +11,7 @@ class UserStateUpdaterCronHandler:
     ):
         self.service = service
         self.log = log
-        self.tag_class = "UserStateUpdaterCronHandler"
+        self.tag_class = self.__class__.__name__
 
     async def run_update_user_states(self) -> None:
         tag = f"{self.tag_class}.run_update_user_states"

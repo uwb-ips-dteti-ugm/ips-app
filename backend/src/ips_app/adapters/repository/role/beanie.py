@@ -20,7 +20,7 @@ from ips_app.domain.ports.driven.repository.role import RoleRepository
 class BeanieRoleRepository(RoleRepository):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "BeanieRoleRepository"
+        self.tag_class = self.__class__.__name__
 
     async def create_role(
         self,

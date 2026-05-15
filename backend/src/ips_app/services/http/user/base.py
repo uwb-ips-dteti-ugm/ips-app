@@ -23,7 +23,7 @@ class BaseUserHTTP(UserHTTP):
         self.repo_feature = repo_feature
         self.repo_role = repo_role
         self.log = log
-        self.tag_class = "BaseUserHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def get_user(self, user_id: Any) -> User:
         tag = f"{self.tag_class}.get_user"

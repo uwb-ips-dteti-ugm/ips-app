@@ -24,7 +24,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         self.repo_node = repo_node
         self.control = control
         self.log = log
-        self.tag_class = "BaseRangingSchedulerTask"
+        self.tag_class = self.__class__.__name__
 
     async def get_registered_nodes(self) -> List[str]:
         tag = f"{self.tag_class}.get_registered_nodes"

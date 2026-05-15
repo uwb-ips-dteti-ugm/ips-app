@@ -14,18 +14,24 @@ from ips_app.domain.models.exception import (
 from ips_app.domain.models.node import Node, NodeStatus
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driven.repository.node import NodeRepository
+from ips_app.utils.validator import (
+    validate_optional_uwb_network_address,
+    validate_uwb_network_value,
+)
 
 
 class BeanieNodeRepository(NodeRepository):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "BeanieNodeRepository"
+        self.tag_class = self.__class__.__name__
 
     async def create_node(
         self,
         device_id: str,
         name: str,
         description: str = "",
+        pan_id: Optional[int] = None,
+        network_address: Optional[int] = None,
         preferences: Optional[Dict[str, Any]] = None,
         created_by: Optional[Any] = None,
         **kwargs: Any,
@@ -33,8 +39,11 @@ class BeanieNodeRepository(NodeRepository):
         tag = f"{self.tag_class}.create_node"
         session = kwargs.get("session")
         try:
+            validate_optional_uwb_network_address(pan_id, network_address)
             doc = NodeDocument(
                 device_id=device_id,
+                pan_id=pan_id,
+                network_address=network_address,
                 name=name,
                 description=description,
                 preferences=preferences or {},
@@ -43,12 +52,13 @@ class BeanieNodeRepository(NodeRepository):
             await doc.insert(session=session)
             return doc.to_domain()
         except DuplicateKeyError as e:
+            field = self._duplicate_field(e)
             await self.log.error(
                 tag,
-                "Duplicate node device id",
-                {"error": str(e), "device_id": device_id},
+                "Duplicate node identity",
+                {"error": str(e), "field": field, "device_id": device_id},
             )
-            raise DuplicateDomainException("device_id", "nodes")
+            raise DuplicateDomainException(field, "nodes")
         except DomainException:
             raise
         except Exception as e:
@@ -102,6 +112,7 @@ class BeanieNodeRepository(NodeRepository):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         status: Optional[NodeStatus] = None,
+        network_address: Optional[int] = None,
         **kwargs: Any,
     ) -> Tuple[List[Node], int]:
         tag = f"{self.tag_class}.read_nodes_by_pagination"
@@ -118,6 +129,9 @@ class BeanieNodeRepository(NodeRepository):
                 ]
             if status:
                 query_filter["status"] = status
+            if network_address is not None:
+                validate_uwb_network_value(network_address, "network_address")
+                query_filter["network_address"] = network_address
 
             query = NodeDocument.find(query_filter, session=session)
             total = await query.count()
@@ -130,7 +144,12 @@ class BeanieNodeRepository(NodeRepository):
             await self.log.error(
                 tag,
                 "Failed to read nodes by pagination",
-                {"error": str(e), "page": page, "limit": limit},
+                {
+                    "error": str(e),
+                    "page": page,
+                    "limit": limit,
+                    "network_address": network_address,
+                },
             )
             raise UnexpectedDomainException(str(e)) from e
 
@@ -374,3 +393,12 @@ class BeanieNodeRepository(NodeRepository):
             update_data["last_disconnected_at"] = last_disconnected_at
 
         await doc.set(update_data, session=session)
+
+    def _duplicate_field(self, error: DuplicateKeyError) -> str:
+        key_pattern = getattr(error, "details", {}) or {}
+        key_pattern = key_pattern.get("keyPattern", {})
+        if "device_id" in key_pattern:
+            return "device_id"
+        if "pan_id" in key_pattern and "network_address" in key_pattern:
+            return "network_address"
+        return "node"

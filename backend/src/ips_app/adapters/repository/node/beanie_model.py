@@ -9,6 +9,8 @@ from ips_app.domain.models.node import Node, NodeStatus
 
 class NodeDocument(Document):
     device_id: Annotated[str, Indexed(unique=True)]
+    pan_id: Optional[int] = Field(default=None, ge=0, le=0xFFFF)
+    network_address: Optional[int] = Field(default=None, ge=0, le=0xFFFF)
     name: Annotated[str, Indexed()]
     description: str = Field(default="")
     preferences: Dict[str, Any] = Field(default_factory=dict)
@@ -33,12 +35,16 @@ class NodeDocument(Document):
             [("status", 1)],
             [("last_seen_at", -1)],
             [("last_connected_at", -1)],
+            [("pan_id", 1)],
+            [("network_address", 1)],
         ]
 
     def to_domain(self) -> Node:
         return Node(
             id=self.id,
             device_id=self.device_id,
+            pan_id=self.pan_id,
+            network_address=self.network_address,
             name=self.name,
             description=self.description,
             preferences=self.preferences,

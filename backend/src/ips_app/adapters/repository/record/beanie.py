@@ -26,7 +26,7 @@ from ips_app.utils.validator import (
 class BeanieRecordRepository(RecordRepository):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "BeanieRecordRepository"
+        self.tag_class = self.__class__.__name__
 
     async def create_record(
         self,

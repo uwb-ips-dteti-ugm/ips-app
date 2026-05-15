@@ -18,7 +18,7 @@ from ips_app.domain.ports.driven.repository.permission import PermissionReposito
 class BeaniePermissionRepository(PermissionRepository):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "BeaniePermissionRepository"
+        self.tag_class = self.__class__.__name__
 
     async def create_permission(
         self,

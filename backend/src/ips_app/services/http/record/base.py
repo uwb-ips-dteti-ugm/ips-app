@@ -15,7 +15,7 @@ class BaseRecordHTTP(RecordHTTP):
     def __init__(self, repo: RecordRepository, log: GenericLogging):
         self.repo = repo
         self.log = log
-        self.tag_class = "BaseRecordHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def get_records_by_interval(
         self,

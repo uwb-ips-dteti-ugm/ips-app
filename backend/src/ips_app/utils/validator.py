@@ -80,6 +80,25 @@ def validate_optional_non_negative_float(
         raise ValidatorDomainException(f"'{field}' must be greater than or equal to 0.")
 
 
+def validate_uwb_network_value(value: int, field: str) -> None:
+    if value < 0 or value > 0xFFFF:
+        raise ValidatorDomainException(f"'{field}' must be between 0 and 65535.")
+
+
+def validate_optional_uwb_network_address(
+    pan_id: Optional[int],
+    network_address: Optional[int],
+) -> None:
+    if (pan_id is None) != (network_address is None):
+        raise ValidatorDomainException(
+            "'pan_id' and 'network_address' must be provided together."
+        )
+    if pan_id is not None:
+        validate_uwb_network_value(pan_id, "pan_id")
+    if network_address is not None:
+        validate_uwb_network_value(network_address, "network_address")
+
+
 def validate_user_state_cutoffs(
     away_after: timedelta,
     offline_after: timedelta,

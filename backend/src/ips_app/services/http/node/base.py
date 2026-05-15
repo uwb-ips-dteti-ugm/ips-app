@@ -35,7 +35,7 @@ class BaseNodeHTTP(NodeHTTP):
         self.repo_record = repo_record
         self.control = control
         self.log = log
-        self.tag_class = "BaseNodeHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def add_node(
         self,

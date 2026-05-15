@@ -14,7 +14,7 @@ from ips_app.domain.ports.driven.node.control import ControlNode
 class WebSocketNodeControl(ControlNode):
     def __init__(self, log: GenericLogging):
         self.log = log
-        self.tag_class = "WebSocketNodeControl"
+        self.tag_class = self.__class__.__name__
         self.connections: Dict[str, Any] = {}
         self.lock = asyncio.Lock()
 

@@ -13,7 +13,7 @@ class BaseRoleHTTP(RoleHTTP):
     def __init__(self, repo: RoleRepository, log: GenericLogging):
         self.repo = repo
         self.log = log
-        self.tag_class = "BaseRoleHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def add_role(self, name: str, description: str) -> Role:
         tag = f"{self.tag_class}.add_role"

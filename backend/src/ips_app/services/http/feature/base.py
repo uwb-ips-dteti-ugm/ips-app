@@ -17,7 +17,7 @@ class BaseFeatureHTTP(FeatureHTTP):
     ):
         self.repo = repo
         self.log = log
-        self.tag_class = "BaseFeatureHTTP"
+        self.tag_class = self.__class__.__name__
 
     async def add_feature(self, name: str, description: str) -> Feature:
         tag = f"{self.tag_class}.add_feature"
