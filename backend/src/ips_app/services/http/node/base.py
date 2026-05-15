@@ -4,7 +4,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ips_app.domain.models.exception import (
     DomainException,
+    DuplicateDomainException,
     ForbiddenDomainException,
+    NotFoundDomainException,
     UnexpectedDomainException,
 )
 from ips_app.domain.models.node import Node, NodeStatus
@@ -14,7 +16,11 @@ from ips_app.domain.ports.driven.node.control import ControlNode
 from ips_app.domain.ports.driven.repository.node import NodeRepository
 from ips_app.domain.ports.driven.repository.record import RecordRepository
 from ips_app.domain.ports.driving.http.node import NodeHTTP
-from ips_app.utils.validator import validate_optional_non_negative_float
+from ips_app.utils.namegen import generate_name
+from ips_app.utils.validator import (
+    validate_non_empty_string,
+    validate_optional_non_negative_float,
+)
 
 
 class BaseNodeHTTP(NodeHTTP):
@@ -229,6 +235,8 @@ class BaseNodeHTTP(NodeHTTP):
     ) -> None:
         tag = f"{self.tag_class}.register_node_connection"
         try:
+            validate_non_empty_string(device_id, "device_id")
+            await self._create_node_registration_if_missing(device_id)
             await self._ensure_approved_node(device_id)
             await self.control.register(device_id, connection)
             await self.repo.update_node_last_connected_at_by_device_id(device_id)
@@ -373,6 +381,22 @@ class BaseNodeHTTP(NodeHTTP):
         if not node.is_approved:
             raise ForbiddenDomainException("Node is not approved.")
         return node
+
+    async def _create_node_registration_if_missing(self, device_id: str) -> None:
+        try:
+            await self.repo.read_node_by_device_id(device_id)
+            return
+        except NotFoundDomainException:
+            pass
+
+        try:
+            await self.repo.create_node(
+                device_id=device_id,
+                name=generate_name(),
+                description="Registered from node websocket connection",
+            )
+        except DuplicateDomainException:
+            return
 
     async def _ensure_approved_nodes(
         self,

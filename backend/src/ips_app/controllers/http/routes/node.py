@@ -18,13 +18,11 @@ from ips_app.controllers.http.middlewares.feature_guard import feature_guard
 from ips_app.controllers.http.middlewares.logger import logger
 from ips_app.domain.models.node import NodeStatus
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
-from ips_app.domain.ports.driving.http.node import NodeHTTP
 from ips_app.domain.ports.driving.http.user import UserHTTP
 
 
 def create_router(
     handler: NodeHandler,
-    node_service: NodeHTTP,
     user_service: UserHTTP,
     log: GenericLogging,
 ) -> APIRouter:
@@ -47,28 +45,7 @@ def create_router(
 
     @router.websocket("/ws/{device_id}")
     async def connect_node_websocket(device_id: str, websocket: WebSocket):
-        registered = False
-        result = await handler.connect_node_websocket(device_id, websocket)
-        if result is not None:
-            return
-
-        registered = True
-        try:
-            await websocket.accept()
-            while True:
-                message = await websocket.receive()
-                if message.get("type") == "websocket.disconnect":
-                    break
-        finally:
-            if registered:
-                try:
-                    await node_service.unregister_node_connection(device_id)
-                except Exception as e:
-                    await log.error(
-                        "NodeRoutes.connect_node_websocket",
-                        "Failed to unregister node websocket",
-                        {"error": str(e), "device_id": device_id},
-                    )
+        await handler.connect_node_websocket(device_id, websocket)
 
     @router.post(
         "",

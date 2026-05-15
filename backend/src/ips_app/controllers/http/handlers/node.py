@@ -1,7 +1,7 @@
 from inspect import isawaitable
 from typing import Any, Optional, Union
 
-from fastapi import Request, Response, status
+from fastapi import Request, Response, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
 
 from ips_app.controllers.http.dto.node import (
@@ -150,11 +150,17 @@ class NodeHandler:
         device_id: str,
         connection: Any,
     ) -> Optional[JSONResponse]:
+        registered = False
         try:
             await self.service.register_node_connection(
                 device_id=device_id,
                 connection=connection,
             )
+            registered = True
+            await self._accept_node_connection(connection)
+            await self._run_node_connection_loop(connection)
+            return None
+        except WebSocketDisconnect:
             return None
         except DomainException as e:
             await self._reject_node_connection(
@@ -168,6 +174,12 @@ class NodeHandler:
                 status.WS_1011_INTERNAL_ERROR,
             )
             return self._handle_exception(e)
+        finally:
+            if registered:
+                try:
+                    await self.service.unregister_node_connection(device_id)
+                except Exception:
+                    pass
 
     async def get_node_registration(
         self,
@@ -232,3 +244,23 @@ class NodeHandler:
         result = close(code=code)
         if isawaitable(result):
             await result
+
+    async def _accept_node_connection(self, connection: Any) -> None:
+        accept = getattr(connection, "accept", None)
+        if accept is None:
+            return
+
+        result = accept()
+        if isawaitable(result):
+            await result
+
+    async def _run_node_connection_loop(self, connection: Any) -> None:
+        while True:
+            receive = getattr(connection, "receive", None)
+            if receive is None:
+                return
+
+            result = receive()
+            message = await result if isawaitable(result) else result
+            if isinstance(message, dict) and message.get("type") == "websocket.disconnect":
+                return
