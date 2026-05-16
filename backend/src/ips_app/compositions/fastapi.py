@@ -230,7 +230,7 @@ def create_app() -> FastAPI:
     app.include_router(node.create_router(node_handler, user_service, log))
     app.include_router(record.create_router(record_handler, user_service, log))
 
-    excluded_middleware_paths = [
+    jwt_excluded_paths = [
         "/docs",
         "/docs/oauth2-redirect",
         "/redoc",
@@ -239,14 +239,18 @@ def create_app() -> FastAPI:
         "/auth/sign-in",
         "/auth/refresh-token",
     ]
+    activity_updater_excluded_paths = [
+        *jwt_excluded_paths,
+        "/auth/sign-out",
+    ]
     app.add_middleware(
         ActivityUpdaterMiddleware,
         user_service=user_service,
-        excluded_paths=excluded_middleware_paths,
+        excluded_paths=activity_updater_excluded_paths,
     )
     app.add_middleware(
         JwtMiddleware,
-        excluded_paths=excluded_middleware_paths,
+        excluded_paths=jwt_excluded_paths,
     )
 
     return app
