@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 
+import { canAccessFeature } from "@/lib/api/featureAccess";
 import { getAuthSession } from "@/lib/auth/session";
 
 import { signOutAction } from "./_actions/sign-out";
+import { Sidebar, sidebarConfig } from "./_components/Sidebar";
 import { SignOutButton } from "./_components/SignOutButton";
 
 export default async function Home() {
@@ -12,20 +14,36 @@ export default async function Home() {
     redirect("/sign-in");
   }
 
-  return (
-    <main className="min-h-dvh bg-white p-6 text-[#0F2854] dark:bg-black dark:text-white">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">IPS App</h1>
-          <p className="text-sm text-[#1C4D8D] dark:text-[#BDE8F5]">
-            Signed in as {session.claims.name}
-          </p>
-        </div>
+  const groups = await getAccessibleSidebarGroups(session.accessToken);
 
-        <form action={signOutAction}>
-          <SignOutButton />
-        </form>
-      </div>
+  return (
+    <main className="flex min-h-dvh bg-[#F5FAFD] text-[#0F2854] dark:bg-black dark:text-white">
+      <Sidebar
+        userName={session.claims.name}
+        groups={groups}
+        signOutAction={signOutAction}
+        signOutButton={<SignOutButton />}
+      />
+      <section className="flex-1" />
     </main>
   );
+}
+
+async function getAccessibleSidebarGroups(accessToken: string) {
+  const featureAccessEntries = await Promise.all(
+    sidebarConfig.flatMap((group) =>
+      group.menus.map(async (menu) => [
+        menu.featureName,
+        await canAccessFeature(accessToken, menu.featureName),
+      ] as const),
+    ),
+  );
+  const featureAccess = new Map(featureAccessEntries);
+
+  return sidebarConfig
+    .map((group) => ({
+      ...group,
+      menus: group.menus.filter((menu) => featureAccess.get(menu.featureName)),
+    }))
+    .filter((group) => group.menus.length > 0);
 }

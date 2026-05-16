@@ -3,11 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { clearAuthCookies, getAuthSession } from "@/lib/auth/session";
-
-const apiBaseUrl =
-  process.env.IPS_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_IPS_API_BASE_URL ??
-  "http://localhost:8000";
+import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
 
 export async function signOutAction(): Promise<void> {
   const session = await getAuthSession();
@@ -15,9 +11,7 @@ export async function signOutAction(): Promise<void> {
   if (session) {
     await fetch(`${apiBaseUrl}/auth/sign-out`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-      },
+      headers: getAuthHeaders(session.accessToken),
       cache: "no-store",
     }).catch(() => undefined);
   }
