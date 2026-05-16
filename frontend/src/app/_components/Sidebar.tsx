@@ -22,13 +22,13 @@ export const sidebarConfig = [
     label: "Admin",
     menus: [
       {
-        label: "User",
+        label: "Users",
         href: "/users",
         featureName: "user/view",
         icon: userIcon,
       },
       {
-        label: "Role",
+        label: "Roles",
         href: "/roles",
         featureName: "role/view",
         icon: roleIcon,

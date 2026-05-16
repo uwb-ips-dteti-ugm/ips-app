@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useState, type ReactNode } from "react";
 
-import chevronDownIcon from "../_assets/ChevronDownIcon.svg";
+import chevronDownIcon from "@/shared/assets/ChevronDownIcon.svg";
+
 import exitIcon from "../_assets/ExitIcon.svg";
 import hamburgerIcon from "../_assets/HamburgerIcon.svg";
 import type { SidebarConfigGroup, SidebarConfigMenu } from "./Sidebar";
@@ -21,12 +22,12 @@ export function SidebarClient({
   signOutAction,
   signOutButton,
 }: SidebarClientProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const firstName = getFirstName(userName);
 
   return (
     <aside
-      className={`flex min-h-dvh shrink-0 flex-col overflow-hidden border-r border-[#D9EEF7] bg-white py-5 text-[#0F2854] transition-[width,padding] duration-200 dark:border-[#1C4D8D] dark:bg-[#07111F] dark:text-white ${
+      className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-hidden border-r border-[#D9EEF7] bg-white py-5 text-[#0F2854] transition-[width,padding] duration-200 dark:border-[#1C4D8D] dark:bg-[#07111F] dark:text-white ${
         isOpen ? "w-72 px-4" : "w-18 px-3"
       }`}
     >
@@ -82,19 +83,19 @@ export function SidebarClient({
 
       {isOpen ? (
         <>
-          <nav className="flex flex-1 flex-col gap-5">
+          <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
             {groups.map((group) => (
               <SidebarGroup key={group.label} group={group} />
             ))}
           </nav>
 
-          <form action={signOutAction} className="px-2 pt-4">
+          <form action={signOutAction} className="shrink-0 px-2 pt-4">
             {signOutButton}
           </form>
         </>
       ) : (
         <>
-          <nav className="flex flex-1 flex-col items-center gap-2">
+          <nav className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto">
             {groups.flatMap((group) =>
               group.menus.map((menu) => (
                 <SidebarCollapsedItem key={menu.href} menu={menu} />
@@ -102,7 +103,7 @@ export function SidebarClient({
             )}
           </nav>
 
-          <form action={signOutAction} className="flex justify-center pt-4">
+          <form action={signOutAction} className="flex shrink-0 justify-center pt-4">
             <SidebarCollapsedSignOutButton />
           </form>
         </>
