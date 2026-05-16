@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 from beanie import Link, PydanticObjectId
+from beanie.odm.fields import ExpressionField
 from pydantic import TypeAdapter
 from pymongo.errors import DuplicateKeyError
 
@@ -141,7 +142,7 @@ class BeanieUserRepository(UserRepository):
                     {"auths.username": {"$regex": search, "$options": "i"}},
                 ]
             if role_id:
-                query_filter["role.$id"] = self._to_obj_id(role_id)
+                query_filter[ExpressionField("role").id] = self._to_obj_id(role_id)
             if state:
                 query_filter["state"] = state.value
             if status:

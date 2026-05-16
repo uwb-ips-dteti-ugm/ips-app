@@ -71,6 +71,7 @@ class RoleSummaryResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
     name: str = Field(..., examples=["John Doe"])
+    username: Optional[str] = Field(None, examples=["johndoe"])
     bio: str = Field(..., examples=["Software Engineer"])
     state: UserState = Field(..., examples=[UserState.ONLINE])
     status: UserStatus = Field(..., examples=[UserStatus.ACTIVE])
@@ -91,6 +92,7 @@ class UserResponse(BaseModel):
         return cls(
             id=str(user.id),
             name=user.name,
+            username=user.password_auth.username if user.password_auth else None,
             bio=user.bio,
             state=user.state,
             status=user.status,
