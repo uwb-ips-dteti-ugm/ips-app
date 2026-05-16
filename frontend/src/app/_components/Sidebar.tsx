@@ -1,6 +1,8 @@
 import { type StaticImageData } from "next/image";
 import { type ReactNode } from "react";
 
+import featureIcon from "../_assets/FeatureIcon.svg";
+import permissionIcon from "../_assets/PermissionIcon.svg";
 import roleIcon from "../_assets/RoleIcon.svg";
 import userIcon from "../_assets/UserIcon.svg";
 import { SidebarClient } from "./SidebarClient";
@@ -32,6 +34,18 @@ export const sidebarConfig = [
         href: "/roles",
         featureName: "role/view",
         icon: roleIcon,
+      },
+      {
+        label: "Permissions",
+        href: "/permissions",
+        featureName: "permission/view",
+        icon: permissionIcon,
+      },
+      {
+        label: "Features",
+        href: "/features",
+        featureName: "feature/view",
+        icon: featureIcon,
       },
     ],
   },
