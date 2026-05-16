@@ -1,5 +1,6 @@
 import Image, { type StaticImageData } from "next/image";
 
+import chevronDownIcon from "../_assets/ChevronDownIcon.svg";
 import roleIcon from "../_assets/RoleIcon.svg";
 import userIcon from "../_assets/UserIcon.svg";
 
@@ -101,9 +102,12 @@ function SidebarGroup({ group }: { group: SidebarConfigGroup }) {
     <details className="group" open>
       <summary className="mb-2 flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-1 text-xs font-semibold uppercase text-[#4988C4] outline-none transition hover:bg-[#BDE8F5]/40 focus-visible:ring-2 focus-visible:ring-[#4988C4] dark:text-[#BDE8F5] dark:hover:bg-[#1C4D8D]/50 [&::-webkit-details-marker]:hidden">
         {group.label}
-        <span
-          aria-hidden="true"
-          className="h-2 w-2 rotate-45 border-b border-r border-current transition-transform group-open:-rotate-135"
+        <Image
+          src={chevronDownIcon}
+          alt=""
+          width={20}
+          height={20}
+          className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 dark:brightness-0 dark:invert"
         />
       </summary>
       <div className="flex flex-col gap-1">
