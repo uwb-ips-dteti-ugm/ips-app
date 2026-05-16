@@ -19,6 +19,8 @@ class UserHTTP(ABC):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         role_id: Optional[Any] = None,
+        state: Optional[UserState] = None,
+        status: Optional[UserStatus] = None,
     ) -> Tuple[List[User], int]:
         """Get users with pagination and filtering."""
         ...

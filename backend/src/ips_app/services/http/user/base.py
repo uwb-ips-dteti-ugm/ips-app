@@ -46,6 +46,8 @@ class BaseUserHTTP(UserHTTP):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         role_id: Optional[Any] = None,
+        state: Optional[UserState] = None,
+        status: Optional[UserStatus] = None,
     ) -> Tuple[List[User], int]:
         tag = f"{self.tag_class}.get_users"
         try:
@@ -55,6 +57,8 @@ class BaseUserHTTP(UserHTTP):
                 cursor_id=cursor_id,
                 search=search,
                 role_id=role_id,
+                state=state,
+                status=status,
             )
         except DomainException:
             raise
@@ -62,7 +66,13 @@ class BaseUserHTTP(UserHTTP):
             await self.log.error(
                 tag,
                 "Failed to get users",
-                {"error": str(e), "page": page, "limit": limit},
+                {
+                    "error": str(e),
+                    "page": page,
+                    "limit": limit,
+                    "state": str(state) if state else None,
+                    "status": str(status) if status else None,
+                },
             )
             raise UnexpectedDomainException(str(e)) from e
 

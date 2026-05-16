@@ -15,6 +15,7 @@ from ips_app.controllers.http.dto.user import (
 from ips_app.controllers.http.handlers.user import UserHandler
 from ips_app.controllers.http.middlewares.feature_guard import feature_guard
 from ips_app.controllers.http.middlewares.logger import logger
+from ips_app.domain.models.user import UserState, UserStatus
 from ips_app.domain.ports.driven.logging.generic import GenericLogging
 from ips_app.domain.ports.driving.http.user import UserHTTP
 
@@ -157,6 +158,8 @@ def create_router(
         cursor_id: Optional[str] = None,
         search: Optional[str] = None,
         role_id: Optional[str] = None,
+        state: Optional[UserState] = None,
+        status: Optional[UserStatus] = None,
     ):
         return await handler.get_users(
             page=page,
@@ -164,6 +167,8 @@ def create_router(
             cursor_id=cursor_id,
             search=search,
             role_id=role_id,
+            state=state,
+            status=status,
         )
 
     @router.get(

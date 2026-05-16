@@ -125,6 +125,8 @@ class BeanieUserRepository(UserRepository):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         role_id: Optional[Any] = None,
+        state: Optional[UserState] = None,
+        status: Optional[UserStatus] = None,
         **kwargs: Any,
     ) -> Tuple[List[User], int]:
         tag = f"{self.tag_class}.read_users_by_pagination"
@@ -140,6 +142,10 @@ class BeanieUserRepository(UserRepository):
                 ]
             if role_id:
                 query_filter["role.$id"] = self._to_obj_id(role_id)
+            if state:
+                query_filter["state"] = state.value
+            if status:
+                query_filter["status"] = status.value
 
             query = UserDocument.find(query_filter, fetch_links=True, session=session)
             total = await query.count()
@@ -150,7 +156,13 @@ class BeanieUserRepository(UserRepository):
             await self.log.error(
                 tag,
                 "Failed to read users by pagination",
-                {"error": str(e), "page": page, "limit": limit},
+                {
+                    "error": str(e),
+                    "page": page,
+                    "limit": limit,
+                    "state": str(state) if state else None,
+                    "status": str(status) if status else None,
+                },
             )
             raise UnexpectedDomainException(str(e)) from e
 

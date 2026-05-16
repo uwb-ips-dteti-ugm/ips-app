@@ -14,6 +14,7 @@ from ips_app.controllers.http.dto.user import (
 )
 from ips_app.controllers.http.handlers.exception import handle_exception
 from ips_app.controllers.http.middlewares.auth_jwt import get_claims
+from ips_app.domain.models.user import UserState, UserStatus
 from ips_app.domain.ports.driving.http.user import UserHTTP
 
 
@@ -51,6 +52,8 @@ class UserHandler:
         cursor_id: Optional[str] = None,
         search: Optional[str] = None,
         role_id: Optional[str] = None,
+        state: Optional[UserState] = None,
+        status: Optional[UserStatus] = None,
     ) -> Union[UsersResponse, JSONResponse]:
         try:
             items, total = await self.service.get_users(
@@ -59,6 +62,8 @@ class UserHandler:
                 cursor_id=cursor_id,
                 search=search,
                 role_id=role_id,
+                state=state,
+                status=status,
             )
             return UsersResponse.from_domain(
                 items=items,

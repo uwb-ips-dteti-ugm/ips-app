@@ -40,6 +40,8 @@ class UserRepository(ABC):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
         role_id: Optional[Any] = None,
+        state: Optional[UserState] = None,
+        status: Optional[UserStatus] = None,
         **kwargs: Any,
     ) -> Tuple[List[User], int]:
         """Read users with pagination and filtering."""
