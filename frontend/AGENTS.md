@@ -27,7 +27,7 @@ The main source tree is `src/`.
 
 - `src/app/layout.tsx`: root HTML/body layout.
 - `src/app/globals.css`: global styles.
-- `src/app/proxy.ts`: route proxy/auth redirect logic.
+- `src/proxy.ts`: route proxy/auth redirect logic.
 - `src/app/(app)/sign-in`: sign-in route and sign-in-only local files.
 - `src/app/(dashboard)/layout.tsx`: authenticated dashboard layout. This owns `DashboardShell`, so the sidebar persists across dashboard navigation.
 - `src/app/(dashboard)/page.tsx`: dashboard root.
@@ -36,6 +36,9 @@ The main source tree is `src/`.
   - `admin/roles`
   - `admin/permissions`
   - `admin/features`
+- `src/app/(dashboard)/node/*`: node pages grouped by sidebar group:
+  - `node/list`
+  - `node/ranging`
 - `src/app/_components`, `src/app/_actions`, `src/app/_assets`: app-shell level code used across dashboard routes, such as sidebar and sign out.
 - `src/lib`: non-React application utilities, backend API helpers, auth/session/token utilities, server-action helpers, and URL/search-param helpers.
 - `src/shared`: reusable React-facing UI and assets that are not tied to one route.
@@ -53,6 +56,7 @@ Sidebar menu entries are configured in `src/app/_components/Sidebar.tsx`. When a
 - Put the menu under the correct group.
 - Use a public route href, for example `/admin/users`.
 - Set `featureName` to the backend feature gate, for example `user/view`.
+- Use `featureNames` when a menu requires multiple backend feature gates.
 - Add an icon under `src/app/_assets` if the icon is specific to the app shell.
 
 Use Next `Link` for internal navigation. Do not use plain `<a href>` for app routes unless a full document navigation is intentional.
@@ -129,6 +133,11 @@ The current admin routes are:
 - `/admin/roles`
 - `/admin/permissions`
 - `/admin/features`
+
+The current node routes are:
+
+- `/node/list`
+- `/node/ranging`
 
 ## Verification
 
