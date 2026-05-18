@@ -34,10 +34,12 @@ export async function DashboardShell({
 async function getAccessibleSidebarGroups(accessToken: string) {
   const featureAccessEntries = await Promise.all(
     sidebarConfig.flatMap((group) =>
-      group.menus.map(async (menu) => [
-        menu.featureName,
-        await canAccessFeature(accessToken, menu.featureName),
-      ] as const),
+      group.menus.flatMap((menu) =>
+        getMenuFeatureNames(menu).map(async (featureName) => [
+          featureName,
+          await canAccessFeature(accessToken, featureName),
+        ] as const),
+      ),
     ),
   );
   const featureAccess = new Map(featureAccessEntries);
@@ -45,7 +47,18 @@ async function getAccessibleSidebarGroups(accessToken: string) {
   return sidebarConfig
     .map((group) => ({
       ...group,
-      menus: group.menus.filter((menu) => featureAccess.get(menu.featureName)),
+      menus: group.menus.filter((menu) =>
+        getMenuFeatureNames(menu).every((featureName) =>
+          featureAccess.get(featureName),
+        ),
+      ),
     }))
     .filter((group) => group.menus.length > 0);
+}
+
+function getMenuFeatureNames(menu: {
+  featureName?: string;
+  featureNames?: string[];
+}) {
+  return menu.featureNames ?? (menu.featureName ? [menu.featureName] : []);
 }

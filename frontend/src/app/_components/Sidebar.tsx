@@ -2,7 +2,9 @@ import { type StaticImageData } from "next/image";
 import { type ReactNode } from "react";
 
 import featureIcon from "../_assets/FeatureIcon.svg";
+import nodeIcon from "../_assets/NodeIcon.svg";
 import permissionIcon from "../_assets/PermissionIcon.svg";
+import rangingIcon from "../_assets/RangingIcon.svg";
 import roleIcon from "../_assets/RoleIcon.svg";
 import userIcon from "../_assets/UserIcon.svg";
 import { SidebarClient } from "./SidebarClient";
@@ -10,7 +12,8 @@ import { SidebarClient } from "./SidebarClient";
 export type SidebarConfigMenu = {
   label: string;
   href: string;
-  featureName: string;
+  featureName?: string;
+  featureNames?: string[];
   icon: StaticImageData;
 };
 
@@ -20,6 +23,23 @@ export type SidebarConfigGroup = {
 };
 
 export const sidebarConfig = [
+  {
+    label: "Node",
+    menus: [
+      {
+        label: "List",
+        href: "/node/list",
+        featureName: "node/view",
+        icon: nodeIcon,
+      },
+      {
+        label: "Ranging",
+        href: "/node/ranging",
+        featureNames: ["node/view", "record/view"],
+        icon: rangingIcon,
+      },
+    ],
+  },
   {
     label: "Admin",
     menus: [
