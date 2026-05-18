@@ -179,7 +179,11 @@ class BaseAuthHTTP(AuthHTTP):
     async def sign_out(self, user_id: Any) -> None:
         tag = f"{self.tag_class}.sign_out"
         try:
-            await self.repo_user.update_user_state_by_id(user_id, UserState.OFFLINE)
+            await self.repo_user.update_user_state_by_id(
+                user_id,
+                UserState.OFFLINE,
+                increment_version=False,
+            )
             await self.log.info(
                 tag,
                 "Successfully signed out user",
@@ -311,7 +315,11 @@ class BaseAuthHTTP(AuthHTTP):
     async def _set_user_online_unless_dnd(self, user: User) -> None:
         if user.state == UserState.DND:
             return
-        await self.repo_user.update_user_state_by_id(user.id, UserState.ONLINE)
+        await self.repo_user.update_user_state_by_id(
+            user.id,
+            UserState.ONLINE,
+            increment_version=False,
+        )
 
     def _ensure_user_can_authenticate(self, user: User) -> None:
         if user.status == UserStatus.SUSPENDED:

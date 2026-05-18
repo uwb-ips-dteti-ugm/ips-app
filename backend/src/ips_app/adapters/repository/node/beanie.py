@@ -383,7 +383,6 @@ class BeanieNodeRepository(NodeRepository):
     ) -> None:
         update_data: Dict[str, Any] = {
             "updated_at": datetime.now(timezone.utc),
-            "version": doc.version + 1,
         }
         if last_seen_at is not None:
             update_data["last_seen_at"] = last_seen_at

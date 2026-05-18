@@ -328,4 +328,8 @@ class BaseUserHTTP(UserHTTP):
     async def _set_user_online_unless_dnd(self, user: User) -> None:
         if user.state == UserState.DND:
             return
-        await self.repo.update_user_state_by_id(user.id, UserState.ONLINE)
+        await self.repo.update_user_state_by_id(
+            user.id,
+            UserState.ONLINE,
+            increment_version=False,
+        )

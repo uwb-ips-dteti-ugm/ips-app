@@ -358,21 +358,22 @@ class BeanieUserRepository(UserRepository):
         id: Any,
         state: UserState,
         updated_by: Optional[int] = None,
+        increment_version: bool = True,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.update_user_state_by_id"
         session = kwargs.get("session")
         try:
             doc = await self._read_user_document(id, session)
-            await doc.set(
-                {
-                    "state": state,
-                    "updated_at": datetime.now(timezone.utc),
-                    "updated_by": updated_by,
-                    "version": doc.version + 1,
-                },
-                session=session,
-            )
+            update_data: Dict[str, Any] = {
+                "state": state,
+                "updated_at": datetime.now(timezone.utc),
+                "updated_by": updated_by,
+            }
+            if increment_version:
+                update_data["version"] = doc.version + 1
+
+            await doc.set(update_data, session=session)
         except DomainException:
             raise
         except Exception as e:
@@ -490,7 +491,6 @@ class BeanieUserRepository(UserRepository):
                     "last_signed_in_at": now,
                     "updated_at": now,
                     "updated_by": updated_by,
-                    "version": doc.version + 1,
                 },
                 session=session,
             )
@@ -520,7 +520,6 @@ class BeanieUserRepository(UserRepository):
                     "last_refreshed_at": now,
                     "updated_at": now,
                     "updated_by": updated_by,
-                    "version": doc.version + 1,
                 },
                 session=session,
             )
@@ -550,7 +549,6 @@ class BeanieUserRepository(UserRepository):
                     "last_activity_at": now,
                     "updated_at": now,
                     "updated_by": updated_by,
-                    "version": doc.version + 1,
                 },
                 session=session,
             )
@@ -597,7 +595,6 @@ class BeanieUserRepository(UserRepository):
                         "updated_at": now,
                         "updated_by": updated_by,
                     },
-                    "$inc": {"version": 1},
                 },
                 session=session,
             )
@@ -620,7 +617,6 @@ class BeanieUserRepository(UserRepository):
                         "updated_at": now,
                         "updated_by": updated_by,
                     },
-                    "$inc": {"version": 1},
                 },
                 session=session,
             )

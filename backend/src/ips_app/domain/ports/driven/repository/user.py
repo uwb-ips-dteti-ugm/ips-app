@@ -109,9 +109,10 @@ class UserRepository(ABC):
         id: Any,
         state: UserState,
         updated_by: Optional[int] = None,
+        increment_version: bool = True,
         **kwargs: Any,
     ) -> None:
-        """Update user state."""
+        """Update user state, optionally bumping version for user-triggered changes."""
         ...
 
     @abstractmethod
