@@ -1,4 +1,4 @@
-import { apiBaseUrl, getAuthHeaders } from "./client";
+import { apiBaseUrl, authenticatedFetch } from "./client";
 
 type FeatureAccessResponse = {
   feature_name: string;
@@ -13,9 +13,8 @@ export async function canAccessFeature(
   url.searchParams.set("feature_name", featureName);
 
   try {
-    const response = await fetch(url, {
-      headers: getAuthHeaders(accessToken),
-      cache: "no-store",
+    const response = await authenticatedFetch(accessToken, url, undefined, {
+      redirectOnUnauthorized: false,
     });
 
     if (!response.ok) {

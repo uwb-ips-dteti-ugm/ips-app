@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
+import { apiBaseUrl, authenticatedFetch } from "@/lib/api/client";
 
 export type RangingRecord = {
   id: string | null;
@@ -32,26 +30,24 @@ export async function fetchRangingRecordsByPair({
   start: Date;
   end: Date;
 }): Promise<RangingRecord[]> {
-  const response = await fetch(new URL("/records/query", apiBaseUrl), {
-    method: "POST",
-    headers: {
-      ...getAuthHeaders(accessToken),
-      "Content-Type": "application/json",
+  const response = await authenticatedFetch(
+    accessToken,
+    new URL("/records/query", apiBaseUrl),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        label: "ranging",
+        interval_field: "recorded_at",
+        start: start.toISOString(),
+        end: end.toISOString(),
+        source_node_device_ids: [sourceNodeDeviceId, targetNodeDeviceId],
+        target_node_device_ids: [sourceNodeDeviceId, targetNodeDeviceId],
+      }),
     },
-    body: JSON.stringify({
-      label: "ranging",
-      interval_field: "recorded_at",
-      start: start.toISOString(),
-      end: end.toISOString(),
-      source_node_device_ids: [sourceNodeDeviceId, targetNodeDeviceId],
-      target_node_device_ids: [sourceNodeDeviceId, targetNodeDeviceId],
-    }),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch ranging records.");

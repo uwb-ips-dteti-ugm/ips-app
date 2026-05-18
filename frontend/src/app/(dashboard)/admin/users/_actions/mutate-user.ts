@@ -1,15 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
-import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
+import {
+  fetchBackend,
+  getActionAccessToken,
+  jsonBackend,
+} from "@/lib/actions/backend";
 import {
   type ActionState,
   getFormString,
   readErrorMessage,
 } from "@/lib/actions/form";
-import { getAuthSession } from "@/lib/auth/session";
 
 export type UserMutationState = ActionState;
 
@@ -17,11 +19,7 @@ export async function registerUserAction(
   _state: UserMutationState,
   formData: FormData,
 ): Promise<UserMutationState> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const accessToken = await getActionAccessToken();
 
   const name = getFormString(formData, "name");
   const username = getFormString(formData, "username");
@@ -35,24 +33,12 @@ export async function registerUserAction(
     };
   }
 
-  const response = await fetch(new URL("/auth/register", apiBaseUrl), {
-    method: "POST",
-    headers: {
-      ...getAuthHeaders(session.accessToken),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name,
-      username,
-      password,
-      role_id: roleId,
-    }),
-    cache: "no-store",
+  const response = await jsonBackend(accessToken, "/auth/register", "POST", {
+    name,
+    username,
+    password,
+    role_id: roleId,
   });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
 
   if (!response.ok) {
     return {
@@ -72,11 +58,7 @@ export async function updateUserAction(
   _state: UserMutationState,
   formData: FormData,
 ): Promise<UserMutationState> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const accessToken = await getActionAccessToken();
 
   const userId = getFormString(formData, "user_id");
   const name = getFormString(formData, "name");
@@ -94,7 +76,7 @@ export async function updateUserAction(
 
   if (username) {
     const authInfoResponse = await patchBackend(
-      session.accessToken,
+      accessToken,
       `/auth/${userId}/info`,
       {
         username,
@@ -113,7 +95,7 @@ export async function updateUserAction(
 
   if (password) {
     const passwordResponse = await patchBackend(
-      session.accessToken,
+      accessToken,
       `/auth/${userId}/password`,
       {
         new_password: password,
@@ -131,7 +113,7 @@ export async function updateUserAction(
   }
 
   const infoResponse = await patchBackend(
-    session.accessToken,
+    accessToken,
     `/users/${userId}/info`,
     {
       name,
@@ -146,7 +128,7 @@ export async function updateUserAction(
 
   if (roleId) {
     const roleResponse = await patchBackend(
-      session.accessToken,
+      accessToken,
       `/users/${userId}/role`,
       {
         role_id: roleId,
@@ -161,7 +143,7 @@ export async function updateUserAction(
   }
 
   const statusResponse = await patchBackend(
-    session.accessToken,
+    accessToken,
     `/users/${userId}/status`,
     {
       status,
@@ -185,11 +167,7 @@ export async function deleteUserAction(
   _state: UserMutationState,
   formData: FormData,
 ): Promise<UserMutationState> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const accessToken = await getActionAccessToken();
 
   const userId = getFormString(formData, "user_id");
 
@@ -200,15 +178,9 @@ export async function deleteUserAction(
     };
   }
 
-  const response = await fetch(new URL(`/users/${userId}`, apiBaseUrl), {
+  const response = await fetchBackend(accessToken, `/users/${userId}`, {
     method: "DELETE",
-    headers: getAuthHeaders(session.accessToken),
-    cache: "no-store",
   });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
 
   if (!response.ok) {
     return {
@@ -229,19 +201,5 @@ async function patchBackend(
   path: string,
   body: Record<string, string>,
 ): Promise<Response> {
-  const response = await fetch(new URL(path, apiBaseUrl), {
-    method: "PATCH",
-    headers: {
-      ...getAuthHeaders(accessToken),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
-
-  return response;
+  return jsonBackend(accessToken, path, "PATCH", body);
 }

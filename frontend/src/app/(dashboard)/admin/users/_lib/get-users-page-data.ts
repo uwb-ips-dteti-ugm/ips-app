@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
+import { apiBaseUrl, authenticatedFetch } from "@/lib/api/client";
 import { canAccessFeature } from "@/lib/api/featureAccess";
 import { getLimitParam, getPageParam, getStringParam } from "@/lib/navigation/searchParams";
 
@@ -160,14 +158,7 @@ async function getUsers({
     url.searchParams.set("status", status);
   }
 
-  const response = await fetch(url, {
-    headers: getAuthHeaders(accessToken),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  const response = await authenticatedFetch(accessToken, url);
 
   if (!response.ok) {
     throw new Error("Failed to fetch users.");
@@ -181,14 +172,7 @@ async function getRoles(accessToken: string): Promise<UserRoleFilterOption[]> {
   url.searchParams.set("page", "0");
   url.searchParams.set("limit", "100");
 
-  const response = await fetch(url, {
-    headers: getAuthHeaders(accessToken),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  const response = await authenticatedFetch(accessToken, url);
 
   if (!response.ok) {
     return [];

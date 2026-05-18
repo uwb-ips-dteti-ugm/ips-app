@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
+import { apiBaseUrl, authenticatedFetch } from "@/lib/api/client";
 
 export type PaginationMeta = {
   page: number;
@@ -34,14 +32,7 @@ export async function fetchPaginated<T>({
     url.searchParams.set("search", search);
   }
 
-  const response = await fetch(url, {
-    headers: getAuthHeaders(accessToken),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  const response = await authenticatedFetch(accessToken, url);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch ${path}.`);

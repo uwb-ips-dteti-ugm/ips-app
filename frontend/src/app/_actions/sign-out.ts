@@ -3,17 +3,18 @@
 import { redirect } from "next/navigation";
 
 import { clearAuthCookies, getAuthSession } from "@/lib/auth/session";
-import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
+import { apiBaseUrl, authenticatedFetch } from "@/lib/api/client";
 
 export async function signOutAction(): Promise<void> {
-  const session = await getAuthSession();
+  const session = await getAuthSession({ persistRefresh: true });
 
   if (session) {
-    await fetch(`${apiBaseUrl}/auth/sign-out`, {
-      method: "POST",
-      headers: getAuthHeaders(session.accessToken),
-      cache: "no-store",
-    }).catch(() => undefined);
+    await authenticatedFetch(
+      session.accessToken,
+      new URL("/auth/sign-out", apiBaseUrl),
+      { method: "POST" },
+      { persistRefresh: true, redirectOnUnauthorized: false },
+    ).catch(() => undefined);
   }
 
   await clearAuthCookies();

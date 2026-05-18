@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
+import { apiBaseUrl, authenticatedFetch } from "@/lib/api/client";
 import { type PaginatedResponse } from "@/lib/api/pagination";
 
 export type NodeStatus = "pending" | "approved" | "suspended" | "revoked";
@@ -53,14 +51,7 @@ export async function fetchNodes({
     url.searchParams.set("status", status);
   }
 
-  const response = await fetch(url, {
-    headers: getAuthHeaders(accessToken),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  const response = await authenticatedFetch(accessToken, url);
 
   if (!response.ok) {
     throw new Error("Failed to fetch nodes.");
@@ -73,14 +64,10 @@ export async function fetchNodeByDeviceId(
   accessToken: string,
   deviceId: string,
 ): Promise<NodeListItem | null> {
-  const response = await fetch(new URL(`/nodes/device/${deviceId}`, apiBaseUrl), {
-    headers: getAuthHeaders(accessToken),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  const response = await authenticatedFetch(
+    accessToken,
+    new URL(`/nodes/device/${deviceId}`, apiBaseUrl),
+  );
 
   if (response.status === 404) {
     return null;
@@ -96,14 +83,10 @@ export async function fetchNodeByDeviceId(
 export async function fetchRegisteredNodeIds(
   accessToken: string,
 ): Promise<string[]> {
-  const response = await fetch(new URL("/nodes/registered", apiBaseUrl), {
-    headers: getAuthHeaders(accessToken),
-    cache: "no-store",
-  });
-
-  if (response.status === 401) {
-    redirect("/sign-in");
-  }
+  const response = await authenticatedFetch(
+    accessToken,
+    new URL("/nodes/registered", apiBaseUrl),
+  );
 
   if (!response.ok) {
     return [];
