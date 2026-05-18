@@ -13,13 +13,6 @@ class RoleSeed(TypedDict):
     permissions: List[str]
 
 
-class AccountSeed(TypedDict):
-    name: str
-    username: str
-    password: str
-    role: str
-
-
 class FeatureSeed(TypedDict):
     name: str
     description: str

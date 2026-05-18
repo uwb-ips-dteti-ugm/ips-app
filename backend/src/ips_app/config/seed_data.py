@@ -1,7 +1,6 @@
 from typing import List
 
 from ips_app.domain.models.seed import (
-    AccountSeed,
     FeatureSeed,
     PermissionSeed,
     RoleSeed,
@@ -125,6 +124,7 @@ SEED_FEATURES: List[FeatureSeed] = [
 
 
 ADMIN_ROLE_NAME = "admin"
+USER_ROLE_NAME = "user"
 
 
 SEED_ROLES: List[RoleSeed] = [
@@ -154,25 +154,9 @@ SEED_ROLES: List[RoleSeed] = [
         ],
     },
     {
-        "name": "user",
+        "name": USER_ROLE_NAME,
         "description": "Default user with basic access",
         "is_default": True,
         "permissions": [],
-    },
-]
-
-
-SEED_TEST_ACCOUNTS: List[AccountSeed] = [
-    {
-        "name": "John Doe",
-        "username": "johndoe",
-        "password": "changeme",
-        "role": "user",
-    },
-    {
-        "name": "Jane Doe",
-        "username": "janedoe",
-        "password": "changeme",
-        "role": "user",
     },
 ]

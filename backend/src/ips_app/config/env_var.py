@@ -22,6 +22,9 @@ class EnvVar:
     admin_name: str
     admin_username: str
     admin_password: str
+    user_name: str
+    user_username: str
+    user_password: str
     user_state_to_away_after: int
     user_state_to_offline_after: int
     user_state_updater_cron_period: int
@@ -42,9 +45,12 @@ def load_env_var() -> EnvVar:
         access_token_expiry=_fallback_int("ACCESS_TOKEN_EXPIRY", 3600),
         refresh_token_secret=_require("REFRESH_TOKEN_SECRET"),
         refresh_token_expiry=_fallback_int("REFRESH_TOKEN_EXPIRY", 604800),
-        admin_name=_fallback("ADMIN_NAME", "admin"),
+        admin_name=_require("ADMIN_NAME"),
         admin_username=_require("ADMIN_USERNAME"),
         admin_password=_require("ADMIN_PASSWORD"),
+        user_name=_require("USER_NAME"),
+        user_username=_require("USER_USERNAME"),
+        user_password=_require("USER_PASSWORD"),
         user_state_to_away_after=_fallback_int(
             "USER_STATE_TO_AWAY_AFTER",
             300,

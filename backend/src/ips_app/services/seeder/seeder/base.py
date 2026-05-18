@@ -20,7 +20,7 @@ from ips_app.config.seed_data import (
     SEED_FEATURES,
     SEED_PERMISSIONS,
     SEED_ROLES,
-    SEED_TEST_ACCOUNTS,
+    USER_ROLE_NAME,
 )
 from ips_app.utils.password import hash_password
 
@@ -31,6 +31,9 @@ class BaseSeeder(Seeder):
         admin_name: str,
         admin_username: str,
         admin_password: str,
+        user_name: str,
+        user_username: str,
+        user_password: str,
         repo_permission: PermissionRepository,
         repo_role: RoleRepository,
         repo_feature: FeatureRepository,
@@ -40,6 +43,9 @@ class BaseSeeder(Seeder):
         self.admin_name = admin_name
         self.admin_username = admin_username
         self.admin_password = admin_password
+        self.user_name = user_name
+        self.user_username = user_username
+        self.user_password = user_password
         self.repo_permission = repo_permission
         self.repo_role = repo_role
         self.repo_feature = repo_feature
@@ -181,18 +187,15 @@ class BaseSeeder(Seeder):
                     label="Created admin user",
                 )
 
-            for account_seed in SEED_TEST_ACCOUNTS:
-                role = await self._read_role_by_name(account_seed["role"])
-                if role is None:
-                    continue
-
+            user_role = await self._read_role_by_name(USER_ROLE_NAME)
+            if user_role is not None:
                 await self._create_account_if_missing(
-                    name=account_seed["name"],
-                    username=account_seed["username"],
-                    password=account_seed["password"],
-                    role=role,
+                    name=self.user_name,
+                    username=self.user_username,
+                    password=self.user_password,
+                    role=user_role,
                     tag=tag,
-                    label="Created test user",
+                    label="Created default user",
                 )
         except DomainException:
             raise
