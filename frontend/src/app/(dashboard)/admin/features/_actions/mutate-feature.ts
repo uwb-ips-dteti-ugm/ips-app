@@ -17,7 +17,7 @@ import {
   replaceAssignedPermissions,
 } from "@/lib/actions/permissions";
 
-export async function createRoleAction(
+export async function createFeatureAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -29,7 +29,7 @@ export async function createRoleAction(
     return { status: "error", message: "Name is required." };
   }
 
-  const response = await jsonBackend(accessToken, "/roles", "POST", {
+  const response = await jsonBackend(accessToken, "/features", "POST", {
     name,
     description,
   });
@@ -37,15 +37,15 @@ export async function createRoleAction(
   if (!response.ok) {
     return {
       status: "error",
-      message: await readErrorMessage(response, "Failed to register role."),
+      message: await readErrorMessage(response, "Failed to register feature."),
     };
   }
 
-  revalidatePath("/roles");
-  return { status: "success", message: "Role registered successfully." };
+  revalidatePath("/admin/features");
+  return { status: "success", message: "Feature registered successfully." };
 }
 
-export async function updateRoleAction(
+export async function updateFeatureAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -58,7 +58,7 @@ export async function updateRoleAction(
     return { status: "error", message: "Name is required." };
   }
 
-  const response = await jsonBackend(accessToken, `/roles/${id}`, "PATCH", {
+  const response = await jsonBackend(accessToken, `/features/${id}`, "PATCH", {
     name,
     description,
   });
@@ -66,15 +66,15 @@ export async function updateRoleAction(
   if (!response.ok) {
     return {
       status: "error",
-      message: await readErrorMessage(response, "Failed to update role."),
+      message: await readErrorMessage(response, "Failed to update feature."),
     };
   }
 
-  revalidatePath("/roles");
-  return { status: "success", message: "Role updated successfully." };
+  revalidatePath("/admin/features");
+  return { status: "success", message: "Feature updated successfully." };
 }
 
-export async function deleteRoleAction(
+export async function deleteFeatureAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -82,25 +82,25 @@ export async function deleteRoleAction(
   const id = getFormString(formData, "id");
 
   if (!id) {
-    return { status: "error", message: "Role ID is required." };
+    return { status: "error", message: "Feature ID is required." };
   }
 
-  const response = await fetchBackend(accessToken, `/roles/${id}`, {
+  const response = await fetchBackend(accessToken, `/features/${id}`, {
     method: "DELETE",
   });
 
   if (!response.ok) {
     return {
       status: "error",
-      message: await readErrorMessage(response, "Failed to delete role."),
+      message: await readErrorMessage(response, "Failed to delete feature."),
     };
   }
 
-  revalidatePath("/roles");
-  return { status: "success", message: "Role deleted successfully." };
+  revalidatePath("/admin/features");
+  return { status: "success", message: "Feature deleted successfully." };
 }
 
-export async function assignRolePermissionsAction(
+export async function assignFeaturePermissionsAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -113,12 +113,12 @@ export async function assignRolePermissionsAction(
   );
 
   if (!id) {
-    return { status: "error", message: "Role ID is required." };
+    return { status: "error", message: "Feature ID is required." };
   }
 
   const result = await replaceAssignedPermissions({
     accessToken,
-    path: `/roles/${id}/permissions`,
+    path: `/features/${id}/permissions`,
     selectedPermissionIds,
     assignedPermissionIds,
   });
@@ -127,6 +127,9 @@ export async function assignRolePermissionsAction(
     return result;
   }
 
-  revalidatePath("/roles");
-  return { status: "success", message: "Role permissions updated successfully." };
+  revalidatePath("/admin/features");
+  return {
+    status: "success",
+    message: "Feature permissions updated successfully.",
+  };
 }

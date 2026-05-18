@@ -61,7 +61,7 @@ export async function registerUserAction(
     };
   }
 
-  revalidatePath("/users");
+  revalidatePath("/admin/users");
   return {
     status: "success",
     message: "User registered successfully.",
@@ -174,7 +174,7 @@ export async function updateUserAction(
     };
   }
 
-  revalidatePath("/users");
+  revalidatePath("/admin/users");
   return {
     status: "success",
     message: "User updated successfully.",
@@ -217,7 +217,7 @@ export async function deleteUserAction(
     };
   }
 
-  revalidatePath("/users");
+  revalidatePath("/admin/users");
   return {
     status: "success",
     message: "User deleted successfully.",

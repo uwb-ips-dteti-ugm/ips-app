@@ -25,25 +25,25 @@ export const sidebarConfig = [
     menus: [
       {
         label: "Users",
-        href: "/users",
+        href: "/admin/users",
         featureName: "user/view",
         icon: userIcon,
       },
       {
         label: "Roles",
-        href: "/roles",
+        href: "/admin/roles",
         featureName: "role/view",
         icon: roleIcon,
       },
       {
         label: "Permissions",
-        href: "/permissions",
+        href: "/admin/permissions",
         featureName: "permission/view",
         icon: permissionIcon,
       },
       {
         label: "Features",
-        href: "/features",
+        href: "/admin/features",
         featureName: "feature/view",
         icon: featureIcon,
       },

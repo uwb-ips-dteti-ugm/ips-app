@@ -17,7 +17,7 @@ import {
   replaceAssignedPermissions,
 } from "@/lib/actions/permissions";
 
-export async function createFeatureAction(
+export async function createRoleAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -29,7 +29,7 @@ export async function createFeatureAction(
     return { status: "error", message: "Name is required." };
   }
 
-  const response = await jsonBackend(accessToken, "/features", "POST", {
+  const response = await jsonBackend(accessToken, "/roles", "POST", {
     name,
     description,
   });
@@ -37,15 +37,15 @@ export async function createFeatureAction(
   if (!response.ok) {
     return {
       status: "error",
-      message: await readErrorMessage(response, "Failed to register feature."),
+      message: await readErrorMessage(response, "Failed to register role."),
     };
   }
 
-  revalidatePath("/features");
-  return { status: "success", message: "Feature registered successfully." };
+  revalidatePath("/admin/roles");
+  return { status: "success", message: "Role registered successfully." };
 }
 
-export async function updateFeatureAction(
+export async function updateRoleAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -58,7 +58,7 @@ export async function updateFeatureAction(
     return { status: "error", message: "Name is required." };
   }
 
-  const response = await jsonBackend(accessToken, `/features/${id}`, "PATCH", {
+  const response = await jsonBackend(accessToken, `/roles/${id}`, "PATCH", {
     name,
     description,
   });
@@ -66,15 +66,15 @@ export async function updateFeatureAction(
   if (!response.ok) {
     return {
       status: "error",
-      message: await readErrorMessage(response, "Failed to update feature."),
+      message: await readErrorMessage(response, "Failed to update role."),
     };
   }
 
-  revalidatePath("/features");
-  return { status: "success", message: "Feature updated successfully." };
+  revalidatePath("/admin/roles");
+  return { status: "success", message: "Role updated successfully." };
 }
 
-export async function deleteFeatureAction(
+export async function deleteRoleAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -82,25 +82,25 @@ export async function deleteFeatureAction(
   const id = getFormString(formData, "id");
 
   if (!id) {
-    return { status: "error", message: "Feature ID is required." };
+    return { status: "error", message: "Role ID is required." };
   }
 
-  const response = await fetchBackend(accessToken, `/features/${id}`, {
+  const response = await fetchBackend(accessToken, `/roles/${id}`, {
     method: "DELETE",
   });
 
   if (!response.ok) {
     return {
       status: "error",
-      message: await readErrorMessage(response, "Failed to delete feature."),
+      message: await readErrorMessage(response, "Failed to delete role."),
     };
   }
 
-  revalidatePath("/features");
-  return { status: "success", message: "Feature deleted successfully." };
+  revalidatePath("/admin/roles");
+  return { status: "success", message: "Role deleted successfully." };
 }
 
-export async function assignFeaturePermissionsAction(
+export async function assignRolePermissionsAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -113,12 +113,12 @@ export async function assignFeaturePermissionsAction(
   );
 
   if (!id) {
-    return { status: "error", message: "Feature ID is required." };
+    return { status: "error", message: "Role ID is required." };
   }
 
   const result = await replaceAssignedPermissions({
     accessToken,
-    path: `/features/${id}/permissions`,
+    path: `/roles/${id}/permissions`,
     selectedPermissionIds,
     assignedPermissionIds,
   });
@@ -127,9 +127,6 @@ export async function assignFeaturePermissionsAction(
     return result;
   }
 
-  revalidatePath("/features");
-  return {
-    status: "success",
-    message: "Feature permissions updated successfully.",
-  };
+  revalidatePath("/admin/roles");
+  return { status: "success", message: "Role permissions updated successfully." };
 }

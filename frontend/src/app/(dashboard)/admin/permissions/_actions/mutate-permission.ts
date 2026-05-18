@@ -37,7 +37,7 @@ export async function createPermissionAction(
     };
   }
 
-  revalidatePath("/permissions");
+  revalidatePath("/admin/permissions");
   return { status: "success", message: "Permission registered successfully." };
 }
 
@@ -66,7 +66,7 @@ export async function updatePermissionAction(
     };
   }
 
-  revalidatePath("/permissions");
+  revalidatePath("/admin/permissions");
   return { status: "success", message: "Permission updated successfully." };
 }
 
@@ -92,6 +92,6 @@ export async function deletePermissionAction(
     };
   }
 
-  revalidatePath("/permissions");
+  revalidatePath("/admin/permissions");
   return { status: "success", message: "Permission deleted successfully." };
 }
