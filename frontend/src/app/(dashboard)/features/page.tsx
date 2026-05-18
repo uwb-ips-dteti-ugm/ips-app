@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { DashboardShell } from "@/app/_components/DashboardShell";
 import { canAccessFeature } from "@/lib/api/featureAccess";
 import { fetchPaginated } from "@/lib/api/pagination";
 import { getAuthSession } from "@/lib/auth/session";
@@ -48,11 +47,7 @@ export default async function FeaturesPage({ searchParams }: FeaturesPageProps) 
   ]);
 
   if (!canViewFeatures) {
-    return (
-      <DashboardShell session={session}>
-        <AccessDenied message="Your account does not have access to view features." />
-      </DashboardShell>
-    );
+    return <AccessDenied message="Your account does not have access to view features." />;
   }
 
   const [features, permissions] = await Promise.all([
@@ -75,33 +70,31 @@ export default async function FeaturesPage({ searchParams }: FeaturesPageProps) 
   ]);
 
   return (
-    <DashboardShell session={session}>
-      <PageContent>
-        <PageHeader
-          title="Features"
-          subtitle="View and manage feature gates."
-        />
+    <PageContent>
+      <PageHeader
+        title="Features"
+        subtitle="View and manage feature gates."
+      />
 
-        <ResourcePageContent
-          key={`${features.meta.page}:${features.meta.limit}:${features.meta.total}:${search}`}
-          items={features.data}
-          meta={features.meta}
-          search={search}
-          resourceLabel="Feature"
-          resourceLabelPlural="features"
-          emptyMessage="No features found."
-          canCreate={canManageFeatures}
-          canManage={canManageFeatures}
-          canDelete={canDeleteFeatures}
-          canAssignPermissions={canManageFeatures && canViewPermissions}
-          showPermissions
-          allPermissions={permissions.data}
-          createAction={createFeatureAction}
-          updateAction={updateFeatureAction}
-          deleteAction={deleteFeatureAction}
-          assignPermissionsAction={assignFeaturePermissionsAction}
-        />
-      </PageContent>
-    </DashboardShell>
+      <ResourcePageContent
+        key={`${features.meta.page}:${features.meta.limit}:${features.meta.total}:${search}`}
+        items={features.data}
+        meta={features.meta}
+        search={search}
+        resourceLabel="Feature"
+        resourceLabelPlural="features"
+        emptyMessage="No features found."
+        canCreate={canManageFeatures}
+        canManage={canManageFeatures}
+        canDelete={canDeleteFeatures}
+        canAssignPermissions={canManageFeatures && canViewPermissions}
+        showPermissions
+        allPermissions={permissions.data}
+        createAction={createFeatureAction}
+        updateAction={updateFeatureAction}
+        deleteAction={deleteFeatureAction}
+        assignPermissionsAction={assignFeaturePermissionsAction}
+      />
+    </PageContent>
   );
 }

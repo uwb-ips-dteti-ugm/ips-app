@@ -11,7 +11,7 @@ import permissionAssignIcon from "@/shared/assets/PermissionAssignIcon.svg";
 import trashIcon from "@/shared/assets/TrashIcon.svg";
 import { DescriptionList, DescriptionRow } from "@/shared/components/DescriptionList";
 import { FilterBar } from "@/shared/components/FilterBar";
-import { ActionMessage, TextField } from "@/shared/components/FormControls";
+import { ActionMessage, SelectField, TextField } from "@/shared/components/FormControls";
 import { Modal, ModalActions } from "@/shared/components/Modal";
 import { Pagination } from "@/shared/components/Pagination";
 import {
@@ -276,13 +276,10 @@ function ResourceFilters({
         inputClassName="w-full min-w-0"
       />
 
-      <TextField
+      <SelectField
         id="resource-limit"
         label="Entries"
         name="limit"
-        type="number"
-        min={1}
-        max={100}
         value={String(limit)}
         onChange={(event) =>
           replaceResourceQuery({
@@ -290,14 +287,17 @@ function ResourceFilters({
             router,
             searchParams,
             search: searchValue.trim(),
-            limit: getLimitValue(event.currentTarget.value),
+            limit: Number.parseInt(event.currentTarget.value, 10),
             onTableLoadingChange,
             startTransition,
           })
         }
         className="w-24"
-        inputClassName="text-center"
-      />
+      >
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </SelectField>
 
       {canCreate && (
         <button
@@ -769,16 +769,6 @@ function replaceQuery({
   startTransition(() => {
     router.replace(`${pathname}?${nextQuery}`, { scroll: false });
   });
-}
-
-function getLimitValue(value: string) {
-  const parsed = Number.parseInt(value, 10);
-
-  if (!Number.isFinite(parsed)) {
-    return 10;
-  }
-
-  return Math.min(Math.max(parsed, 1), 100);
 }
 
 function useCloseOnSuccess(state: ActionState, onClose: () => void) {

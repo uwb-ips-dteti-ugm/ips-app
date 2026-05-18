@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import chevronDownIcon from "@/shared/assets/ChevronDownIcon.svg";
@@ -140,7 +141,7 @@ function SidebarGroup({ group }: { group: SidebarConfigGroup }) {
 
 function SidebarItem({ menu }: { menu: SidebarConfigMenu }) {
   return (
-    <a
+    <Link
       href={menu.href}
       className="flex items-center gap-3 rounded-md px-3 py-2.5 text-base font-medium text-[#0F2854] transition hover:bg-[#BDE8F5]/50 dark:text-white dark:hover:bg-[#1C4D8D]"
     >
@@ -152,13 +153,13 @@ function SidebarItem({ menu }: { menu: SidebarConfigMenu }) {
         className="shrink-0 dark:brightness-0 dark:invert"
       />
       {menu.label}
-    </a>
+    </Link>
   );
 }
 
 function SidebarCollapsedItem({ menu }: { menu: SidebarConfigMenu }) {
   return (
-    <a
+    <Link
       href={menu.href}
       aria-label={menu.label}
       title={menu.label}
@@ -171,7 +172,7 @@ function SidebarCollapsedItem({ menu }: { menu: SidebarConfigMenu }) {
         height={20}
         className="shrink-0 dark:brightness-0 dark:invert"
       />
-    </a>
+    </Link>
   );
 }
 

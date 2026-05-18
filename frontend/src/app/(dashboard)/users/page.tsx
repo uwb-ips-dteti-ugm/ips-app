@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { DashboardShell } from "@/app/_components/DashboardShell";
 import { canAccessFeature } from "@/lib/api/featureAccess";
 import { apiBaseUrl, getAuthHeaders } from "@/lib/api/client";
 import { getAuthSession } from "@/lib/auth/session";
@@ -72,11 +71,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
     ]);
 
   if (!canViewUsers) {
-    return (
-      <DashboardShell session={session}>
-        <AccessDenied message="Your account does not have access to view users." />
-      </DashboardShell>
-    );
+    return <AccessDenied message="Your account does not have access to view users." />;
   }
 
   const [users, roles] = await Promise.all([
@@ -93,27 +88,25 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   ]);
 
   return (
-    <DashboardShell session={session}>
-      <PageContent>
-        <PageHeader title="Users" subtitle="View and manage users." />
+    <PageContent>
+      <PageHeader title="Users" subtitle="View and manage users." />
 
-        <UsersPageContent
-          key={`${users.meta.page}:${users.meta.limit}:${users.meta.total}:${search}:${roleId}:${state}:${status}`}
-          users={users.data}
-          meta={users.meta}
-          filters={{
-            search,
-            roleId,
-            state,
-            status,
-          }}
-          roles={roles}
-          canRegisterUsers={canRegisterUsers}
-          canManageUsers={canManageUsers}
-          canDeleteUsers={canDeleteUsers}
-        />
-      </PageContent>
-    </DashboardShell>
+      <UsersPageContent
+        key={`${users.meta.page}:${users.meta.limit}:${users.meta.total}:${search}:${roleId}:${state}:${status}`}
+        users={users.data}
+        meta={users.meta}
+        filters={{
+          search,
+          roleId,
+          state,
+          status,
+        }}
+        roles={roles}
+        canRegisterUsers={canRegisterUsers}
+        canManageUsers={canManageUsers}
+        canDeleteUsers={canDeleteUsers}
+      />
+    </PageContent>
   );
 }
 

@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { DashboardShell } from "@/app/_components/DashboardShell";
 import { canAccessFeature } from "@/lib/api/featureAccess";
 import { fetchPaginated } from "@/lib/api/pagination";
 import { getAuthSession } from "@/lib/auth/session";
@@ -48,11 +47,7 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
   ]);
 
   if (!canViewRoles) {
-    return (
-      <DashboardShell session={session}>
-        <AccessDenied message="Your account does not have access to view roles." />
-      </DashboardShell>
-    );
+    return <AccessDenied message="Your account does not have access to view roles." />;
   }
 
   const [roles, permissions] = await Promise.all([
@@ -75,31 +70,29 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
   ]);
 
   return (
-    <DashboardShell session={session}>
-      <PageContent>
-        <PageHeader title="Roles" subtitle="View and manage user roles." />
+    <PageContent>
+      <PageHeader title="Roles" subtitle="View and manage user roles." />
 
-        <ResourcePageContent
-          key={`${roles.meta.page}:${roles.meta.limit}:${roles.meta.total}:${search}`}
-          items={roles.data}
-          meta={roles.meta}
-          search={search}
-          resourceLabel="Role"
-          resourceLabelPlural="roles"
-          emptyMessage="No roles found."
-          canCreate={canManageRoles}
-          canManage={canManageRoles}
-          canDelete={canDeleteRoles}
-          canAssignPermissions={canManageRoles && canViewPermissions}
-          showDefault
-          showPermissions
-          allPermissions={permissions.data}
-          createAction={createRoleAction}
-          updateAction={updateRoleAction}
-          deleteAction={deleteRoleAction}
-          assignPermissionsAction={assignRolePermissionsAction}
-        />
-      </PageContent>
-    </DashboardShell>
+      <ResourcePageContent
+        key={`${roles.meta.page}:${roles.meta.limit}:${roles.meta.total}:${search}`}
+        items={roles.data}
+        meta={roles.meta}
+        search={search}
+        resourceLabel="Role"
+        resourceLabelPlural="roles"
+        emptyMessage="No roles found."
+        canCreate={canManageRoles}
+        canManage={canManageRoles}
+        canDelete={canDeleteRoles}
+        canAssignPermissions={canManageRoles && canViewPermissions}
+        showDefault
+        showPermissions
+        allPermissions={permissions.data}
+        createAction={createRoleAction}
+        updateAction={updateRoleAction}
+        deleteAction={deleteRoleAction}
+        assignPermissionsAction={assignRolePermissionsAction}
+      />
+    </PageContent>
   );
 }

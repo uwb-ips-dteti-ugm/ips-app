@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { DashboardShell } from "@/app/_components/DashboardShell";
 import { canAccessFeature } from "@/lib/api/featureAccess";
 import { fetchPaginated } from "@/lib/api/pagination";
 import { getAuthSession } from "@/lib/auth/session";
@@ -44,9 +43,7 @@ export default async function PermissionsPage({
 
   if (!canViewPermissions) {
     return (
-      <DashboardShell session={session}>
-        <AccessDenied message="Your account does not have access to view permissions." />
-      </DashboardShell>
+      <AccessDenied message="Your account does not have access to view permissions." />
     );
   }
 
@@ -59,29 +56,27 @@ export default async function PermissionsPage({
   });
 
   return (
-    <DashboardShell session={session}>
-      <PageContent>
-        <PageHeader
-          title="Permissions"
-          subtitle="View and manage permission resources."
-        />
+    <PageContent>
+      <PageHeader
+        title="Permissions"
+        subtitle="View and manage permission resources."
+      />
 
-        <ResourcePageContent
-          key={`${permissions.meta.page}:${permissions.meta.limit}:${permissions.meta.total}:${search}`}
-          items={permissions.data}
-          meta={permissions.meta}
-          search={search}
-          resourceLabel="Permission"
-          resourceLabelPlural="permissions"
-          emptyMessage="No permissions found."
-          canCreate={canManagePermissions}
-          canManage={canManagePermissions}
-          canDelete={canDeletePermissions}
-          createAction={createPermissionAction}
-          updateAction={updatePermissionAction}
-          deleteAction={deletePermissionAction}
-        />
-      </PageContent>
-    </DashboardShell>
+      <ResourcePageContent
+        key={`${permissions.meta.page}:${permissions.meta.limit}:${permissions.meta.total}:${search}`}
+        items={permissions.data}
+        meta={permissions.meta}
+        search={search}
+        resourceLabel="Permission"
+        resourceLabelPlural="permissions"
+        emptyMessage="No permissions found."
+        canCreate={canManagePermissions}
+        canManage={canManagePermissions}
+        canDelete={canDeletePermissions}
+        createAction={createPermissionAction}
+        updateAction={updatePermissionAction}
+        deleteAction={deletePermissionAction}
+      />
+    </PageContent>
   );
 }
