@@ -171,10 +171,7 @@ class BeanieUserRepository(UserRepository):
             if cursor_id:
                 query_filter["_id"] = {"$gt": self._to_obj_id(cursor_id)}
             if search:
-                query_filter["$or"] = [
-                    {"name": {"$regex": search, "$options": "i"}},
-                    {"auths.username": {"$regex": search, "$options": "i"}},
-                ]
+                query_filter["name"] = {"$regex": search, "$options": "i"}
             if role_id:
                 query_filter[ExpressionField("role").id] = self._to_obj_id(role_id)
             if status:

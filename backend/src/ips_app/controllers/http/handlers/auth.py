@@ -112,7 +112,7 @@ class AuthHandler:
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content=ErrorResponse(
-                        error="The username or password is incorrect."
+                        error="The password is incorrect."
                     ).model_dump(),
                 )
             if isinstance(e, ForbiddenDomainException):
@@ -131,7 +131,7 @@ class AuthHandler:
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content=ErrorResponse(
-                        error="The username or password is incorrect."
+                        error="That username does not exist."
                     ).model_dump(),
                 )
             if isinstance(e, UnexpectedDomainException):

@@ -211,10 +211,7 @@ class BaseAuthHTTP(AuthHTTP):
         )
 
     async def _read_password_user_by_username(self, username: str) -> User:
-        try:
-            return await self.repo_user.read_user_by_password_username(username)
-        except NotFoundDomainException:
-            raise InvalidCredentialsDomainException() from None
+        return await self.repo_user.read_user_by_password_username(username)
 
     def _require_password_auth(
         self,
