@@ -10,7 +10,6 @@ class Permission(BaseModel):
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[int] = None
+    created_by: Optional[Any] = None
     updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
-    version: int = 0
+    updated_by: Optional[Any] = None

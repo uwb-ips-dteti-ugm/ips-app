@@ -11,70 +11,48 @@ from ips_app.domain.models.exception import (
 
 @dataclass(frozen=True)
 class EnvVar:
+    port_app: int
+    port_mongo: int
     log_level: str
     log_style: str
+    mongo_username: str
+    mongo_password: str
     mongo_uri: str
     mongo_db: str
     access_token_secret: str
     access_token_expiry: int
     refresh_token_secret: str
     refresh_token_expiry: int
-    admin_name: str
-    admin_username: str
-    admin_password: str
-    user_name: str
-    user_username: str
-    user_password: str
-    user_state_to_away_after: int
-    user_state_to_offline_after: int
-    user_state_updater_cron_period: int
-    ranging_scheduler_sleep_ms: int
-    ranging_scheduler_listen_for_ms: int
-    ranging_scheduler_wait_for_ms: int
+    seeder_admin_name: str
+    seeder_admin_username: str
+    seeder_admin_password: str
+    seeder_user_name: str
+    seeder_user_username: str
+    seeder_user_password: str
 
 
 def load_env_var() -> EnvVar:
     load_dotenv()
 
     return EnvVar(
+        port_app=_fallback_int("PORT_APP", 8000),
+        port_mongo=_fallback_int("PORT_MONGO", 27017),
         log_level=_fallback("LOG_LEVEL", "INFO").upper(),
-        log_style=_fallback("LOG_FORMAT", "basic").lower(),
+        log_style=_fallback("LOG_FORMAT", "json").lower(),
+        mongo_username=_require("MONGO_USERNAME"),
+        mongo_password=_require("MONGO_PASSWORD"),
         mongo_uri=_require("MONGO_URI"),
         mongo_db=_require("MONGO_DB"),
         access_token_secret=_require("ACCESS_TOKEN_SECRET"),
         access_token_expiry=_fallback_int("ACCESS_TOKEN_EXPIRY", 3600),
         refresh_token_secret=_require("REFRESH_TOKEN_SECRET"),
         refresh_token_expiry=_fallback_int("REFRESH_TOKEN_EXPIRY", 604800),
-        admin_name=_require("ADMIN_NAME"),
-        admin_username=_require("ADMIN_USERNAME"),
-        admin_password=_require("ADMIN_PASSWORD"),
-        user_name=_require("USER_NAME"),
-        user_username=_require("USER_USERNAME"),
-        user_password=_require("USER_PASSWORD"),
-        user_state_to_away_after=_fallback_int(
-            "USER_STATE_TO_AWAY_AFTER",
-            300,
-        ),
-        user_state_to_offline_after=_fallback_int(
-            "USER_STATE_TO_OFFLINE_AFTER",
-            1200,
-        ),
-        user_state_updater_cron_period=_fallback_int(
-            "USER_STATE_UPDATER_CRON_PERIOD",
-            300,
-        ),
-        ranging_scheduler_sleep_ms=_fallback_int(
-            "RANGING_SCHEDULER_SLEEP_MS",
-            60,
-        ),
-        ranging_scheduler_listen_for_ms=_fallback_int(
-            "RANGING_SCHEDULER_LISTEN_FOR_MS",
-            40,
-        ),
-        ranging_scheduler_wait_for_ms=_fallback_int(
-            "RANGING_SCHEDULER_WAIT_FOR_MS",
-            40,
-        ),
+        seeder_admin_name=_require("SEEDER_ADMIN_NAME"),
+        seeder_admin_username=_require("SEEDER_ADMIN_USERNAME"),
+        seeder_admin_password=_require("SEEDER_ADMIN_PASSWORD"),
+        seeder_user_name=_require("SEEDER_USER_NAME"),
+        seeder_user_username=_require("SEEDER_USER_USERNAME"),
+        seeder_user_password=_require("SEEDER_USER_PASSWORD"),
     )
 
 
@@ -96,4 +74,6 @@ def _fallback_int(key: str, value: int) -> int:
     try:
         return int(raw_value)
     except ValueError as e:
-        raise ValidatorDomainException(f"Environment variable '{key}' must be an integer.") from e
+        raise ValidatorDomainException(
+            f"Environment variable '{key}' must be an integer."
+        ) from e

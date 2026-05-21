@@ -1,0 +1,46 @@
+{
+    "websocket_url": "ws://localhost:8000/nodes/ws",
+    "retry_seconds": 3,
+    "nodes": [
+        {
+            "device_id": "DUMMY01",
+            "pan_id": 1,
+            "noise": 0.01,
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "device_id": "DUMMY02",
+            "pan_id": 2,
+            "noise": 0.01,
+            "x": 2.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "device_id": "DUMMY03",
+            "pan_id": 3,
+            "noise": 0.01,
+            "x": 0.0,
+            "y": 2.0,
+            "z": 0.0
+        },
+        {
+            "device_id": "DUMMY04",
+            "pan_id": 4,
+            "noise": 0.01,
+            "x": 2.0,
+            "y": 2.0,
+            "z": 0.0
+        },
+        {
+            "device_id": "DUMMY05",
+            "pan_id": 5,
+            "noise": 0.01,
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        }
+    ]
+}

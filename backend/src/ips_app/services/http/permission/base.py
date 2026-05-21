@@ -1,25 +1,30 @@
-import json
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ips_app.domain.models.exception import DomainException, UnexpectedDomainException
 from ips_app.domain.models.permission import Permission
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.permission import PermissionRepository
 from ips_app.domain.ports.driving.http.permission import PermissionHTTP
 
 
 class BasePermissionHTTP(PermissionHTTP):
-    def __init__(self, repo: PermissionRepository, log: GenericLogging):
+    def __init__(self, repo: PermissionRepository, log: LeveledLogging):
         self.repo = repo
         self.log = log
         self.tag_class = self.__class__.__name__
 
-    async def add_permission(self, name: str, description: str) -> Permission:
+    async def add_permission(
+        self,
+        name: str,
+        description: str = "",
+        created_by: Optional[Any] = None,
+    ) -> Permission:
         tag = f"{self.tag_class}.add_permission"
         try:
             permission = await self.repo.create_permission(
                 name=name,
                 description=description,
+                created_by=created_by,
             )
             await self.log.info(
                 tag,
@@ -61,10 +66,10 @@ class BasePermissionHTTP(PermissionHTTP):
         tag = f"{self.tag_class}.get_permissions"
         try:
             return await self.repo.read_permissions_by_pagination(
-                page,
-                limit,
-                cursor_id,
-                search,
+                page=page,
+                limit=limit,
+                cursor_id=cursor_id,
+                search=search,
             )
         except DomainException:
             raise
@@ -81,13 +86,15 @@ class BasePermissionHTTP(PermissionHTTP):
         permission_id: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
+        updated_by: Optional[Any] = None,
     ) -> Permission:
         tag = f"{self.tag_class}.set_permission"
         try:
             await self.repo.update_permission_by_id(
-                permission_id,
-                name,
-                description,
+                id=permission_id,
+                name=name,
+                description=description,
+                updated_by=updated_by,
             )
             permission = await self.get_permission(permission_id)
             await self.log.info(
@@ -109,14 +116,15 @@ class BasePermissionHTTP(PermissionHTTP):
     async def set_permission_preferences(
         self,
         permission_id: Any,
-        preferences: bytes,
+        preferences: Dict[str, Any],
+        updated_by: Optional[Any] = None,
     ) -> Permission:
         tag = f"{self.tag_class}.set_permission_preferences"
         try:
-            preferences_dict = json.loads(preferences)
             await self.repo.update_permission_preferences_by_id(
-                permission_id,
-                preferences_dict,
+                id=permission_id,
+                preferences=preferences,
+                updated_by=updated_by,
             )
             permission = await self.get_permission(permission_id)
             await self.log.info(

@@ -3,11 +3,11 @@ from typing import AsyncGenerator
 
 from fastapi import Depends, HTTPException, Request
 
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 
 
 def logger(
-    log: GenericLogging,
+    log: LeveledLogging,
     tag: str = "LoggerMiddlewareHTTP",
     msg_2xx: str = "Request successful",
     msg_4xx: str = "Client error",

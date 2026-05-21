@@ -17,10 +17,9 @@ class RoleDocument(Document):
     permissions: List[Link[PermissionDocument]] = Field(default_factory=list)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[int] = None
+    created_by: Optional[Any] = None
     updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
-    version: int = Field(default=0)
+    updated_by: Optional[Any] = None
 
     class Settings:
         name = "roles"
@@ -49,5 +48,4 @@ class RoleDocument(Document):
             created_by=self.created_by,
             updated_at=self.updated_at,
             updated_by=self.updated_by,
-            version=self.version,
         )

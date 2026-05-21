@@ -27,6 +27,10 @@ class ForbiddenDomainException(DomainException):
     def __init__(self, message: str = "Action is forbidden."):
         super().__init__(message)
 
+class InvalidCredentialsDomainException(DomainException):
+    def __init__(self):
+        super().__init__("Invalid credentials provided.")
+
 class InvalidTokenDomainException(DomainException):
     def __init__(self):
         super().__init__("Token is invalid.")

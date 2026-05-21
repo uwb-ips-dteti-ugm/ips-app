@@ -2,7 +2,11 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Request
 
-from ips_app.controllers.http.dto.common import ErrorResponse, PermissionIdsRequest
+from ips_app.controllers.http.dto.common import (
+    ErrorResponse,
+    MessageResponse,
+    PermissionIdsRequest,
+)
 from ips_app.controllers.http.dto.permission import PermissionResponse
 from ips_app.controllers.http.dto.role import (
     AddRoleRequest,
@@ -11,20 +15,20 @@ from ips_app.controllers.http.dto.role import (
     SetRoleRequest,
 )
 from ips_app.controllers.http.handlers.role import RoleHandler
-from ips_app.controllers.http.middlewares.feature_guard import feature_guard
 from ips_app.controllers.http.middlewares.logger import logger
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
-from ips_app.domain.ports.driving.http.user import UserHTTP
+from ips_app.controllers.http.middlewares.permission_check import permission_check
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
+from ips_app.domain.ports.driving.http.role import RoleHTTP
 
 
 def create_router(
     handler: RoleHandler,
-    user_service: UserHTTP,
-    log: GenericLogging,
+    role_service: RoleHTTP,
+    log: LeveledLogging,
 ) -> APIRouter:
-    guard_manage = feature_guard("role/manage", user_service)
-    guard_view = feature_guard("role/view", user_service)
-    guard_delete = feature_guard("role/delete", user_service)
+    guard_manage = permission_check(["role/manage"], role_service)
+    guard_view = permission_check(["role/view"], role_service)
+    guard_delete = permission_check(["role/delete"], role_service)
 
     router = APIRouter(
         prefix="/roles",
@@ -84,6 +88,23 @@ def create_router(
         )
 
     @router.get(
+        "/default",
+        response_model=RoleResponse,
+        dependencies=[
+            logger(
+                log,
+                tag="RoleRoutes.get_default_role",
+                msg_2xx="Default role fetched successfully",
+                msg_4xx="Default role fetch rejected",
+                msg_5xx="Default role fetch failed",
+            ),
+            guard_view,
+        ],
+    )
+    async def get_default_role():
+        return await handler.get_default_role()
+
+    @router.get(
         "/{role_id}",
         response_model=RoleResponse,
         dependencies=[
@@ -118,6 +139,23 @@ def create_router(
         return await handler.patch_role(role_id, request)
 
     @router.patch(
+        "/{role_id}/default",
+        response_model=RoleResponse,
+        dependencies=[
+            logger(
+                log,
+                tag="RoleRoutes.patch_default_role",
+                msg_2xx="Default role updated successfully",
+                msg_4xx="Default role update rejected",
+                msg_5xx="Default role update failed",
+            ),
+            guard_manage,
+        ],
+    )
+    async def patch_default_role(role_id: str):
+        return await handler.patch_default_role(role_id)
+
+    @router.patch(
         "/{role_id}/preferences",
         response_model=RoleResponse,
         dependencies=[
@@ -136,6 +174,7 @@ def create_router(
 
     @router.delete(
         "/{role_id}",
+        response_model=MessageResponse,
         dependencies=[
             logger(
                 log,

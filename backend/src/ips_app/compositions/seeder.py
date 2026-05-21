@@ -3,10 +3,8 @@ import asyncio
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from ips_app.adapters.logging.generic.basic import BasicGenericLogging
-from ips_app.adapters.logging.generic.json import JSONGenericLogging
-from ips_app.adapters.repository.feature.beanie import BeanieFeatureRepository
-from ips_app.adapters.repository.feature.beanie_model import FeatureDocument
+from ips_app.adapters.logging.leveled.basic import BasicLeveledLogging
+from ips_app.adapters.logging.leveled.json import JSONLeveledLogging
 from ips_app.adapters.repository.permission.beanie import BeaniePermissionRepository
 from ips_app.adapters.repository.permission.beanie_model import PermissionDocument
 from ips_app.adapters.repository.role.beanie import BeanieRoleRepository
@@ -14,10 +12,15 @@ from ips_app.adapters.repository.role.beanie_model import RoleDocument
 from ips_app.adapters.repository.user.beanie import BeanieUserRepository
 from ips_app.adapters.repository.user.beanie_model import UserDocument
 from ips_app.config.env_var import EnvVar, load_env_var
+from ips_app.controllers.seeder.permission import PermissionSeederController
+from ips_app.controllers.seeder.role import RoleSeederController
+from ips_app.controllers.seeder.user import UserSeederController
 from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.log import LogLevel
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
-from ips_app.services.seeder.seeder.base import BaseSeeder
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
+from ips_app.services.seeder.permission.base import BasePermissionSeeder
+from ips_app.services.seeder.role.base import BaseRoleSeeder
+from ips_app.services.seeder.user.base import BaseUserSeeder
 
 
 async def main() -> None:
@@ -32,38 +35,37 @@ async def main() -> None:
                 PermissionDocument,
                 RoleDocument,
                 UserDocument,
-                FeatureDocument,
             ],
         )
 
         repo_permission = BeaniePermissionRepository(log)
         repo_role = BeanieRoleRepository(log)
-        repo_feature = BeanieFeatureRepository(log)
         repo_user = BeanieUserRepository(log)
 
-        seeder = BaseSeeder(
-            admin_name=env_var.admin_name,
-            admin_username=env_var.admin_username,
-            admin_password=env_var.admin_password,
-            user_name=env_var.user_name,
-            user_username=env_var.user_username,
-            user_password=env_var.user_password,
-            repo_permission=repo_permission,
-            repo_role=repo_role,
-            repo_feature=repo_feature,
-            repo_user=repo_user,
-            log=log,
+        permission_controller = PermissionSeederController(
+            BasePermissionSeeder(repo_permission, log),
+        )
+        role_controller = RoleSeederController(
+            BaseRoleSeeder(repo_role, repo_permission, log),
+        )
+        user_controller = UserSeederController(
+            BaseUserSeeder(repo_user, repo_role, log),
+            admin_name=env_var.seeder_admin_name,
+            admin_username=env_var.seeder_admin_username,
+            admin_password=env_var.seeder_admin_password,
+            user_name=env_var.seeder_user_name,
+            user_username=env_var.seeder_user_username,
+            user_password=env_var.seeder_user_password,
         )
 
-        await seeder.seed_permissions()
-        await seeder.seed_roles()
-        await seeder.seed_features()
-        await seeder.seed_accounts()
+        await permission_controller.seed()
+        await role_controller.seed()
+        await user_controller.seed()
     finally:
         motor.close()
 
 
-def _create_logger(env_var: EnvVar) -> GenericLogging:
+def _create_logger(env_var: EnvVar) -> LeveledLogging:
     try:
         log_level = LogLevel[env_var.log_level]
     except KeyError as e:
@@ -72,9 +74,9 @@ def _create_logger(env_var: EnvVar) -> GenericLogging:
         ) from e
 
     if env_var.log_style == "json":
-        return JSONGenericLogging(log_level)
+        return JSONLeveledLogging(log_level)
     if env_var.log_style == "basic":
-        return BasicGenericLogging(log_level)
+        return BasicLeveledLogging(log_level)
 
     raise ValidatorDomainException("LOG_FORMAT must be either 'basic' or 'json'.")
 

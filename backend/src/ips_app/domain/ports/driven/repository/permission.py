@@ -9,7 +9,7 @@ class PermissionRepository(ABC):
         self,
         name: str,
         description: str,
-        created_by: Optional[int] = None,
+        created_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> Permission:
         """Create a new permission."""
@@ -43,7 +43,7 @@ class PermissionRepository(ABC):
         id: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Update permission name or description."""
@@ -54,7 +54,7 @@ class PermissionRepository(ABC):
         self,
         id: Any,
         preferences: Dict[str, Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Update permission preferences."""

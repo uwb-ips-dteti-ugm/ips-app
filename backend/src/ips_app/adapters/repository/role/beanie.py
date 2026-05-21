@@ -7,18 +7,21 @@ from pymongo.errors import DuplicateKeyError
 
 from ips_app.adapters.repository.permission.beanie_model import PermissionDocument
 from ips_app.adapters.repository.role.beanie_model import RoleDocument
+from ips_app.adapters.repository.user.beanie_model import UserDocument
 from ips_app.domain.models.exception import (
     DuplicateDomainException,
+    ForbiddenDomainException,
     NotFoundDomainException,
     UnexpectedDomainException,
 )
+from ips_app.domain.models.permission import Permission
 from ips_app.domain.models.role import Role
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.role import RoleRepository
 
 
 class BeanieRoleRepository(RoleRepository):
-    def __init__(self, log: GenericLogging):
+    def __init__(self, log: LeveledLogging):
         self.log = log
         self.tag_class = self.__class__.__name__
 
@@ -27,7 +30,7 @@ class BeanieRoleRepository(RoleRepository):
         name: str,
         description: str,
         is_default: bool = False,
-        created_by: Optional[int] = None,
+        created_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> Role:
         tag = f"{self.tag_class}.create_role"
@@ -44,7 +47,6 @@ class BeanieRoleRepository(RoleRepository):
                             "is_default": False,
                             "updated_at": datetime.now(timezone.utc),
                             "updated_by": created_by,
-                            "version": existing_default.version + 1,
                         },
                         session=session,
                     )
@@ -171,12 +173,38 @@ class BeanieRoleRepository(RoleRepository):
             )
             raise UnexpectedDomainException(str(e)) from e
 
+    async def read_role_permissions_by_id(
+        self,
+        id: Any,
+        **kwargs: Any,
+    ) -> List[Permission]:
+        tag = f"{self.tag_class}.read_role_permissions_by_id"
+        session = kwargs.get("session")
+        try:
+            doc = await RoleDocument.get(
+                self._to_obj_id(id),
+                fetch_links=True,
+                session=session,
+            )
+            if not doc:
+                raise NotFoundDomainException(str(id), "roles")
+            return doc.to_domain().permissions
+        except NotFoundDomainException:
+            raise
+        except Exception as e:
+            await self.log.error(
+                tag,
+                "Failed to read role permissions",
+                {"error": str(e), "id": str(id)},
+            )
+            raise UnexpectedDomainException(str(e)) from e
+
     async def update_role_by_id(
         self,
         id: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.update_role_by_id"
@@ -189,7 +217,6 @@ class BeanieRoleRepository(RoleRepository):
             update_data: Dict[str, Any] = {
                 "updated_at": datetime.now(timezone.utc),
                 "updated_by": updated_by,
-                "version": doc.version + 1,
             }
             if name is not None:
                 update_data["name"] = name
@@ -217,7 +244,7 @@ class BeanieRoleRepository(RoleRepository):
     async def update_role_is_default_by_id(
         self,
         id: Any,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.update_role_is_default_by_id"
@@ -239,7 +266,6 @@ class BeanieRoleRepository(RoleRepository):
                         "is_default": False,
                         "updated_at": now,
                         "updated_by": updated_by,
-                        "version": existing_default.version + 1,
                     },
                     session=session,
                 )
@@ -249,7 +275,6 @@ class BeanieRoleRepository(RoleRepository):
                     "is_default": True,
                     "updated_at": now,
                     "updated_by": updated_by,
-                    "version": doc.version + 1,
                 },
                 session=session,
             )
@@ -267,7 +292,7 @@ class BeanieRoleRepository(RoleRepository):
         self,
         id: Any,
         preferences: Dict[str, Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.update_role_preferences_by_id"
@@ -283,7 +308,6 @@ class BeanieRoleRepository(RoleRepository):
                     "preferences": preferences,
                     "updated_at": now,
                     "updated_by": updated_by,
-                    "version": doc.version + 1,
                 },
                 session=session,
             )
@@ -301,11 +325,20 @@ class BeanieRoleRepository(RoleRepository):
         tag = f"{self.tag_class}.delete_role_by_id"
         session = kwargs.get("session")
         try:
-            doc = await RoleDocument.get(self._to_obj_id(id), session=session)
+            role_id = self._to_obj_id(id)
+            doc = await RoleDocument.get(role_id, session=session)
             if not doc:
                 raise NotFoundDomainException(str(id), "roles")
+
+            user = await UserDocument.find_one(
+                {"role.$id": role_id},
+                session=session,
+            )
+            if user:
+                raise ForbiddenDomainException("Role is used by a user.")
+
             await doc.delete(session=session)
-        except NotFoundDomainException:
+        except (ForbiddenDomainException, NotFoundDomainException):
             raise
         except Exception as e:
             await self.log.error(
@@ -319,7 +352,7 @@ class BeanieRoleRepository(RoleRepository):
         self,
         id: Any,
         permission_ids: List[Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.add_permissions_to_role"
@@ -345,7 +378,6 @@ class BeanieRoleRepository(RoleRepository):
             if added_count:
                 doc.updated_at = datetime.now(timezone.utc)
                 doc.updated_by = updated_by
-                doc.version += 1
                 await doc.save(session=session)
                 await self.log.info(
                     tag,
@@ -366,7 +398,7 @@ class BeanieRoleRepository(RoleRepository):
         self,
         id: Any,
         permission_ids: List[Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.remove_permissions_from_role"
@@ -387,7 +419,6 @@ class BeanieRoleRepository(RoleRepository):
                 doc.permissions = permissions
                 doc.updated_at = datetime.now(timezone.utc)
                 doc.updated_by = updated_by
-                doc.version += 1
                 await doc.save(session=session)
         except NotFoundDomainException:
             raise

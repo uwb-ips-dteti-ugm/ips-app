@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request
 
-from ips_app.controllers.http.dto.common import ErrorResponse
+from ips_app.controllers.http.dto.common import ErrorResponse, MessageResponse
 from ips_app.controllers.http.dto.permission import (
     AddPermissionRequest,
     PermissionResponse,
@@ -10,20 +10,20 @@ from ips_app.controllers.http.dto.permission import (
     SetPermissionRequest,
 )
 from ips_app.controllers.http.handlers.permission import PermissionHandler
-from ips_app.controllers.http.middlewares.feature_guard import feature_guard
 from ips_app.controllers.http.middlewares.logger import logger
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
-from ips_app.domain.ports.driving.http.user import UserHTTP
+from ips_app.controllers.http.middlewares.permission_check import permission_check
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
+from ips_app.domain.ports.driving.http.role import RoleHTTP
 
 
 def create_router(
     handler: PermissionHandler,
-    user_service: UserHTTP,
-    log: GenericLogging,
+    role_service: RoleHTTP,
+    log: LeveledLogging,
 ) -> APIRouter:
-    guard_manage = feature_guard("permission/manage", user_service)
-    guard_view = feature_guard("permission/view", user_service)
-    guard_delete = feature_guard("permission/delete", user_service)
+    guard_manage = permission_check(["permission/manage"], role_service)
+    guard_view = permission_check(["permission/view"], role_service)
+    guard_delete = permission_check(["permission/delete"], role_service)
 
     router = APIRouter(
         prefix="/permissions",
@@ -135,6 +135,7 @@ def create_router(
 
     @router.delete(
         "/{permission_id}",
+        response_model=MessageResponse,
         dependencies=[
             logger(
                 log,

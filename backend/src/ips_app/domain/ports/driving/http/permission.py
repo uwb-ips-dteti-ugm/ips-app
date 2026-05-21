@@ -1,12 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ips_app.domain.models.permission import Permission
 
 
 class PermissionHTTP(ABC):
     @abstractmethod
-    async def add_permission(self, name: str, description: str) -> Permission:
+    async def add_permission(
+        self,
+        name: str,
+        description: str = "",
+        created_by: Optional[Any] = None,
+    ) -> Permission:
         """Add a new permission."""
         ...
 
@@ -23,7 +28,7 @@ class PermissionHTTP(ABC):
         cursor_id: Optional[Any] = None,
         search: Optional[str] = None,
     ) -> Tuple[List[Permission], int]:
-        """Get permissions with pagination."""
+        """Get permissions with cursor-compatible pagination."""
         ...
 
     @abstractmethod
@@ -32,6 +37,7 @@ class PermissionHTTP(ABC):
         permission_id: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
+        updated_by: Optional[Any] = None,
     ) -> Permission:
         """Update a permission's basic information."""
         ...
@@ -40,12 +46,13 @@ class PermissionHTTP(ABC):
     async def set_permission_preferences(
         self,
         permission_id: Any,
-        preferences: bytes,
+        preferences: Dict[str, Any],
+        updated_by: Optional[Any] = None,
     ) -> Permission:
         """Update a permission's preferences."""
         ...
 
     @abstractmethod
     async def remove_permission(self, permission_id: Any) -> str:
-        """Remove a permission."""
+        """Remove a permission if no role uses it."""
         ...

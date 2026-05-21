@@ -1,17 +1,20 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
 import jwt
-from ips_app.domain.models.user import UserAccessTokenClaims, UserRefreshTokenClaims
+
 from ips_app.domain.models.exception import (
     ExpiredTokenDomainException,
     InvalidTokenDomainException,
 )
+from ips_app.domain.models.user import UserAccessTokenClaims, UserRefreshTokenClaims
+
 
 _ACCESS_TOKEN_PRIVATE_KEY: Optional[str] = None
-_ACCESS_TOKEN_EXPIRY: Optional[int] = None  # seconds
+_ACCESS_TOKEN_EXPIRY: Optional[int] = None
 
 _REFRESH_TOKEN_PRIVATE_KEY: Optional[str] = None
-_REFRESH_TOKEN_EXPIRY: Optional[int] = None  # seconds
+_REFRESH_TOKEN_EXPIRY: Optional[int] = None
 
 
 def config_access_token(private_key: str, expiry: int) -> None:

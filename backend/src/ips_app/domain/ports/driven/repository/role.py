@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any, Dict
+from ips_app.domain.models.permission import Permission
 from ips_app.domain.models.role import Role
 
 
@@ -10,7 +11,7 @@ class RoleRepository(ABC):
         name: str,
         description: str,
         is_default: bool = False,
-        created_by: Optional[int] = None,
+        created_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> Role:
         """Create a new role."""
@@ -44,12 +45,21 @@ class RoleRepository(ABC):
         ...
 
     @abstractmethod
+    async def read_role_permissions_by_id(
+        self,
+        id: Any,
+        **kwargs: Any,
+    ) -> List[Permission]:
+        """Read a role's permissions by its ID."""
+        ...
+
+    @abstractmethod
     async def update_role_by_id(
         self,
         id: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Update role name or description."""
@@ -59,7 +69,7 @@ class RoleRepository(ABC):
     async def update_role_is_default_by_id(
         self,
         id: Any,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Set a role as the default role and unset the previous default role."""
@@ -70,7 +80,7 @@ class RoleRepository(ABC):
         self,
         id: Any,
         preferences: Dict[str, Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Update role preferences."""
@@ -86,7 +96,7 @@ class RoleRepository(ABC):
         self,
         id: Any,
         permission_ids: List[Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Add permissions to a role."""
@@ -97,7 +107,7 @@ class RoleRepository(ABC):
         self,
         id: Any,
         permission_ids: List[Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         """Remove permissions from a role."""

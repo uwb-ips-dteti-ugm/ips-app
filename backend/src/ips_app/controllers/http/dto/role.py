@@ -15,7 +15,8 @@ class AddRoleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., examples=["admin"])
-    description: str = Field("", examples=["Administrator with full access"])
+    description: str = Field("", examples=["Administrator role"])
+    is_default: bool = Field(False, examples=[False])
 
     def validate_fields(self) -> None:
         validate_resource_name(self.name)
@@ -25,8 +26,8 @@ class AddRoleRequest(BaseModel):
 class SetRoleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: Optional[str] = Field(None, examples=["superadmin"])
-    description: Optional[str] = Field(None, examples=["Root administrator"])
+    name: Optional[str] = Field(None, examples=["operator"])
+    description: Optional[str] = Field(None, examples=["Operator role"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -41,13 +42,9 @@ class RoleResponse(BaseModel):
     description: str = Field(..., examples=["Administrator role"])
     is_default: bool = Field(..., examples=[False])
     permissions: List[PermissionResponse] = Field(default_factory=list)
-    preferences: Dict[str, Any] = Field(
-        default_factory=dict,
-        examples=[{"color": "red"}],
-    )
+    preferences: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: Optional[datetime] = None
-    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, role: Role) -> RoleResponse:
@@ -63,7 +60,6 @@ class RoleResponse(BaseModel):
             preferences=role.preferences,
             created_at=role.created_at,
             updated_at=role.updated_at,
-            version=role.version,
         )
 
 

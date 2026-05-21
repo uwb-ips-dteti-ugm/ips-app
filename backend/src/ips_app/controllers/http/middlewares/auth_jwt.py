@@ -10,7 +10,6 @@ from ips_app.controllers.http.dto.common import ErrorResponse
 from ips_app.domain.models.exception import (
     ExpiredTokenDomainException,
     InvalidTokenDomainException,
-    UnexpectedDomainException,
 )
 from ips_app.domain.models.user import UserAccessTokenClaims
 from ips_app.utils.token import validate_access_token
@@ -41,19 +40,20 @@ class JwtMiddleware(BaseHTTPMiddleware):
 
         token = self._extract_bearer_token(request)
         if not token:
-            return self._unauthorized("Valid bearer authorization header is required")
+            return self._unauthorized("Please sign in to continue.")
 
         try:
             claims = validate_access_token(token)
         except ExpiredTokenDomainException:
-            return self._unauthorized("Expired access token")
+            return self._unauthorized("Your session has expired. Please sign in again.")
         except InvalidTokenDomainException:
-            return self._unauthorized("Invalid access token")
-        except Exception as e:
-            error = UnexpectedDomainException(str(e))
+            return self._unauthorized("Your session is invalid. Please sign in again.")
+        except Exception:
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content=ErrorResponse(error=str(error)).model_dump(),
+                content=ErrorResponse(
+                    error="Something went wrong while checking your session. Please try again."
+                ).model_dump(),
             )
 
         ctx_token = claims_context.set(claims)

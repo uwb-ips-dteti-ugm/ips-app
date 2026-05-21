@@ -2,32 +2,31 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Request
 
-from ips_app.controllers.http.dto.common import ErrorResponse
-from ips_app.controllers.http.dto.feature import FeatureAccessResponse, FeatureResponse
+from ips_app.controllers.http.dto.common import ErrorResponse, MessageResponse
+from ips_app.controllers.http.dto.permission import PermissionResponse
 from ips_app.controllers.http.dto.user import (
     SetUserInfoRequest,
     SetUserRoleRequest,
-    SetUserStateRequest,
     SetUserStatusRequest,
     UserResponse,
     UsersResponse,
 )
 from ips_app.controllers.http.handlers.user import UserHandler
-from ips_app.controllers.http.middlewares.feature_guard import feature_guard
 from ips_app.controllers.http.middlewares.logger import logger
-from ips_app.domain.models.user import UserState, UserStatus
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
-from ips_app.domain.ports.driving.http.user import UserHTTP
+from ips_app.controllers.http.middlewares.permission_check import permission_check
+from ips_app.domain.models.user import UserStatus
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
+from ips_app.domain.ports.driving.http.role import RoleHTTP
 
 
 def create_router(
     handler: UserHandler,
-    user_service: UserHTTP,
-    log: GenericLogging,
+    role_service: RoleHTTP,
+    log: LeveledLogging,
 ) -> APIRouter:
-    guard_manage = feature_guard("user/manage", user_service)
-    guard_view = feature_guard("user/view", user_service)
-    guard_delete = feature_guard("user/delete", user_service)
+    guard_manage = permission_check(["user/manage"], role_service)
+    guard_view = permission_check(["user/view"], role_service)
+    guard_delete = permission_check(["user/delete"], role_service)
 
     router = APIRouter(
         prefix="/users",
@@ -59,36 +58,20 @@ def create_router(
         return await handler.get_user_me()
 
     @router.get(
-        "/me/features",
-        response_model=List[FeatureResponse],
+        "/me/permissions",
+        response_model=List[PermissionResponse],
         dependencies=[
             logger(
                 log,
-                tag="UserRoutes.get_me_features",
-                msg_2xx="Current user accessible features fetched successfully",
-                msg_4xx="Current user accessible features fetch rejected",
-                msg_5xx="Current user accessible features fetch failed",
+                tag="UserRoutes.get_me_permissions",
+                msg_2xx="Current user permissions fetched successfully",
+                msg_4xx="Current user permissions fetch rejected",
+                msg_5xx="Current user permissions fetch failed",
             )
         ],
     )
-    async def get_user_me_accessible_features():
-        return await handler.get_user_me_accessible_features()
-
-    @router.get(
-        "/me/features/access",
-        response_model=FeatureAccessResponse,
-        dependencies=[
-            logger(
-                log,
-                tag="UserRoutes.get_me_feature_access",
-                msg_2xx="Current user feature access checked successfully",
-                msg_4xx="Current user feature access check rejected",
-                msg_5xx="Current user feature access check failed",
-            )
-        ],
-    )
-    async def get_user_me_feature_access(feature_name: str):
-        return await handler.get_user_me_feature_access(feature_name)
+    async def get_user_me_permissions():
+        return await handler.get_user_me_permissions()
 
     @router.patch(
         "/me/info",
@@ -122,22 +105,6 @@ def create_router(
     async def patch_user_me_preferences(request: Request):
         return await handler.patch_user_me_preferences(request)
 
-    @router.patch(
-        "/me/state",
-        response_model=UserResponse,
-        dependencies=[
-            logger(
-                log,
-                tag="UserRoutes.patch_me_state",
-                msg_2xx="Current user state updated successfully",
-                msg_4xx="Current user state update rejected",
-                msg_5xx="Current user state update failed",
-            )
-        ],
-    )
-    async def patch_user_me_state(request: SetUserStateRequest):
-        return await handler.patch_user_me_state(request)
-
     @router.get(
         "",
         response_model=UsersResponse,
@@ -158,7 +125,6 @@ def create_router(
         cursor_id: Optional[str] = None,
         search: Optional[str] = None,
         role_id: Optional[str] = None,
-        state: Optional[UserState] = None,
         status: Optional[UserStatus] = None,
     ):
         return await handler.get_users(
@@ -167,7 +133,6 @@ def create_router(
             cursor_id=cursor_id,
             search=search,
             role_id=role_id,
-            state=state,
             status=status,
         )
 
@@ -189,38 +154,21 @@ def create_router(
         return await handler.get_user(user_id)
 
     @router.get(
-        "/{user_id}/features",
-        response_model=List[FeatureResponse],
+        "/{user_id}/permissions",
+        response_model=List[PermissionResponse],
         dependencies=[
             logger(
                 log,
-                tag="UserRoutes.get_user_features",
-                msg_2xx="User accessible features fetched successfully",
-                msg_4xx="User accessible features fetch rejected",
-                msg_5xx="User accessible features fetch failed",
+                tag="UserRoutes.get_user_permissions",
+                msg_2xx="User permissions fetched successfully",
+                msg_4xx="User permissions fetch rejected",
+                msg_5xx="User permissions fetch failed",
             ),
             guard_view,
         ],
     )
-    async def get_user_accessible_features(user_id: str):
-        return await handler.get_user_accessible_features(user_id)
-
-    @router.get(
-        "/{user_id}/features/access",
-        response_model=FeatureAccessResponse,
-        dependencies=[
-            logger(
-                log,
-                tag="UserRoutes.get_user_feature_access",
-                msg_2xx="User feature access checked successfully",
-                msg_4xx="User feature access check rejected",
-                msg_5xx="User feature access check failed",
-            ),
-            guard_view,
-        ],
-    )
-    async def get_user_feature_access(user_id: str, feature_name: str):
-        return await handler.get_user_feature_access(user_id, feature_name)
+    async def get_user_permissions(user_id: str):
+        return await handler.get_user_permissions(user_id)
 
     @router.patch(
         "/{user_id}/info",
@@ -274,23 +222,6 @@ def create_router(
         return await handler.patch_user_role(user_id, request)
 
     @router.patch(
-        "/{user_id}/state",
-        response_model=UserResponse,
-        dependencies=[
-            logger(
-                log,
-                tag="UserRoutes.patch_user_state",
-                msg_2xx="User state updated successfully",
-                msg_4xx="User state update rejected",
-                msg_5xx="User state update failed",
-            ),
-            guard_manage,
-        ],
-    )
-    async def patch_user_state(user_id: str, request: SetUserStateRequest):
-        return await handler.patch_user_state(user_id, request)
-
-    @router.patch(
         "/{user_id}/status",
         response_model=UserResponse,
         dependencies=[
@@ -309,6 +240,7 @@ def create_router(
 
     @router.delete(
         "/{user_id}",
+        response_model=MessageResponse,
         dependencies=[
             logger(
                 log,

@@ -13,8 +13,8 @@ from ips_app.utils.validator import validate_description, validate_resource_name
 class AddPermissionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str = Field(..., examples=["user:view"])
-    description: str = Field("", examples=["Ability to view user profiles"])
+    name: str = Field(..., examples=["user/view"])
+    description: str = Field("", examples=["Ability to view users"])
 
     def validate_fields(self) -> None:
         validate_resource_name(self.name)
@@ -24,8 +24,8 @@ class AddPermissionRequest(BaseModel):
 class SetPermissionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: Optional[str] = Field(None, examples=["user:manage"])
-    description: Optional[str] = Field(None, examples=["Full user management"])
+    name: Optional[str] = Field(None, examples=["user/manage"])
+    description: Optional[str] = Field(None, examples=["Ability to manage users"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -36,15 +36,11 @@ class SetPermissionRequest(BaseModel):
 
 class PermissionResponse(BaseModel):
     id: str = Field(..., examples=["507f1f77bcf86cd799439011"])
-    name: str = Field(..., examples=["user:view"])
-    description: str = Field(..., examples=["View user profiles"])
-    preferences: Dict[str, Any] = Field(
-        default_factory=dict,
-        examples=[{"internal": True}],
-    )
+    name: str = Field(..., examples=["user/view"])
+    description: str = Field(..., examples=["Ability to view users"])
+    preferences: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: Optional[datetime] = None
-    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, permission: Permission) -> PermissionResponse:
@@ -55,7 +51,6 @@ class PermissionResponse(BaseModel):
             preferences=permission.preferences,
             created_at=permission.created_at,
             updated_at=permission.updated_at,
-            version=permission.version,
         )
 
 

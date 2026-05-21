@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ips_app.controllers.http.dto.common import PaginationMeta
 from ips_app.domain.models.role import Role
-from ips_app.domain.models.user import User, UserState, UserStatus
+from ips_app.domain.models.user import User, UserStatus
 from ips_app.utils.validator import (
     validate_bio,
     validate_name,
@@ -18,11 +18,8 @@ from ips_app.utils.validator import (
 class SetUserInfoRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: Optional[str] = Field(None, examples=["Johnny Doe"])
-    bio: Optional[str] = Field(
-        None,
-        examples=["Software Engineer and Tech Enthusiast"],
-    )
+    name: Optional[str] = Field(None, examples=["John Doe"])
+    bio: Optional[str] = Field(None, examples=["Software Engineer"])
 
     def validate_fields(self) -> None:
         if self.name is not None:
@@ -38,12 +35,6 @@ class SetUserRoleRequest(BaseModel):
 
     def validate_fields(self) -> None:
         validate_non_empty_string(self.role_id, "role_id")
-
-
-class SetUserStateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    state: UserState = Field(..., examples=[UserState.ONLINE])
 
 
 class SetUserStatusRequest(BaseModel):
@@ -73,19 +64,11 @@ class UserResponse(BaseModel):
     name: str = Field(..., examples=["John Doe"])
     username: Optional[str] = Field(None, examples=["johndoe"])
     bio: str = Field(..., examples=["Software Engineer"])
-    state: UserState = Field(..., examples=[UserState.ONLINE])
     status: UserStatus = Field(..., examples=[UserStatus.ACTIVE])
-    role: Optional[RoleSummaryResponse] = None
-    preferences: Dict[str, Any] = Field(
-        default_factory=dict,
-        examples=[{"theme": "dark"}],
-    )
-    last_signed_in_at: Optional[datetime] = None
-    last_refreshed_at: Optional[datetime] = None
-    last_activity_at: Optional[datetime] = None
+    role: RoleSummaryResponse
+    preferences: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: Optional[datetime] = None
-    version: int = Field(..., examples=[1])
 
     @classmethod
     def from_domain(cls, user: User) -> UserResponse:
@@ -94,16 +77,11 @@ class UserResponse(BaseModel):
             name=user.name,
             username=user.password_auth.username if user.password_auth else None,
             bio=user.bio,
-            state=user.state,
             status=user.status,
-            role=RoleSummaryResponse.from_domain(user.role) if user.role else None,
+            role=RoleSummaryResponse.from_domain(user.role),
             preferences=user.preferences,
-            last_signed_in_at=user.last_signed_in_at,
-            last_refreshed_at=user.last_refreshed_at,
-            last_activity_at=user.last_activity_at,
             created_at=user.created_at,
             updated_at=user.updated_at,
-            version=user.version,
         )
 
 

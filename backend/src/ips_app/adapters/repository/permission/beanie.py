@@ -5,18 +5,20 @@ from beanie import PydanticObjectId
 from pymongo.errors import DuplicateKeyError
 
 from ips_app.adapters.repository.permission.beanie_model import PermissionDocument
+from ips_app.adapters.repository.role.beanie_model import RoleDocument
 from ips_app.domain.models.exception import (
     DuplicateDomainException,
+    ForbiddenDomainException,
     NotFoundDomainException,
     UnexpectedDomainException,
 )
 from ips_app.domain.models.permission import Permission
-from ips_app.domain.ports.driven.logging.generic import GenericLogging
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.permission import PermissionRepository
 
 
 class BeaniePermissionRepository(PermissionRepository):
-    def __init__(self, log: GenericLogging):
+    def __init__(self, log: LeveledLogging):
         self.log = log
         self.tag_class = self.__class__.__name__
 
@@ -24,7 +26,7 @@ class BeaniePermissionRepository(PermissionRepository):
         self,
         name: str,
         description: str,
-        created_by: Optional[int] = None,
+        created_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> Permission:
         tag = f"{self.tag_class}.create_permission"
@@ -140,7 +142,7 @@ class BeaniePermissionRepository(PermissionRepository):
         id: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.update_permission_by_id"
@@ -156,7 +158,6 @@ class BeaniePermissionRepository(PermissionRepository):
             update_data: Dict[str, Any] = {
                 "updated_at": datetime.now(timezone.utc),
                 "updated_by": updated_by,
-                "version": doc.version + 1,
             }
             if name is not None:
                 update_data["name"] = name
@@ -185,7 +186,7 @@ class BeaniePermissionRepository(PermissionRepository):
         self,
         id: Any,
         preferences: Dict[str, Any],
-        updated_by: Optional[int] = None,
+        updated_by: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         tag = f"{self.tag_class}.update_permission_preferences_by_id"
@@ -204,7 +205,6 @@ class BeaniePermissionRepository(PermissionRepository):
                     "preferences": preferences,
                     "updated_at": now,
                     "updated_by": updated_by,
-                    "version": doc.version + 1,
                 },
                 session=session,
             )
@@ -222,14 +222,23 @@ class BeaniePermissionRepository(PermissionRepository):
         tag = f"{self.tag_class}.delete_permission_by_id"
         session = kwargs.get("session")
         try:
+            permission_id = self._to_obj_id(id)
             doc = await PermissionDocument.get(
-                self._to_obj_id(id),
+                permission_id,
                 session=session,
             )
             if not doc:
                 raise NotFoundDomainException(str(id), "permissions")
+
+            role = await RoleDocument.find_one(
+                {"permissions.$id": permission_id},
+                session=session,
+            )
+            if role:
+                raise ForbiddenDomainException("Permission is used by a role.")
+
             await doc.delete(session=session)
-        except NotFoundDomainException:
+        except (ForbiddenDomainException, NotFoundDomainException):
             raise
         except Exception as e:
             await self.log.error(

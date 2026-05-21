@@ -15,9 +15,9 @@ class UserPasswordAuth(BaseModel):
     password_hash: str
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[int] = None
+    created_by: Optional[Any] = None
     updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
+    updated_by: Optional[Any] = None
 
 
 UserAuth = Annotated[
@@ -28,13 +28,6 @@ UserAuth = Annotated[
 ]
 
 
-class UserState(StrEnum):
-    ONLINE = "online"
-    OFFLINE = "offline"
-    AWAY = "away"
-    DND = "dnd"
-
-
 class UserStatus(StrEnum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
@@ -43,23 +36,17 @@ class UserStatus(StrEnum):
 
 class User(BaseModel):
     id: Optional[Any] = None
-    role: Optional[Role] = None
+    role: Role
     name: str
     bio: str = ""
     auths: List[UserAuth] = Field(default_factory=list)
-    state: UserState = UserState.OFFLINE
     status: UserStatus = UserStatus.ACTIVE
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
-    last_signed_in_at: Optional[datetime] = None
-    last_refreshed_at: Optional[datetime] = None
-    last_activity_at: Optional[datetime] = None
-
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[int] = None
+    created_by: Optional[Any] = None
     updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
-    version: int = 0
+    updated_by: Optional[Any] = None
 
     @property
     def password_auth(self) -> Optional[UserPasswordAuth]:
