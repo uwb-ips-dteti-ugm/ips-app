@@ -37,14 +37,14 @@ class NodeDocument(Document):
         name = "nodes"
         indexes = [
             [("status", 1)],
-            [("network.$id", 1)],
+            [("network._id", 1)],
             [("address", 1)],
             IndexModel(
-                [("network.$id", 1), ("address", 1)],
+                [("network._id", 1), ("address", 1)],
                 unique=True,
-                name="unique_node_network_address",
+                name="unique_node_network_id_address",
                 partialFilterExpression={
-                    "network.$id": {"$exists": True},
+                    "network._id": {"$exists": True},
                     "address": {"$exists": True},
                 },
             ),

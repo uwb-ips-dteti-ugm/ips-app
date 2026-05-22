@@ -1,4 +1,5 @@
 import asyncio
+from inspect import isawaitable
 from typing import Any, Dict
 
 from ips_app.domain.models.exception import (
@@ -22,13 +23,24 @@ class WebSocketNodeControl(NodeControl):
     async def register(self, device_id: str, connection: Any) -> None:
         tag = f"{self.tag_class}.register"
         try:
+            replaced_connection = None
             async with self.lock:
+                replaced_connection = self.connections.get(device_id)
                 self.connections[device_id] = connection
+
+            if (
+                replaced_connection is not None
+                and replaced_connection is not connection
+            ):
+                await self._close_connection(device_id, replaced_connection)
 
             await self.log.info(
                 tag,
                 "Registered node control connection",
-                {"device_id": device_id},
+                {
+                    "device_id": device_id,
+                    "replaced": replaced_connection is not None,
+                },
             )
         except DomainException:
             raise
@@ -40,17 +52,25 @@ class WebSocketNodeControl(NodeControl):
             )
             raise UnexpectedDomainException(str(e)) from e
 
-    async def unregister(self, device_id: str) -> None:
+    async def unregister(self, device_id: str, connection: Any = None) -> bool:
         tag = f"{self.tag_class}.unregister"
         try:
+            removed_connection = None
             async with self.lock:
-                self.connections.pop(device_id, None)
+                current_connection = self.connections.get(device_id)
+                if connection is None or current_connection is connection:
+                    removed_connection = self.connections.pop(device_id, None)
+
+            removed = removed_connection is not None
+            if removed:
+                await self._close_connection(device_id, removed_connection)
 
             await self.log.info(
                 tag,
                 "Unregistered node control connection",
-                {"device_id": device_id},
+                {"device_id": device_id, "removed": removed},
             )
+            return removed
         except DomainException:
             raise
         except Exception as e:
@@ -198,12 +218,25 @@ class WebSocketNodeControl(NodeControl):
         payload: Dict[str, Any],
     ) -> None:
         connection = await self._read_connection(device_id)
-        await connection.send_json(
-            {
-                "command": int(command),
-                "payload": payload,
-            }
-        )
+        try:
+            await connection.send_json(
+                {
+                    "command": int(command),
+                    "payload": payload,
+                }
+            )
+        except Exception as e:
+            await self.unregister(device_id, connection)
+            await self.log.warn(
+                f"{self.tag_class}._send_command",
+                "Removed failed node control connection",
+                {
+                    "device_id": device_id,
+                    "command": int(command),
+                    "error": str(e),
+                },
+            )
+            raise NotFoundDomainException(device_id, "node connections") from e
 
     async def _read_connection(self, device_id: str) -> Any:
         async with self.lock:
@@ -211,3 +244,19 @@ class WebSocketNodeControl(NodeControl):
         if connection is None:
             raise NotFoundDomainException(device_id, "node connections")
         return connection
+
+    async def _close_connection(self, device_id: str, connection: Any) -> None:
+        close = getattr(connection, "close", None)
+        if close is None:
+            return
+
+        try:
+            result = close(code=1000)
+            if isawaitable(result):
+                await result
+        except Exception as e:
+            await self.log.debug(
+                f"{self.tag_class}._close_connection",
+                "Node control connection close failed or was already closed",
+                {"device_id": device_id, "error": str(e)},
+            )

@@ -109,7 +109,11 @@ class NodeHTTP(ABC):
         ...
 
     @abstractmethod
-    async def unregister_node_connection(self, device_id: str) -> None:
+    async def unregister_node_connection(
+        self,
+        device_id: str,
+        connection: Any = None,
+    ) -> None:
         """Unregister an active node control connection."""
         ...
 

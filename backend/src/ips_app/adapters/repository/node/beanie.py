@@ -21,7 +21,7 @@ from ips_app.domain.ports.driven.repository.node import NodeRepository
 from ips_app.utils.validator import validate_node_network_assignment
 
 
-NODE_NETWORK_ID_FIELD = "network.$id"
+NODE_NETWORK_ID_FIELD = "network._id"
 
 
 class BeanieNodeRepository(NodeRepository):

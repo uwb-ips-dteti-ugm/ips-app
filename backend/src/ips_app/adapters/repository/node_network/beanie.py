@@ -21,7 +21,7 @@ from ips_app.domain.ports.driven.repository.node_network import (
 )
 
 
-NODE_NETWORK_ID_FIELD = "network.$id"
+NODE_NETWORK_ID_FIELD = "network._id"
 
 
 class BeanieNodeNetworkRepository(NodeNetworkRepository):

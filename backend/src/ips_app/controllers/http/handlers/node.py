@@ -448,6 +448,7 @@ class NodeHandler:
             await self._reject_node_connection(
                 connection,
                 status.WS_1008_POLICY_VIOLATION,
+                str(e),
             )
             if isinstance(e, ForbiddenDomainException):
                 return JSONResponse(
@@ -471,6 +472,7 @@ class NodeHandler:
             await self._reject_node_connection(
                 connection,
                 status.WS_1011_INTERNAL_ERROR,
+                "Something went wrong while connecting the node.",
             )
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -481,7 +483,10 @@ class NodeHandler:
         finally:
             if registered:
                 try:
-                    await self.service.unregister_node_connection(device_id)
+                    await self.service.unregister_node_connection(
+                        device_id,
+                        connection,
+                    )
                 except Exception:
                     pass
 
@@ -619,12 +624,17 @@ class NodeHandler:
                 ).model_dump(),
             )
 
-    async def _reject_node_connection(self, connection: Any, code: int) -> None:
+    async def _reject_node_connection(
+        self,
+        connection: Any,
+        code: int,
+        reason: str = "",
+    ) -> None:
         close = getattr(connection, "close", None)
         if close is None:
             return
 
-        result = close(code=code)
+        result = close(code=code, reason=reason[:120])
         if isawaitable(result):
             await result
 
@@ -712,16 +722,35 @@ class NodeHandler:
         if not isinstance(data, dict):
             raise ValidatorDomainException("Node ranging message data must be an object.")
 
-        await self.service.add_ranging_record_by_addresses(
-            reported_by_device_id=device_id,
-            pan_id=self._read_required_integer(data, "pan_id"),
-            source_address=self._read_required_integer(data, "source_address"),
-            destination_address=self._read_required_integer(
-                data,
-                "destination_address",
-            ),
-            distance=self._read_required_float(data, "distance"),
+        pan_id = self._read_required_integer(data, "pan_id")
+        source_address = self._read_required_integer(data, "source_address")
+        destination_address = self._read_required_integer(
+            data,
+            "destination_address",
         )
+        distance = self._read_required_float(data, "distance")
+
+        try:
+            await self.service.add_ranging_record_by_addresses(
+                reported_by_device_id=device_id,
+                pan_id=pan_id,
+                source_address=source_address,
+                destination_address=destination_address,
+                distance=distance,
+            )
+        except DomainException as e:
+            await self.log.warn(
+                f"{self.tag_class}._handle_ranging_message",
+                "Rejected node ranging report",
+                {
+                    "device_id": device_id,
+                    "pan_id": pan_id,
+                    "source_address": source_address,
+                    "destination_address": destination_address,
+                    "distance": distance,
+                    "error": str(e),
+                },
+            )
 
     async def _handle_error_message(
         self,

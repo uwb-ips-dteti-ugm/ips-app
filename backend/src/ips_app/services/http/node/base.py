@@ -315,11 +315,13 @@ class BaseNodeHTTP(NodeHTTP):
         connection: Any,
     ) -> None:
         tag = f"{self.tag_class}.register_node_connection"
+        registered = False
         try:
             validate_non_empty_string(device_id, "device_id")
             await self._create_node_registration_if_missing(device_id)
             await self._ensure_approved_node(device_id)
             await self.control.register(device_id, connection)
+            registered = True
             await self.repo.update_node_last_connected_at_by_device_id(device_id)
             await self.log.info(
                 tag,
@@ -327,8 +329,12 @@ class BaseNodeHTTP(NodeHTTP):
                 {"device_id": device_id},
             )
         except DomainException:
+            if registered:
+                await self._cleanup_failed_node_connection(device_id, connection)
             raise
         except Exception as e:
+            if registered:
+                await self._cleanup_failed_node_connection(device_id, connection)
             await self.log.error(
                 tag,
                 "Failed to register node connection",
@@ -336,10 +342,22 @@ class BaseNodeHTTP(NodeHTTP):
             )
             raise UnexpectedDomainException(str(e)) from e
 
-    async def unregister_node_connection(self, device_id: str) -> None:
+    async def unregister_node_connection(
+        self,
+        device_id: str,
+        connection: Any = None,
+    ) -> None:
         tag = f"{self.tag_class}.unregister_node_connection"
         try:
-            await self.control.unregister(device_id)
+            removed = await self.control.unregister(device_id, connection)
+            if not removed:
+                await self.log.debug(
+                    tag,
+                    "Skipped node disconnect timestamp because connection was already replaced or removed",
+                    {"device_id": device_id},
+                )
+                return
+
             await self.repo.update_node_last_disconnected_at_by_device_id(device_id)
             await self.log.info(
                 tag,
@@ -355,6 +373,16 @@ class BaseNodeHTTP(NodeHTTP):
                 {"error": str(e), "device_id": device_id},
             )
             raise UnexpectedDomainException(str(e)) from e
+
+    async def _cleanup_failed_node_connection(
+        self,
+        device_id: str,
+        connection: Any,
+    ) -> None:
+        try:
+            await self.control.unregister(device_id, connection)
+        except Exception:
+            pass
 
     async def is_node_registered(self, device_id: str) -> bool:
         tag = f"{self.tag_class}.is_node_registered"
@@ -453,7 +481,7 @@ class BaseNodeHTTP(NodeHTTP):
             await self._set_nodes_last_seen(
                 (source_node.device_id, destination_node.device_id)
             )
-            await self.log.info(
+            await self.log.debug(
                 tag,
                 "Successfully added ranging record by addresses",
                 {

@@ -55,8 +55,10 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
     async def get_next_node_pair(self) -> Optional[RangingNodePair]:
         tag = f"{self.tag_class}.get_next_node_pair"
         try:
+            await self._prune_unregistered_nodes()
             if not self._node_pairs:
                 await self.refresh_registered_nodes()
+                await self._prune_unregistered_nodes()
             if not self._node_pairs:
                 return None
 
@@ -86,9 +88,8 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         tag = f"{self.tag_class}.listen_ranging"
         try:
             validate_positive_integer(timeout_uus, "timeout_uus")
-            await self._ensure_registered_nodes(
-                (pair.listener_device_id, pair.initiator_device_id)
-            )
+            pair_device_ids = self._pair_device_ids(pair)
+            await self._ensure_registered_nodes(pair_device_ids)
             await self.control.listen_ranging(
                 device_id=pair.listener_device_id,
                 pan_id=pair.pan_id,
@@ -96,9 +97,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                 initiator_address=pair.initiator_address,
                 timeout_uus=timeout_uus,
             )
-            await self._set_nodes_last_seen(
-                (pair.listener_device_id, pair.initiator_device_id)
-            )
+            await self._set_nodes_last_seen(pair_device_ids)
             await self.log.debug(
                 tag,
                 "Successfully sent listen ranging command",
@@ -110,6 +109,11 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                     "timeout_uus": timeout_uus,
                 },
             )
+        except NotFoundDomainException as e:
+            if e.group_name == "node connections":
+                await self._set_nodes_last_disconnected([e.data_label])
+                self._remove_nodes_from_schedule([e.data_label])
+            raise
         except DomainException:
             raise
         except Exception as e:
@@ -132,9 +136,8 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         tag = f"{self.tag_class}.initiate_ranging"
         try:
             validate_positive_integer(timeout_uus, "timeout_uus")
-            await self._ensure_registered_nodes(
-                (pair.listener_device_id, pair.initiator_device_id)
-            )
+            pair_device_ids = self._pair_device_ids(pair)
+            await self._ensure_registered_nodes(pair_device_ids)
             await self.control.initiate_ranging(
                 device_id=pair.initiator_device_id,
                 pan_id=pair.pan_id,
@@ -142,9 +145,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                 listener_address=pair.listener_address,
                 timeout_uus=timeout_uus,
             )
-            await self._set_nodes_last_seen(
-                (pair.listener_device_id, pair.initiator_device_id)
-            )
+            await self._set_nodes_last_seen(pair_device_ids)
             await self.log.debug(
                 tag,
                 "Successfully sent initiate ranging command",
@@ -156,6 +157,11 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                     "timeout_uus": timeout_uus,
                 },
             )
+        except NotFoundDomainException as e:
+            if e.group_name == "node connections":
+                await self._set_nodes_last_disconnected([e.data_label])
+                self._remove_nodes_from_schedule([e.data_label])
+            raise
         except DomainException:
             raise
         except Exception as e:
@@ -195,10 +201,19 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         return nodes
 
     async def _ensure_registered_nodes(self, device_ids: Sequence[str]) -> None:
+        missing_device_ids: List[str] = []
         for device_id in self._unique_device_ids(device_ids):
             is_registered = await self.control.is_registered(device_id)
             if not is_registered:
-                raise NotFoundDomainException(device_id, "node connections")
+                missing_device_ids.append(device_id)
+
+        if missing_device_ids:
+            await self._set_nodes_last_disconnected(missing_device_ids)
+            self._remove_nodes_from_schedule(missing_device_ids)
+            raise NotFoundDomainException(
+                missing_device_ids[0],
+                "node connections",
+            )
 
     async def _set_nodes_last_seen(
         self,
@@ -223,6 +238,42 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
                 pairs.append(self._create_node_pair(listener, initiator))
 
         return pairs
+
+    async def _prune_unregistered_nodes(self) -> None:
+        if not self._registered_nodes:
+            return
+
+        active_device_ids = set(await self.control.get_registered())
+        missing_device_ids = [
+            node.device_id
+            for node in self._registered_nodes
+            if node.device_id not in active_device_ids
+        ]
+        await self._set_nodes_last_disconnected(missing_device_ids)
+        self._remove_nodes_from_schedule(missing_device_ids)
+
+    def _remove_nodes_from_schedule(self, device_ids: Sequence[str]) -> None:
+        removed_device_ids = set(self._unique_device_ids(device_ids))
+        if not removed_device_ids:
+            return
+
+        self._registered_nodes = [
+            node
+            for node in self._registered_nodes
+            if node.device_id not in removed_device_ids
+        ]
+        self._node_pairs = [
+            pair
+            for pair in self._node_pairs
+            if (
+                pair.listener_device_id not in removed_device_ids
+                and pair.initiator_device_id not in removed_device_ids
+            )
+        ]
+        if self._node_pairs:
+            self._node_pair_index %= len(self._node_pairs)
+        else:
+            self._node_pair_index = 0
 
     def _create_node_pair(self, listener: Node, initiator: Node) -> RangingNodePair:
         listener_network_id = self._node_network_id(listener)
@@ -257,6 +308,21 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
         if node.network is None or node.network.id is None:
             raise ValidatorDomainException("Node must have a network ID.")
         return node.network.id
+
+    def _pair_device_ids(self, pair: RangingNodePair) -> tuple[str, str]:
+        return (pair.listener_device_id, pair.initiator_device_id)
+
+    async def _set_nodes_last_disconnected(
+        self,
+        device_ids: Sequence[str],
+    ) -> None:
+        for device_id in self._unique_device_ids(device_ids):
+            try:
+                await self.repo_node.update_node_last_disconnected_at_by_device_id(
+                    device_id
+                )
+            except DomainException:
+                continue
 
     def _unique_device_ids(self, device_ids: Sequence[str]) -> List[str]:
         unique_device_ids: List[str] = []

@@ -11,7 +11,7 @@ class NodeControl(ABC):
         ...
 
     @abstractmethod
-    async def unregister(self, device_id: str) -> None:
+    async def unregister(self, device_id: str, connection: Any = None) -> bool:
         """Unregister an active node command connection."""
         ...
 
