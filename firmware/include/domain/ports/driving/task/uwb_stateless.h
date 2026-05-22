@@ -25,6 +25,7 @@ namespace ports::driving::task
             uint16_t destination_address,
             uint16_t source_address,
             uint32_t timeout_uus) = 0;
+        virtual void restart() = 0;
         virtual models::Error sendRangingResult(
             const char *device_id,
             uint16_t pan_id,

@@ -6,8 +6,9 @@
 
 namespace controllers::task
 {
-    constexpr int initiateCommandCode = 200;
-    constexpr int listenCommandCode = 300;
+    constexpr int restartCommandCode = 1;
+    constexpr int listenCommandCode = 2;
+    constexpr int initiateCommandCode = 3;
 
     // Helpers
 
@@ -39,17 +40,17 @@ namespace controllers::task
         return true;
     }
 
-    bool readRangingArgs(
-        JsonObjectConst args,
+    bool readRangingPayload(
+        JsonObjectConst payload,
         uint16_t *pan_id,
-        uint16_t *destination_address,
-        uint16_t *source_address,
+        uint16_t *listener_address,
+        uint16_t *initiator_address,
         uint32_t *timeout_uus)
     {
-        return readUint16(args, "pan_id", pan_id) &&
-               readUint16(args, "destination_address", destination_address) &&
-               readUint16(args, "source_address", source_address) &&
-               readUint32(args, "timeout_uus", timeout_uus);
+        return readUint16(payload, "pan_id", pan_id) &&
+               readUint16(payload, "listener_address", listener_address) &&
+               readUint16(payload, "initiator_address", initiator_address) &&
+               readUint32(payload, "timeout_uus", timeout_uus);
     }
 
     // Controller implementations
@@ -173,35 +174,41 @@ namespace controllers::task
         if (parse_error)
             return;
 
-        JsonVariantConst code_field = document["code"];
-        JsonObjectConst args = document["args"].as<JsonObjectConst>();
-        if (code_field.isNull() || !code_field.is<long>() || args.isNull())
+        JsonVariantConst command_field = document["command"];
+        JsonObjectConst payload_object = document["payload"].as<JsonObjectConst>();
+        if (command_field.isNull() || !command_field.is<long>() || payload_object.isNull())
             return;
 
-        const long code = code_field.as<long>();
-        uint16_t pan_id = 0;
-        uint16_t destination_address = 0;
-        uint16_t source_address = 0;
-        uint32_t timeout_uus = 0;
-        if (!readRangingArgs(args, &pan_id, &destination_address, &source_address, &timeout_uus))
-            return;
-
-        if (code == listenCommandCode)
+        const long command = command_field.as<long>();
+        if (command == restartCommandCode)
         {
-            const models::Error error = service->listen(pan_id, destination_address, source_address, timeout_uus);
-            if (error != models::Error::Ok)
-                service->sendError(device_id, pan_id, source_address, destination_address, models::errorToString(error));
+            service->restart();
             return;
         }
 
-        if (code == initiateCommandCode)
+        uint16_t pan_id = 0;
+        uint16_t listener_address = 0;
+        uint16_t initiator_address = 0;
+        uint32_t timeout_uus = 0;
+        if (!readRangingPayload(payload_object, &pan_id, &listener_address, &initiator_address, &timeout_uus))
+            return;
+
+        if (command == listenCommandCode)
+        {
+            const models::Error error = service->listen(pan_id, listener_address, initiator_address, timeout_uus);
+            if (error != models::Error::Ok)
+                service->sendError(device_id, pan_id, initiator_address, listener_address, models::errorToString(error));
+            return;
+        }
+
+        if (command == initiateCommandCode)
         {
             float distance = 0.0F;
-            const models::Error error = service->initiate(pan_id, source_address, destination_address, timeout_uus, &distance);
+            const models::Error error = service->initiate(pan_id, initiator_address, listener_address, timeout_uus, &distance);
             if (error == models::Error::Ok)
-                service->sendRangingResult(device_id, pan_id, source_address, destination_address, distance);
+                service->sendRangingResult(device_id, pan_id, initiator_address, listener_address, distance);
             else
-                service->sendError(device_id, pan_id, source_address, destination_address, models::errorToString(error));
+                service->sendError(device_id, pan_id, initiator_address, listener_address, models::errorToString(error));
         }
     }
 }

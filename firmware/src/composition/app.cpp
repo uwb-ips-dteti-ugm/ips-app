@@ -54,6 +54,7 @@ namespace composition
     App::App()
         : logger(&Serial, adapters::logger::leveled::LOG_LEVEL_INFO),
           websocket_client(),
+          device_control(),
           wifi_connection(),
           ranging(
               &logger,
@@ -69,7 +70,7 @@ namespace composition
               config::uwbServerPath,
               config::uwbServerConnectTimeoutMs),
           wifi_service(&wifi_connection, &logger),
-          uwb_service(&logger, &uwb_server, &ranging, &wifi_connection),
+          uwb_service(&logger, &uwb_server, &device_control, &ranging, &wifi_connection),
           wifi_controller(
               &wifi_service,
               config::wifiSsid,

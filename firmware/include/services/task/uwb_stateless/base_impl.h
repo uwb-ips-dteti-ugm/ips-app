@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "domain/ports/driven/client/uwb_server.h"
+#include "domain/ports/driven/device/control.h"
 #include "domain/ports/driven/logger/leveled.h"
 #include "domain/ports/driven/ranging/stateless.h"
 #include "domain/ports/driven/wifi/connection.h"
@@ -17,6 +18,7 @@ namespace services::task::uwb_stateless
         BaseImpl(
             ports::driven::logger::Leveled *logger,
             ports::driven::client::UWBServer *client,
+            ports::driven::device::Control *device,
             ports::driven::ranging::Stateless *ranging,
             ports::driven::wifi::Connection *wifi);
         ~BaseImpl() override = default;
@@ -37,6 +39,7 @@ namespace services::task::uwb_stateless
             uint16_t destination_address,
             uint16_t source_address,
             uint32_t timeout_uus) override;
+        void restart() override;
         models::Error sendRangingResult(
             const char *device_id,
             uint16_t pan_id,
@@ -53,6 +56,7 @@ namespace services::task::uwb_stateless
     private:
         ports::driven::logger::Leveled *logger;
         ports::driven::client::UWBServer *client;
+        ports::driven::device::Control *device;
         ports::driven::ranging::Stateless *ranging;
         ports::driven::wifi::Connection *wifi;
     };

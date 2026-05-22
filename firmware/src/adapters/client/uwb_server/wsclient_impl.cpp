@@ -164,12 +164,12 @@ namespace adapters::client::uwb_server
         }
 
         JsonDocument document;
-        document["status"] = "OK";
-        document["device_id"] = device_id;
-        document["pan_id"] = pan_id;
-        document["source_address"] = source_address;
-        document["destination_address"] = destination_address;
-        document["distance"] = distance;
+        document["label"] = "ranging";
+        JsonObject data = document["data"].to<JsonObject>();
+        data["pan_id"] = pan_id;
+        data["source_address"] = source_address;
+        data["destination_address"] = destination_address;
+        data["distance"] = distance;
 
         String payload;
         serializeJson(document, payload);
@@ -202,12 +202,12 @@ namespace adapters::client::uwb_server
         }
 
         JsonDocument document;
-        document["status"] = "ERROR";
-        document["device_id"] = device_id;
-        document["pan_id"] = pan_id;
-        document["source_address"] = source_address;
-        document["destination_address"] = destination_address;
-        document["message"] = message;
+        document["label"] = "error";
+        JsonObject data = document["data"].to<JsonObject>();
+        data["pan_id"] = pan_id;
+        data["source_address"] = source_address;
+        data["destination_address"] = destination_address;
+        data["message"] = message;
 
         String payload;
         serializeJson(document, payload);

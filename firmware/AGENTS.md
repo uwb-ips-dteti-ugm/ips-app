@@ -85,11 +85,11 @@ The UWB task controller currently handles JSON text messages shaped like:
 
 ```json
 {
-  "code": 300,
-  "args": {
+  "command": 2,
+  "payload": {
     "pan_id": 1234,
-    "destination_address": 2222,
-    "source_address": 1111,
+    "listener_address": 2222,
+    "initiator_address": 1111,
     "timeout_uus": 6000
   }
 }
@@ -97,8 +97,35 @@ The UWB task controller currently handles JSON text messages shaped like:
 
 Command codes:
 
-- `200`: initiate ranging, then send a ranging result or error.
-- `300`: listen for a ranging poll, send the DW3000 response frame, then send an error only if the operation fails.
+- `1`: restart the device.
+- `2`: listen for a ranging poll, send the DW3000 response frame, then send an error only if the operation fails.
+- `3`: initiate ranging, then send a ranging result or error.
+
+Node messages sent back to the server use `label` and `data`:
+
+```json
+{
+  "label": "ranging",
+  "data": {
+    "pan_id": 1234,
+    "source_address": 1111,
+    "destination_address": 2222,
+    "distance": 2.42
+  }
+}
+```
+
+```json
+{
+  "label": "error",
+  "data": {
+    "pan_id": 1234,
+    "source_address": 1111,
+    "destination_address": 2222,
+    "message": "UWB response RX timeout"
+  }
+}
+```
 
 Ranging timeout values use DW3000 UWB microseconds (`uus`) because that is the unit used by the DW3000 API and examples.
 

@@ -3,6 +3,7 @@
 #include <WebSocketsClient.h>
 
 #include "adapters/client/uwb_server/wsclient_impl.h"
+#include "adapters/device/control/esp32_impl.h"
 #include "adapters/logger/leveled/serial_impl.h"
 #include "adapters/ranging/stateless/dw3000_impl.h"
 #include "adapters/wifi/connection/esp32_impl.h"
@@ -31,6 +32,7 @@ namespace composition
     private:
         adapters::logger::leveled::SerialImpl logger;
         WebSocketsClient websocket_client;
+        adapters::device::control::ESP32Impl device_control;
         adapters::wifi::connection::ESP32Impl wifi_connection;
         adapters::ranging::stateless::DW3000Impl ranging;
         adapters::client::uwb_server::WSClientImpl uwb_server;

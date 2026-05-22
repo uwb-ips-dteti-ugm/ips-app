@@ -6,6 +6,7 @@ namespace services::task::uwb_stateless
     constexpr const char *connectTag = "task::uwb_stateless::BaseImpl::sendConnectRequest";
     constexpr const char *initiateTag = "task::uwb_stateless::BaseImpl::initiate";
     constexpr const char *listenTag = "task::uwb_stateless::BaseImpl::listen";
+    constexpr const char *restartTag = "task::uwb_stateless::BaseImpl::restart";
     constexpr const char *rangingResultTag = "task::uwb_stateless::BaseImpl::sendRangingResult";
     constexpr const char *errorTag = "task::uwb_stateless::BaseImpl::sendError";
 
@@ -44,10 +45,12 @@ namespace services::task::uwb_stateless
     BaseImpl::BaseImpl(
         ports::driven::logger::Leveled *logger,
         ports::driven::client::UWBServer *client,
+        ports::driven::device::Control *device,
         ports::driven::ranging::Stateless *ranging,
         ports::driven::wifi::Connection *wifi)
         : logger(logger),
           client(client),
+          device(device),
           ranging(ranging),
           wifi(wifi)
     {
@@ -169,6 +172,12 @@ namespace services::task::uwb_stateless
             static_cast<unsigned int>(destination_address),
             static_cast<unsigned int>(source_address));
         return models::Error::Ok;
+    }
+
+    void BaseImpl::restart()
+    {
+        logger->info(restartTag, "Restarting device");
+        device->restart();
     }
 
     models::Error BaseImpl::sendRangingResult(
