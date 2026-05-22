@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from beanie import PydanticObjectId
-from beanie.odm.fields import ExpressionField
 from pymongo.errors import DuplicateKeyError
 
 from ips_app.adapters.repository.node.beanie_model import NodeDocument
@@ -20,6 +19,9 @@ from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.node_network import (
     NodeNetworkRepository,
 )
+
+
+NODE_NETWORK_ID_FIELD = "network.$id"
 
 
 class BeanieNodeNetworkRepository(NodeNetworkRepository):
@@ -191,7 +193,7 @@ class BeanieNodeNetworkRepository(NodeNetworkRepository):
             doc = await self._read_node_network_document(network_id, session)
 
             node = await NodeDocument.find_one(
-                {ExpressionField("network").id: network_id},
+                {NODE_NETWORK_ID_FIELD: network_id},
                 session=session,
             )
             if node:

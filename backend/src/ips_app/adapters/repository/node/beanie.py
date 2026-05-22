@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 from beanie import Link, PydanticObjectId
-from beanie.odm.fields import ExpressionField
 from pymongo.errors import DuplicateKeyError
 
 from ips_app.adapters.repository.node.beanie_model import NodeDocument
@@ -20,6 +19,9 @@ from ips_app.domain.models.node import Node, NodeStatus
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.node import NodeRepository
 from ips_app.utils.validator import validate_node_network_assignment
+
+
+NODE_NETWORK_ID_FIELD = "network.$id"
 
 
 class BeanieNodeRepository(NodeRepository):
@@ -45,6 +47,11 @@ class BeanieNodeRepository(NodeRepository):
             network = None
             if network_id is not None:
                 network = await self._read_node_network_document(network_id, session)
+                await self._ensure_network_address_is_available(
+                    network_id=network.id,
+                    address=cast(int, address),
+                    session=session,
+                )
 
             doc = NodeDocument(
                 device_id=device_id,
@@ -129,7 +136,7 @@ class BeanieNodeRepository(NodeRepository):
             network_obj_id = self._to_obj_id(network_id)
             doc = await NodeDocument.find_one(
                 {
-                    ExpressionField("network").id: network_obj_id,
+                    NODE_NETWORK_ID_FIELD: network_obj_id,
                     "address": address,
                 },
                 fetch_links=True,
@@ -181,9 +188,7 @@ class BeanieNodeRepository(NodeRepository):
             if status:
                 query_filter["status"] = status.value
             if network_id:
-                query_filter[ExpressionField("network").id] = self._to_obj_id(
-                    network_id
-                )
+                query_filter[NODE_NETWORK_ID_FIELD] = self._to_obj_id(network_id)
             if address is not None:
                 query_filter["address"] = address
 
@@ -257,6 +262,12 @@ class BeanieNodeRepository(NodeRepository):
             network = None
             if network_id is not None:
                 network = await self._read_node_network_document(network_id, session)
+                await self._ensure_network_address_is_available(
+                    network_id=network.id,
+                    address=cast(int, address),
+                    session=session,
+                    excluded_node_id=doc.id,
+                )
 
             await doc.set(
                 {
@@ -498,6 +509,24 @@ class BeanieNodeRepository(NodeRepository):
         if not doc:
             raise NotFoundDomainException(str(id), "node networks")
         return doc
+
+    async def _ensure_network_address_is_available(
+        self,
+        network_id: Any,
+        address: int,
+        session: Any,
+        excluded_node_id: Optional[Any] = None,
+    ) -> None:
+        query_filter: Dict[str, Any] = {
+            NODE_NETWORK_ID_FIELD: self._to_obj_id(network_id),
+            "address": address,
+        }
+        if excluded_node_id is not None:
+            query_filter["_id"] = {"$ne": self._to_obj_id(excluded_node_id)}
+
+        existing = await NodeDocument.find_one(query_filter, session=session)
+        if existing:
+            raise DuplicateDomainException("network address", "nodes")
 
     async def _set_node_timestamps(
         self,

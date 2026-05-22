@@ -3,8 +3,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Callable, Coroutine, cast
 
 from beanie import init_beanie
-from fastapi import Depends, FastAPI
-from fastapi.security import HTTPBearer
+from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from ips_app.adapters.control.node.websocket import WebSocketNodeControl
@@ -97,14 +96,12 @@ def create_app() -> FastAPI:
 
     log = _create_logger(env_var)
     motor = AsyncIOMotorClient(env_var.mongo_uri)
-    security_scheme = HTTPBearer(auto_error=False)
     task_runners: list[TaskRunner] = []
 
     app = FastAPI(
         lifespan=lifespan,
         title="IPS App API",
         version="1.0.0",
-        dependencies=[Depends(security_scheme)],
     )
 
     repo_permission = BeaniePermissionRepository(log)
