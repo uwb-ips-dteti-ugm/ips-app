@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class LeveledLogging(ABC):
     @abstractmethod
     async def error(self, tag: str, message: str, meta: dict) -> None: ...
