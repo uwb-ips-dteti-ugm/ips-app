@@ -31,6 +31,18 @@ class RecordDocument(Document):
                 [("label", 1), ("data.target_node_device_id", 1), ("recorded_at", 1)],
                 name="record_label_ranging_target_recorded_at",
             ),
+            IndexModel(
+                [("label", 1), ("data.ref_node_device_id", 1), ("recorded_at", 1)],
+                name="record_label_multilateration_ref_recorded_at",
+            ),
+            IndexModel(
+                [
+                    ("label", 1),
+                    ("data.coordinates.node_device_id", 1),
+                    ("recorded_at", 1),
+                ],
+                name="record_label_multilateration_node_recorded_at",
+            ),
         ]
 
     def to_domain(self) -> Record:

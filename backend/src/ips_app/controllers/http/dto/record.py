@@ -15,10 +15,9 @@ from ips_app.domain.models.record import (
 from ips_app.utils.validator import validate_ids_list, validate_record_interval
 
 
-class RecordIntervalRequest(BaseModel):
+class RangingRecordIntervalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    label: RecordDataLabel = Field(..., examples=[RecordDataLabel.RANGING])
     start: datetime
     end: datetime
     source_node_device_ids: Optional[List[str]] = Field(
@@ -38,10 +37,9 @@ class RecordIntervalRequest(BaseModel):
             validate_ids_list(self.target_node_device_ids, "target_node_device_ids")
 
 
-class LatestRecordRequest(BaseModel):
+class LatestRangingRecordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    label: RecordDataLabel = Field(..., examples=[RecordDataLabel.RANGING])
     source_node_device_ids: Optional[List[str]] = Field(
         None,
         examples=[["node-anchor-001"]],
@@ -58,21 +56,55 @@ class LatestRecordRequest(BaseModel):
             validate_ids_list(self.target_node_device_ids, "target_node_device_ids")
 
 
-class RemoveRecordsByIntervalRequest(BaseModel):
+class RemoveRangingRecordsByIntervalRequest(RangingRecordIntervalRequest):
+    pass
+
+
+class MultilaterationRecordIntervalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    label: RecordDataLabel = Field(..., examples=[RecordDataLabel.RANGING])
     start: datetime
     end: datetime
-    source_node_device_ids: Optional[List[str]] = Field(
+    ref_node_device_ids: Optional[List[str]] = Field(
         None,
         examples=[["node-anchor-001"]],
+    )
+    node_device_ids: Optional[List[str]] = Field(
+        None,
+        examples=[["node-tag-001"]],
     )
 
     def validate_fields(self) -> None:
         validate_record_interval(self.start, self.end)
-        if self.source_node_device_ids is not None:
-            validate_ids_list(self.source_node_device_ids, "source_node_device_ids")
+        if self.ref_node_device_ids is not None:
+            validate_ids_list(self.ref_node_device_ids, "ref_node_device_ids")
+        if self.node_device_ids is not None:
+            validate_ids_list(self.node_device_ids, "node_device_ids")
+
+
+class LatestMultilaterationRecordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ref_node_device_ids: Optional[List[str]] = Field(
+        None,
+        examples=[["node-anchor-001"]],
+    )
+    node_device_ids: Optional[List[str]] = Field(
+        None,
+        examples=[["node-tag-001"]],
+    )
+
+    def validate_fields(self) -> None:
+        if self.ref_node_device_ids is not None:
+            validate_ids_list(self.ref_node_device_ids, "ref_node_device_ids")
+        if self.node_device_ids is not None:
+            validate_ids_list(self.node_device_ids, "node_device_ids")
+
+
+class RemoveMultilaterationRecordsByIntervalRequest(
+    MultilaterationRecordIntervalRequest
+):
+    pass
 
 
 class RecordDataRangingResponse(BaseModel):

@@ -9,7 +9,6 @@ from ips_app.domain.models.exception import (
     UnexpectedDomainException,
 )
 from ips_app.domain.models.node import Node, NodeStatus
-from ips_app.domain.models.record import RecordDataLabel, RecordDataRanging
 from ips_app.domain.ports.driven.control.node import NodeControl
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.node import NodeRepository
@@ -485,13 +484,10 @@ class BaseNodeHTTP(NodeHTTP):
                 )
 
             self._ensure_approved_nodes((source_node, destination_node))
-            await self.repo_record.create_record(
-                label=RecordDataLabel.RANGING,
-                data=RecordDataRanging(
-                    source_node_device_id=source_node.device_id,
-                    target_node_device_id=destination_node.device_id,
-                    distance=distance,
-                ),
+            await self.repo_record.create_ranging_record(
+                source_node_device_id=source_node.device_id,
+                target_node_device_id=destination_node.device_id,
+                distance=distance,
                 recorded_at=datetime.now(timezone.utc),
                 metadata={
                     "pan_id": pan_id,
