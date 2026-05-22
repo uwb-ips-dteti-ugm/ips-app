@@ -6,26 +6,47 @@ from fastapi import Depends, FastAPI
 from fastapi.security import HTTPBearer
 from motor.motor_asyncio import AsyncIOMotorClient
 
+from ips_app.adapters.control.node.websocket import WebSocketNodeControl
 from ips_app.adapters.logging.leveled.basic import BasicLeveledLogging
 from ips_app.adapters.logging.leveled.json import JSONLeveledLogging
+from ips_app.adapters.repository.node.beanie import BeanieNodeRepository
+from ips_app.adapters.repository.node.beanie_model import NodeDocument
+from ips_app.adapters.repository.node_network.beanie import BeanieNodeNetworkRepository
+from ips_app.adapters.repository.node_network.beanie_model import NodeNetworkDocument
 from ips_app.adapters.repository.permission.beanie import BeaniePermissionRepository
 from ips_app.adapters.repository.permission.beanie_model import PermissionDocument
+from ips_app.adapters.repository.record.beanie import BeanieRecordRepository
+from ips_app.adapters.repository.record.beanie_model import RecordDocument
 from ips_app.adapters.repository.role.beanie import BeanieRoleRepository
 from ips_app.adapters.repository.role.beanie_model import RoleDocument
 from ips_app.adapters.repository.user.beanie import BeanieUserRepository
 from ips_app.adapters.repository.user.beanie_model import UserDocument
 from ips_app.config.env_var import EnvVar, load_env_var
 from ips_app.controllers.http.handlers.auth import AuthHandler
+from ips_app.controllers.http.handlers.node import NodeHandler
+from ips_app.controllers.http.handlers.node_network import NodeNetworkHandler
 from ips_app.controllers.http.handlers.permission import PermissionHandler
+from ips_app.controllers.http.handlers.record import RecordHandler
 from ips_app.controllers.http.handlers.role import RoleHandler
 from ips_app.controllers.http.handlers.user import UserHandler
 from ips_app.controllers.http.middlewares.auth_jwt import JwtMiddleware
-from ips_app.controllers.http.routes import auth, permission, role, user
+from ips_app.controllers.http.routes import (
+    auth,
+    node,
+    node_network,
+    permission,
+    record,
+    role,
+    user,
+)
 from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.log import LogLevel
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.services.http.auth.base import BaseAuthHTTP
+from ips_app.services.http.node.base import BaseNodeHTTP
+from ips_app.services.http.node_network.base import BaseNodeNetworkHTTP
 from ips_app.services.http.permission.base import BasePermissionHTTP
+from ips_app.services.http.record.base import BaseRecordHTTP
 from ips_app.services.http.role.base import BaseRoleHTTP
 from ips_app.services.http.user.base import BaseUserHTTP
 from ips_app.utils.token import config_access_token, config_refresh_token
@@ -42,6 +63,9 @@ async def lifespan(app: FastAPI):
             PermissionDocument,
             RoleDocument,
             UserDocument,
+            NodeNetworkDocument,
+            NodeDocument,
+            RecordDocument,
         ],
     )
 
@@ -69,16 +93,32 @@ def create_app() -> FastAPI:
     repo_permission = BeaniePermissionRepository(log)
     repo_role = BeanieRoleRepository(log)
     repo_user = BeanieUserRepository(log)
+    repo_node_network = BeanieNodeNetworkRepository(log)
+    repo_node = BeanieNodeRepository(log)
+    repo_record = BeanieRecordRepository(log)
+    node_control = WebSocketNodeControl(log)
 
     permission_service = BasePermissionHTTP(repo_permission, log)
     role_service = BaseRoleHTTP(repo_role, log)
     user_service = BaseUserHTTP(repo_user, log)
     auth_service = BaseAuthHTTP(repo_user, log)
+    node_network_service = BaseNodeNetworkHTTP(repo_node_network, log)
+    node_service = BaseNodeHTTP(
+        repo=repo_node,
+        repo_node_network=repo_node_network,
+        repo_record=repo_record,
+        control=node_control,
+        log=log,
+    )
+    record_service = BaseRecordHTTP(repo_record, log)
 
     permission_handler = PermissionHandler(permission_service)
     role_handler = RoleHandler(role_service)
     user_handler = UserHandler(user_service)
     auth_handler = AuthHandler(auth_service)
+    node_network_handler = NodeNetworkHandler(node_network_service)
+    node_handler = NodeHandler(node_service)
+    record_handler = RecordHandler(record_service)
 
     app.state.env_var = env_var
     app.state.motor = motor
@@ -87,6 +127,11 @@ def create_app() -> FastAPI:
     app.include_router(user.create_router(user_handler, role_service, log))
     app.include_router(role.create_router(role_handler, role_service, log))
     app.include_router(permission.create_router(permission_handler, role_service, log))
+    app.include_router(
+        node_network.create_router(node_network_handler, role_service, log)
+    )
+    app.include_router(node.create_router(node_handler, role_service, log))
+    app.include_router(record.create_router(record_handler, role_service, log))
 
     app.add_middleware(
         JwtMiddleware,

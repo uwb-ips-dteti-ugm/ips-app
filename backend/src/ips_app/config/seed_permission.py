@@ -47,4 +47,36 @@ SEED_PERMISSIONS: List[PermissionSeed] = [
         "name": "user/delete",
         "description": "Delete users",
     },
+    {
+        "name": "node-network/manage",
+        "description": "Create and update node networks",
+    },
+    {
+        "name": "node-network/view",
+        "description": "View node networks",
+    },
+    {
+        "name": "node-network/delete",
+        "description": "Delete node networks",
+    },
+    {
+        "name": "node/manage",
+        "description": "Create, update, and control nodes",
+    },
+    {
+        "name": "node/view",
+        "description": "View nodes",
+    },
+    {
+        "name": "node/delete",
+        "description": "Delete nodes",
+    },
+    {
+        "name": "record/view",
+        "description": "View positioning records",
+    },
+    {
+        "name": "record/delete",
+        "description": "Delete positioning records",
+    },
 ]
