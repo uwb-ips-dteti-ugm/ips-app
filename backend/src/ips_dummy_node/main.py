@@ -14,14 +14,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import quote, urlparse, urlunparse
 
+WebSocketConnectionClosed: type[BaseException]
+
 try:
     from websockets.asyncio.client import connect
-    from websockets.exceptions import ConnectionClosed
+    from websockets.exceptions import ConnectionClosed as _WebSocketConnectionClosed
 except ModuleNotFoundError:  # pragma: no cover - runtime dependency guard
     connect = None  # type: ignore[assignment]
-
-    class ConnectionClosed(Exception):  # type: ignore[no-redef]
-        pass
+    WebSocketConnectionClosed = Exception
+else:
+    WebSocketConnectionClosed = _WebSocketConnectionClosed
 
 
 COMMAND_RESTART = 1
@@ -30,12 +32,12 @@ COMMAND_INITIATE_RANGING = 3
 DEFAULT_CONFIG_PATH = Path(__file__).with_name("config.json")
 DEFAULT_WEBSOCKET_URL = "ws://localhost:8000/nodes/ws"
 DEFAULT_RETRY_SECONDS = 3.0
+MAX_UWB_VALUE = 0xFFFF
 
 
 @dataclass(frozen=True)
 class DummyNodeConfig:
     device_id: str
-    pan_id: int
     x: float
     y: float
     z: float
@@ -52,8 +54,9 @@ class DummyNodeAppConfig:
 @dataclass(frozen=True)
 class ListenWindow:
     listener_device_id: str
-    listener_pan_id: int
-    initiator_pan_id: int
+    pan_id: int
+    listener_address: int
+    initiator_address: int
     expires_at: float
 
 
@@ -62,45 +65,57 @@ class RestartRequested(Exception):
 
 
 class RangingEnvironment:
-    def __init__(self, nodes: Sequence[DummyNodeConfig]):
-        self.nodes_by_pan_id = {node.pan_id: node for node in nodes}
-        self.listen_windows: Dict[Tuple[int, int], ListenWindow] = {}
+    def __init__(self):
+        self.nodes_by_network_address: Dict[Tuple[int, int], DummyNodeConfig] = {}
+        self.listen_windows: Dict[Tuple[int, int, int], ListenWindow] = {}
         self.lock = asyncio.Lock()
 
     async def mark_listening(
         self,
         listener: DummyNodeConfig,
-        listener_pan_id: int,
-        initiator_pan_id: int,
-        listen_for_ms: int,
+        pan_id: int,
+        listener_address: int,
+        initiator_address: int,
+        timeout_uus: int,
     ) -> None:
-        expires_at = time.monotonic() + listen_for_ms / 1000
+        expires_at = time.monotonic() + timeout_uus_to_seconds(timeout_uus)
         async with self.lock:
-            self.listen_windows[(listener_pan_id, initiator_pan_id)] = ListenWindow(
+            self.nodes_by_network_address[(pan_id, listener_address)] = listener
+            self.listen_windows[
+                (pan_id, listener_address, initiator_address)
+            ] = ListenWindow(
                 listener_device_id=listener.device_id,
-                listener_pan_id=listener_pan_id,
-                initiator_pan_id=initiator_pan_id,
+                pan_id=pan_id,
+                listener_address=listener_address,
+                initiator_address=initiator_address,
                 expires_at=expires_at,
             )
 
     async def range_to_listener(
         self,
         initiator: DummyNodeConfig,
-        initiator_pan_id: int,
-        listener_pan_id: int,
-        wait_for_ms: int,
+        pan_id: int,
+        initiator_address: int,
+        listener_address: int,
+        timeout_uus: int,
     ) -> Tuple[Optional[float], bool]:
-        listener = self.nodes_by_pan_id.get(listener_pan_id)
-        deadline = time.monotonic() + wait_for_ms / 1000
+        deadline = time.monotonic() + timeout_uus_to_seconds(timeout_uus)
 
         while True:
             async with self.lock:
+                self.nodes_by_network_address[(pan_id, initiator_address)] = initiator
                 self._prune_expired_listen_windows()
                 listen_window = self.listen_windows.get(
-                    (listener_pan_id, initiator_pan_id)
+                    (pan_id, listener_address, initiator_address)
                 )
                 if listen_window is not None:
-                    self.listen_windows.pop((listener_pan_id, initiator_pan_id), None)
+                    self.listen_windows.pop(
+                        (pan_id, listener_address, initiator_address),
+                        None,
+                    )
+                    listener = self.nodes_by_network_address.get(
+                        (pan_id, listener_address)
+                    )
                     return (
                         self._distance(initiator, listener) if listener else None,
                         True,
@@ -149,7 +164,7 @@ class DummyNode:
                 await self._run_connection(stop_event)
             except RestartRequested:
                 self._log("Restart requested by server")
-            except ConnectionClosed as e:
+            except WebSocketConnectionClosed as e:
                 self._log(f"Connection closed: {e}")
             except Exception as e:
                 self._log(f"Connection rejected or unavailable: {e}")
@@ -160,7 +175,13 @@ class DummyNode:
     async def _run_connection(self, stop_event: asyncio.Event) -> None:
         uri = build_node_websocket_uri(self.websocket_url, self.node.device_id)
         self._log(f"Connecting to {uri}")
-        async with connect(uri) as websocket:
+        websocket_connect = connect
+        if websocket_connect is None:
+            raise RuntimeError(
+                "Missing 'websockets'. Install backend requirements before running dummy nodes."
+            )
+
+        async with websocket_connect(uri) as websocket:
             self._log("Connected")
             while not stop_event.is_set():
                 try:
@@ -202,71 +223,122 @@ class DummyNode:
         self._log(f"Ignored unknown command: {message!r}")
 
     async def _handle_listen_ranging(self, payload: Dict[str, Any]) -> None:
-        listener_pan_id = int(payload.get("listener_pan_id", -1))
-        initiator_pan_id = int(payload.get("initiator_pan_id", -1))
-        listen_for_ms = int(payload.get("listen_for_ms", 0))
-
-        if listener_pan_id != self.node.pan_id:
-            self._log(
-                "Ignored listen command for PAN "
-                f"{listener_pan_id}; local PAN is {self.node.pan_id}"
-            )
+        command = self._read_ranging_command(payload)
+        if command is None:
             return
+        pan_id, listener_address, initiator_address, timeout_uus = command
 
         await self.environment.mark_listening(
             listener=self.node,
-            listener_pan_id=listener_pan_id,
-            initiator_pan_id=initiator_pan_id,
-            listen_for_ms=listen_for_ms,
+            pan_id=pan_id,
+            listener_address=listener_address,
+            initiator_address=initiator_address,
+            timeout_uus=timeout_uus,
         )
         self._log(
-            "Listening for ranging from PAN "
-            f"{initiator_pan_id} for {listen_for_ms} ms"
+            "Listening for ranging from "
+            f"PAN {pan_id} address {initiator_address} for {timeout_uus} uus"
         )
 
     async def _handle_initiate_ranging(self, websocket: Any, payload: Dict[str, Any]) -> None:
-        initiator_pan_id = int(payload.get("initiator_pan_id", -1))
-        listener_pan_id = int(payload.get("listener_pan_id", -1))
-        wait_for_ms = int(payload.get("wait_for_ms", 0))
-
-        if initiator_pan_id != self.node.pan_id:
-            self._log(
-                "Ignored initiate command for PAN "
-                f"{initiator_pan_id}; local PAN is {self.node.pan_id}"
-            )
+        command = self._read_ranging_command(payload)
+        if command is None:
             return
+        pan_id, listener_address, initiator_address, timeout_uus = command
 
         distance, listener_was_ready = await self.environment.range_to_listener(
             initiator=self.node,
-            initiator_pan_id=initiator_pan_id,
-            listener_pan_id=listener_pan_id,
-            wait_for_ms=wait_for_ms,
+            pan_id=pan_id,
+            initiator_address=initiator_address,
+            listener_address=listener_address,
+            timeout_uus=timeout_uus,
         )
-        await self._send_ranging_record(
-            websocket=websocket,
-            destination_pan_id=listener_pan_id,
-            distance=distance,
-        )
+        if listener_was_ready and distance is not None:
+            await self._send_ranging_record(
+                websocket=websocket,
+                pan_id=pan_id,
+                source_address=initiator_address,
+                destination_address=listener_address,
+                distance=distance,
+            )
+        else:
+            await self._send_error(
+                websocket=websocket,
+                pan_id=pan_id,
+                source_address=initiator_address,
+                destination_address=listener_address,
+                message="Dummy listener did not answer before ranging timeout.",
+            )
         self._log(
-            "Reported ranging to PAN "
-            f"{listener_pan_id}: {distance if listener_was_ready else 'unreachable'}"
+            "Reported ranging to "
+            f"PAN {pan_id} address {listener_address}: "
+            f"{distance if listener_was_ready and distance is not None else 'unreachable'}"
         )
 
     async def _send_ranging_record(
         self,
         websocket: Any,
-        destination_pan_id: int,
-        distance: Optional[float],
+        pan_id: int,
+        source_address: int,
+        destination_address: int,
+        distance: float,
     ) -> None:
         message = {
             "label": "ranging",
             "data": {
-                "source_pan_id": self.node.pan_id,
-                "destination_pan_id": destination_pan_id,
+                "pan_id": pan_id,
+                "source_address": source_address,
+                "destination_address": destination_address,
                 "distance": distance,
             },
         }
         await websocket.send(json.dumps(message))
+
+    async def _send_error(
+        self,
+        websocket: Any,
+        pan_id: int,
+        source_address: int,
+        destination_address: int,
+        message: str,
+    ) -> None:
+        await websocket.send(
+            json.dumps(
+                {
+                    "label": "error",
+                    "data": {
+                        "pan_id": pan_id,
+                        "source_address": source_address,
+                        "destination_address": destination_address,
+                        "message": message,
+                    },
+                }
+            )
+        )
+
+    def _read_ranging_command(
+        self,
+        payload: Dict[str, Any],
+    ) -> Optional[Tuple[int, int, int, int]]:
+        try:
+            pan_id = parse_uwb_value(payload["pan_id"], "pan_id")
+            listener_address = parse_uwb_value(
+                payload["listener_address"],
+                "listener_address",
+            )
+            initiator_address = parse_uwb_value(
+                payload["initiator_address"],
+                "initiator_address",
+            )
+            timeout_uus = parse_positive_integer(
+                payload["timeout_uus"],
+                "timeout_uus",
+            )
+        except (KeyError, TypeError, ValueError) as e:
+            self._log(f"Ignored invalid ranging command payload: {e}")
+            return None
+
+        return pan_id, listener_address, initiator_address, timeout_uus
 
     def _log(self, message: str) -> None:
         print(f"[{datetime.now(timezone.utc).isoformat()}] {self.node.device_id}: {message}")
@@ -275,12 +347,12 @@ class DummyNode:
 def load_config(path: Path) -> DummyNodeAppConfig:
     raw_config = json.loads(path.read_text())
     nodes = [
-        parse_node_config(index=index, raw_node=raw_node)
-        for index, raw_node in enumerate(raw_config.get("nodes", []), start=1)
+        parse_node_config(raw_node=raw_node)
+        for raw_node in raw_config.get("nodes", [])
     ]
     if not nodes:
         raise ValueError("Dummy node config must contain at least one node.")
-    validate_unique_pan_ids(nodes)
+    validate_unique_nodes(nodes)
 
     websocket_url = (
         os.getenv("IPS_DUMMY_NODE_WEBSOCKET_URL")
@@ -300,27 +372,53 @@ def load_config(path: Path) -> DummyNodeAppConfig:
     )
 
 
-def validate_unique_pan_ids(nodes: Sequence[DummyNodeConfig]) -> None:
-    seen_pan_ids: set[int] = set()
+def validate_unique_nodes(nodes: Sequence[DummyNodeConfig]) -> None:
+    seen_device_ids: set[str] = set()
     for node in nodes:
-        if node.pan_id in seen_pan_ids:
-            raise ValueError(f"Duplicate dummy node pan_id: {node.pan_id}")
-        seen_pan_ids.add(node.pan_id)
+        if node.device_id in seen_device_ids:
+            raise ValueError(f"Duplicate dummy node device_id: {node.device_id}")
+        seen_device_ids.add(node.device_id)
 
 
-def parse_node_config(index: int, raw_node: Dict[str, Any]) -> DummyNodeConfig:
+def parse_node_config(raw_node: Dict[str, Any]) -> DummyNodeConfig:
     device_id = str(raw_node["device_id"]).strip()
     if not device_id:
         raise ValueError("Dummy node device_id must not be empty.")
 
     return DummyNodeConfig(
         device_id=device_id,
-        pan_id=int(raw_node.get("pan_id", index)),
         x=float(raw_node.get("x", 0.0)),
         y=float(raw_node.get("y", 0.0)),
         z=float(raw_node.get("z", 0.0)),
         noise=max(float(raw_node.get("noise", 0.0)), 0.0),
     )
+
+
+def parse_uwb_value(raw_value: Any, name: str) -> int:
+    value = parse_integer(raw_value, name)
+    if value < 0 or value > MAX_UWB_VALUE:
+        raise ValueError(f"{name} must be an integer from 0 to {MAX_UWB_VALUE}.")
+    return value
+
+
+def parse_positive_integer(raw_value: Any, name: str) -> int:
+    value = parse_integer(raw_value, name)
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer.")
+    return value
+
+
+def parse_integer(raw_value: Any, name: str) -> int:
+    try:
+        if isinstance(raw_value, str):
+            return int(raw_value, base=0)
+        return int(raw_value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"{name} must be an integer.") from e
+
+
+def timeout_uus_to_seconds(timeout_uus: int) -> float:
+    return timeout_uus / 1_000_000
 
 
 def build_node_websocket_uri(base_url: str, device_id: str) -> str:
@@ -354,7 +452,7 @@ async def run_dummy_nodes(config: DummyNodeAppConfig) -> None:
     stop_event = asyncio.Event()
     register_stop_handlers(stop_event)
 
-    environment = RangingEnvironment(config.nodes)
+    environment = RangingEnvironment()
     tasks = [
         asyncio.create_task(
             DummyNode(
