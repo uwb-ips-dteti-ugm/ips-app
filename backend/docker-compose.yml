@@ -1,6 +1,7 @@
 services:
   seeder:
     build: .
+    container_name: ips-app-seeder
     command: python -m ips_app.compositions.seeder
     env_file:
       - ./.env
@@ -13,10 +14,11 @@ services:
         condition: service_completed_successfully
     restart: "no"
 
-  app:
+  backend:
     build: .
+    container_name: ips-app-backend
     ports:
-      - "${PORT_APP}:8000"
+      - "${PORT_BACKEND:-8000}:8000"
     env_file:
       - ./.env
     volumes:
@@ -30,7 +32,7 @@ services:
 
   mongo:
     image: mongo:8
-    # We use a custom entrypoint to generate a keyfile required for replica sets with auth enabled.
+    container_name: ips-app-mongo
     entrypoint:
       - /bin/bash
       - -c
@@ -40,16 +42,36 @@ services:
           chmod 400 /data/db/mongodb.key
         fi
         exec docker-entrypoint.sh "$$@"
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/data/db/mongodb.key"]
+    command:
+      [
+        "mongod",
+        "--replSet",
+        "rs0",
+        "--bind_ip_all",
+        "--keyFile",
+        "/data/db/mongodb.key",
+      ]
     ports:
-      - "${PORT_MONGO}:27017"
+      - "${PORT_MONGO:-27017}:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     volumes:
       - ips_app_mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--username", "${MONGO_USERNAME}", "--password", "${MONGO_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--username",
+          "${MONGO_USERNAME}",
+          "--password",
+          "${MONGO_PASSWORD}",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,6 +80,7 @@ services:
 
   mongo-init:
     image: mongo:8
+    container_name: ips-app-mongo-init
     depends_on:
       mongo:
         condition: service_healthy
@@ -84,3 +107,7 @@ services:
 
 volumes:
   ips_app_mongo_data:
+
+networks:
+  default:
+    name: ips-app-network
