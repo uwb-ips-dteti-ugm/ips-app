@@ -1,5 +1,6 @@
+import asyncio
 from contextlib import asynccontextmanager
-from typing import cast
+from typing import Any, Callable, Coroutine, cast
 
 from beanie import init_beanie
 from fastapi import Depends, FastAPI
@@ -39,6 +40,12 @@ from ips_app.controllers.http.routes import (
     role,
     user,
 )
+from ips_app.controllers.task.handlers.ranging_scheduler import (
+    RangingSchedulerTaskHandler,
+)
+from ips_app.controllers.task.runners.ranging_scheduler import (
+    create_runner as create_ranging_scheduler_runner,
+)
 from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.log import LogLevel
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
@@ -49,13 +56,19 @@ from ips_app.services.http.permission.base import BasePermissionHTTP
 from ips_app.services.http.record.base import BaseRecordHTTP
 from ips_app.services.http.role.base import BaseRoleHTTP
 from ips_app.services.http.user.base import BaseUserHTTP
+from ips_app.services.task.ranging_scheduler.base import BaseRangingSchedulerTask
 from ips_app.utils.token import config_access_token, config_refresh_token
+from ips_app.utils.validator import validate_positive_integer
+
+
+TaskRunner = tuple[str, Callable[[], Coroutine[Any, Any, None]]]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     env_var = cast(EnvVar, app.state.env_var)
     motor = cast(AsyncIOMotorClient, app.state.motor)
+    task_runners = cast(list[TaskRunner], app.state.task_runners)
 
     await init_beanie(
         database=motor[env_var.mongo_db],  # type: ignore[arg-type]
@@ -69,19 +82,23 @@ async def lifespan(app: FastAPI):
         ],
     )
 
+    task_handles = _start_task_runners(task_runners)
     try:
         yield
     finally:
+        await _stop_task_runners(task_handles)
         motor.close()
 
 
 def create_app() -> FastAPI:
     env_var = load_env_var()
+    _validate_ranging_scheduler_env(env_var)
     _config_tokens(env_var)
 
     log = _create_logger(env_var)
     motor = AsyncIOMotorClient(env_var.mongo_uri)
     security_scheme = HTTPBearer(auto_error=False)
+    task_runners: list[TaskRunner] = []
 
     app = FastAPI(
         lifespan=lifespan,
@@ -111,6 +128,11 @@ def create_app() -> FastAPI:
         log=log,
     )
     record_service = BaseRecordHTTP(repo_record, log)
+    ranging_scheduler_service = BaseRangingSchedulerTask(
+        repo_node=repo_node,
+        control=node_control,
+        log=log,
+    )
 
     permission_handler = PermissionHandler(permission_service)
     role_handler = RoleHandler(role_service)
@@ -119,9 +141,31 @@ def create_app() -> FastAPI:
     node_network_handler = NodeNetworkHandler(node_network_service)
     node_handler = NodeHandler(node_service)
     record_handler = RecordHandler(record_service)
+    ranging_scheduler_handler = RangingSchedulerTaskHandler(
+        service=ranging_scheduler_service,
+        log=log,
+    )
+    task_runners.append(
+        (
+            "ranging_scheduler",
+            create_ranging_scheduler_runner(
+                handler=ranging_scheduler_handler,
+                listen_timeout_uus=env_var.ranging_scheduler_listen_timeout_uus,
+                initiate_timeout_uus=(
+                    env_var.ranging_scheduler_initiate_timeout_uus
+                ),
+                listen_to_initiate_delay_ms=(
+                    env_var.ranging_scheduler_listen_to_initiate_delay_ms
+                ),
+                pair_delay_ms=env_var.ranging_scheduler_pair_delay_ms,
+                idle_delay_ms=env_var.ranging_scheduler_idle_delay_ms,
+            ),
+        )
+    )
 
     app.state.env_var = env_var
     app.state.motor = motor
+    app.state.task_runners = task_runners
 
     app.include_router(auth.create_router(auth_handler, role_service, log))
     app.include_router(user.create_router(user_handler, role_service, log))
@@ -151,6 +195,48 @@ def create_app() -> FastAPI:
 def _config_tokens(env_var: EnvVar) -> None:
     config_access_token(env_var.access_token_secret, env_var.access_token_expiry)
     config_refresh_token(env_var.refresh_token_secret, env_var.refresh_token_expiry)
+
+
+def _validate_ranging_scheduler_env(env_var: EnvVar) -> None:
+    validate_positive_integer(
+        env_var.ranging_scheduler_listen_timeout_uus,
+        "RANGING_SCHEDULER_LISTEN_TIMEOUT_UUS",
+    )
+    validate_positive_integer(
+        env_var.ranging_scheduler_initiate_timeout_uus,
+        "RANGING_SCHEDULER_INITIATE_TIMEOUT_UUS",
+    )
+    validate_positive_integer(
+        env_var.ranging_scheduler_listen_to_initiate_delay_ms,
+        "RANGING_SCHEDULER_LISTEN_TO_INITIATE_DELAY_MS",
+    )
+    validate_positive_integer(
+        env_var.ranging_scheduler_pair_delay_ms,
+        "RANGING_SCHEDULER_PAIR_DELAY_MS",
+    )
+    validate_positive_integer(
+        env_var.ranging_scheduler_idle_delay_ms,
+        "RANGING_SCHEDULER_IDLE_DELAY_MS",
+    )
+
+
+def _start_task_runners(
+    task_runners: list[TaskRunner],
+) -> list[asyncio.Task[None]]:
+    return [
+        asyncio.create_task(runner(), name=name)
+        for name, runner in task_runners
+    ]
+
+
+async def _stop_task_runners(
+    task_handles: list[asyncio.Task[None]],
+) -> None:
+    for task in task_handles:
+        task.cancel()
+
+    if task_handles:
+        await asyncio.gather(*task_handles, return_exceptions=True)
 
 
 def _create_logger(env_var: EnvVar) -> LeveledLogging:
