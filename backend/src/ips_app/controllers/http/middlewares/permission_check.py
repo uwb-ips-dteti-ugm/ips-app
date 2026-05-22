@@ -12,6 +12,23 @@ from ips_app.domain.ports.driving.http.role import RoleHTTP
 bearer_scheme = HTTPBearer(auto_error=False, scheme_name="BearerAuth")
 
 
+def authorization_check():
+    async def check(
+        _credentials: Annotated[
+            HTTPAuthorizationCredentials | None,
+            Security(bearer_scheme),
+        ],
+    ) -> None:
+        claims = get_claims()
+        if not claims:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Please sign in to continue.",
+            )
+
+    return Depends(check)
+
+
 def permission_check(permission_names: Sequence[str], service: RoleHTTP):
     required_permissions = set(permission_names)
 

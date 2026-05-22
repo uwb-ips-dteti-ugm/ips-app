@@ -13,7 +13,10 @@ from ips_app.controllers.http.dto.common import ErrorResponse
 from ips_app.controllers.http.dto.user import UserResponse
 from ips_app.controllers.http.handlers.auth import AuthHandler
 from ips_app.controllers.http.middlewares.logger import logger
-from ips_app.controllers.http.middlewares.permission_check import permission_check
+from ips_app.controllers.http.middlewares.permission_check import (
+    authorization_check,
+    permission_check,
+)
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driving.http.role import RoleHTTP
 
@@ -23,6 +26,7 @@ def create_router(
     role_service: RoleHTTP,
     log: LeveledLogging,
 ) -> APIRouter:
+    guard_authorized = authorization_check()
     guard_manage = permission_check(["auth/manage"], role_service)
 
     router = APIRouter(
@@ -96,7 +100,8 @@ def create_router(
                 msg_2xx="Current user password updated successfully",
                 msg_4xx="Current user password update rejected",
                 msg_5xx="Current user password update failed",
-            )
+            ),
+            guard_authorized,
         ],
     )
     async def patch_auth_me_password(request: SetPasswordWithOldPasswordRequest):
@@ -111,7 +116,8 @@ def create_router(
                 msg_2xx="Current user auth info updated successfully",
                 msg_4xx="Current user auth info update rejected",
                 msg_5xx="Current user auth info update failed",
-            )
+            ),
+            guard_authorized,
         ],
     )
     async def patch_auth_me_info(request: SetPasswordAuthInfoRequest):

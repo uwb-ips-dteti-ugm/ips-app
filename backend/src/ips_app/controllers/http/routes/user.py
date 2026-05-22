@@ -13,7 +13,10 @@ from ips_app.controllers.http.dto.user import (
 )
 from ips_app.controllers.http.handlers.user import UserHandler
 from ips_app.controllers.http.middlewares.logger import logger
-from ips_app.controllers.http.middlewares.permission_check import permission_check
+from ips_app.controllers.http.middlewares.permission_check import (
+    authorization_check,
+    permission_check,
+)
 from ips_app.domain.models.user import UserStatus
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driving.http.role import RoleHTTP
@@ -24,6 +27,7 @@ def create_router(
     role_service: RoleHTTP,
     log: LeveledLogging,
 ) -> APIRouter:
+    guard_authorized = authorization_check()
     guard_manage = permission_check(["user/manage"], role_service)
     guard_view = permission_check(["user/view"], role_service)
     guard_delete = permission_check(["user/delete"], role_service)
@@ -51,7 +55,8 @@ def create_router(
                 msg_2xx="Current user fetched successfully",
                 msg_4xx="Current user fetch rejected",
                 msg_5xx="Current user fetch failed",
-            )
+            ),
+            guard_authorized,
         ],
     )
     async def get_user_me():
@@ -67,7 +72,8 @@ def create_router(
                 msg_2xx="Current user permissions fetched successfully",
                 msg_4xx="Current user permissions fetch rejected",
                 msg_5xx="Current user permissions fetch failed",
-            )
+            ),
+            guard_authorized,
         ],
     )
     async def get_user_me_permissions():
@@ -83,7 +89,8 @@ def create_router(
                 msg_2xx="Current user info updated successfully",
                 msg_4xx="Current user info update rejected",
                 msg_5xx="Current user info update failed",
-            )
+            ),
+            guard_authorized,
         ],
     )
     async def patch_user_me_info(request: SetUserInfoRequest):
@@ -99,7 +106,8 @@ def create_router(
                 msg_2xx="Current user preferences updated successfully",
                 msg_4xx="Current user preferences update rejected",
                 msg_5xx="Current user preferences update failed",
-            )
+            ),
+            guard_authorized,
         ],
     )
     async def patch_user_me_preferences(request: Request):
