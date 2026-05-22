@@ -241,6 +241,9 @@ class BaseNodeHTTP(NodeHTTP):
                 updated_by=updated_by,
             )
             node = await self.get_node(node_id)
+            if not node.is_approved:
+                await self._unregister_inactive_node(node)
+
             await self.log.info(
                 tag,
                 "Successfully updated node status",
@@ -383,6 +386,24 @@ class BaseNodeHTTP(NodeHTTP):
             await self.control.unregister(device_id, connection)
         except Exception:
             pass
+
+    async def _unregister_inactive_node(self, node: Node) -> None:
+        removed = await self.control.unregister(node.device_id)
+        if not removed:
+            return
+
+        await self.repo.update_node_last_disconnected_at_by_device_id(
+            node.device_id
+        )
+        await self.log.info(
+            f"{self.tag_class}._unregister_inactive_node",
+            "Unregistered inactive node connection",
+            {
+                "id": str(node.id),
+                "device_id": node.device_id,
+                "status": str(node.status),
+            },
+        )
 
     async def is_node_registered(self, device_id: str) -> bool:
         tag = f"{self.tag_class}.is_node_registered"
