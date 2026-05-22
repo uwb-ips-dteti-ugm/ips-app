@@ -7,42 +7,47 @@ import {
   PageHeader,
 } from "@/shared/components/PageHeader";
 
-import { UsersPageContent } from "./_components/UsersPageContent";
+import { UsersListContent } from "./_components/UsersListContent";
+import { getUsersPageData } from "./_lib/get-users-page-data";
 import {
-  getUsersPageData,
+  getUsersListKey,
+  parseUsersListState,
   type UsersPageSearchParams,
-} from "./_lib/get-users-page-data";
+} from "./_lib/users-list-state";
 
-export default async function UsersPage({
-  searchParams,
-}: {
+type UsersPageProps = {
   searchParams: Promise<UsersPageSearchParams>;
-}) {
+};
+
+export default async function UsersPage({ searchParams }: UsersPageProps) {
   const session = await getAuthSession();
 
   if (!session) {
     redirect("/sign-in");
   }
 
-  const data = await getUsersPageData(session.accessToken, await searchParams);
+  const state = parseUsersListState(await searchParams);
+  const data = await getUsersPageData(session.accessToken, state);
 
   if (!data.canViewUsers) {
-    return <AccessDenied message="Your account does not have access to view users." />;
+    return (
+      <AccessDenied message="Your account does not have access to view users." />
+    );
   }
 
   return (
     <PageContent>
-      <PageHeader title="Users" subtitle="View and manage users." />
+      <PageHeader title="Users" subtitle="View and manage user accounts." />
 
-      <UsersPageContent
-        key={`${data.users.meta.page}:${data.users.meta.limit}:${data.users.meta.total}:${data.filters.search}:${data.filters.roleId}:${data.filters.state}:${data.filters.status}`}
-        users={data.users.data}
-        meta={data.users.meta}
-        filters={data.filters}
-        roles={data.roles}
-        canRegisterUsers={data.canRegisterUsers}
-        canManageUsers={data.canManageUsers}
+      <UsersListContent
+        key={getUsersListKey(state)}
         canDeleteUsers={data.canDeleteUsers}
+        canManageUsers={data.canManageUsers}
+        canRegisterUsers={data.canRegisterUsers}
+        meta={data.users.meta}
+        roles={data.roles}
+        state={state}
+        users={data.users.data}
       />
     </PageContent>
   );

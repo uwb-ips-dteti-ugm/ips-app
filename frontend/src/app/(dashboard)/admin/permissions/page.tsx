@@ -1,23 +1,22 @@
 import { redirect } from "next/navigation";
 
-import { canAccessFeature } from "@/lib/api/featureAccess";
-import { fetchPaginated } from "@/lib/api/pagination";
 import { getAuthSession } from "@/lib/auth/session";
-import { getLimitParam, getPageParam, getStringParam } from "@/lib/navigation/searchParams";
-import { AccessDenied, PageContent, PageHeader } from "@/shared/components/PageHeader";
 import {
-  ResourcePageContent,
-  type ResourcePermissionItem,
-} from "@/shared/components/ResourcePage";
+  AccessDenied,
+  PageContent,
+  PageHeader,
+} from "@/shared/components/PageHeader";
 
+import { PermissionsListContent } from "./_components/PermissionsListContent";
+import { getPermissionsPageData } from "./_lib/get-permissions-page-data";
 import {
-  createPermissionAction,
-  deletePermissionAction,
-  updatePermissionAction,
-} from "./_actions/mutate-permission";
+  getCursorListKey,
+  parseCursorListState,
+  type PageSearchParams,
+} from "../_lib/cursor-list-state";
 
 type PermissionsPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<PageSearchParams>;
 };
 
 export default async function PermissionsPage({
@@ -29,31 +28,14 @@ export default async function PermissionsPage({
     redirect("/sign-in");
   }
 
-  const resolvedSearchParams = await searchParams;
-  const page = getPageParam(resolvedSearchParams.page);
-  const limit = getLimitParam(resolvedSearchParams.limit);
-  const search = getStringParam(resolvedSearchParams.search);
+  const state = parseCursorListState(await searchParams);
+  const data = await getPermissionsPageData(session.accessToken, state);
 
-  const [canViewPermissions, canManagePermissions, canDeletePermissions] =
-    await Promise.all([
-      canAccessFeature(session.accessToken, "permission/view"),
-      canAccessFeature(session.accessToken, "permission/manage"),
-      canAccessFeature(session.accessToken, "permission/delete"),
-    ]);
-
-  if (!canViewPermissions) {
+  if (!data.canViewPermissions) {
     return (
       <AccessDenied message="Your account does not have access to view permissions." />
     );
   }
-
-  const permissions = await fetchPaginated<ResourcePermissionItem>({
-    accessToken: session.accessToken,
-    path: "/permissions",
-    page,
-    limit,
-    search,
-  });
 
   return (
     <PageContent>
@@ -62,20 +44,13 @@ export default async function PermissionsPage({
         subtitle="View and manage permission resources."
       />
 
-      <ResourcePageContent
-        key={`${permissions.meta.page}:${permissions.meta.limit}:${permissions.meta.total}:${search}`}
-        items={permissions.data}
-        meta={permissions.meta}
-        search={search}
-        resourceLabel="Permission"
-        resourceLabelPlural="permissions"
-        emptyMessage="No permissions found."
-        canCreate={canManagePermissions}
-        canManage={canManagePermissions}
-        canDelete={canDeletePermissions}
-        createAction={createPermissionAction}
-        updateAction={updatePermissionAction}
-        deleteAction={deletePermissionAction}
+      <PermissionsListContent
+        key={getCursorListKey(state)}
+        canDeletePermissions={data.canDeletePermissions}
+        canManagePermissions={data.canManagePermissions}
+        meta={data.permissions.meta}
+        permissions={data.permissions.data}
+        state={state}
       />
     </PageContent>
   );

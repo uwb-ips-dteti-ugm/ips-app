@@ -1,204 +1,107 @@
-import { apiBaseUrl, authenticatedFetch } from "@/lib/api/client";
-import { canAccessFeature } from "@/lib/api/featureAccess";
-import { getLimitParam, getPageParam, getStringParam } from "@/lib/navigation/searchParams";
-
+import { getRoles } from "@/lib/api/role";
 import {
-  type UserRoleFilterOption,
-  type UserStateFilterValue,
-  type UserStatusFilterValue,
-} from "../_components/UsersSearchForm";
-import { type UserListItem } from "../_components/UsersTable";
+  getMyPermissions,
+  getUsers,
+  type UserResponse,
+  type UsersResponse,
+} from "@/lib/api/user";
 
-export type UsersPageSearchParams = Record<
-  string,
-  string | string[] | undefined
->;
+import type { UsersListState } from "./users-list-state";
 
-type UsersResponse = {
-  data: UserListItem[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-  };
-};
-
-type RolesResponse = {
-  data: UserRoleFilterOption[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-  };
+export type UserRoleFilterOption = {
+  id: string;
+  name: string;
 };
 
 export type UsersPageData = {
-  canViewUsers: boolean;
-  canManageUsers: boolean;
   canDeleteUsers: boolean;
+  canManageUsers: boolean;
   canRegisterUsers: boolean;
-  users: UsersResponse;
+  canViewUsers: boolean;
   roles: UserRoleFilterOption[];
-  filters: {
-    search: string;
-    roleId: string;
-    state: UserStateFilterValue;
-    status: UserStatusFilterValue;
-  };
+  users: UsersResponse;
 };
 
 export async function getUsersPageData(
   accessToken: string,
-  searchParams: UsersPageSearchParams,
+  state: UsersListState,
 ): Promise<UsersPageData> {
-  const page = getPageParam(searchParams.page);
-  const limit = getLimitParam(searchParams.limit);
-  const search = getStringParam(searchParams.search);
-  const roleId = getStringParam(searchParams.role_id);
-  const state = getUserStateFilter(searchParams.state);
-  const status = getUserStatusFilter(searchParams.status);
-
-  const [
-    canViewUsers,
-    canManageUsers,
-    canDeleteUsers,
-    canViewRoles,
-    canRegisterUsers,
-  ] = await Promise.all([
-    canAccessFeature(accessToken, "user/view"),
-    canAccessFeature(accessToken, "user/manage"),
-    canAccessFeature(accessToken, "user/delete"),
-    canAccessFeature(accessToken, "role/view"),
-    canAccessFeature(accessToken, "auth/manage"),
-  ]);
+  const permissionNames = await readPermissionNames(accessToken);
+  const canDeleteUsers = permissionNames.has("user/delete");
+  const canManageUsers = permissionNames.has("user/manage");
+  const canRegisterUsers = permissionNames.has("auth/manage");
+  const canViewUsers = permissionNames.has("user/view");
 
   if (!canViewUsers) {
     return {
-      canViewUsers,
-      canManageUsers,
       canDeleteUsers,
+      canManageUsers,
       canRegisterUsers,
-      users: {
-        data: [],
-        meta: { page, limit, total: 0 },
-      },
+      canViewUsers,
       roles: [],
-      filters: {
-        search,
-        roleId,
-        state,
-        status,
-      },
+      users: emptyUsers(state.limit),
     };
   }
 
   const [users, roles] = await Promise.all([
-    getUsers({
-      accessToken,
-      page,
-      limit,
-      search,
-      roleId,
-      state,
-      status,
-    }),
-    canViewRoles ? getRoles(accessToken) : [],
+    getUsers(
+      {
+        cursor_id: optionalQueryValue(state.cursorId),
+        limit: state.limit,
+        page: 0,
+        role_id: optionalQueryValue(state.roleId),
+        search: optionalQueryValue(state.search),
+        status: state.status || undefined,
+      },
+      { accessToken },
+    ),
+    permissionNames.has("role/view") ? readRoleOptions(accessToken) : [],
   ]);
 
   return {
-    canViewUsers,
-    canManageUsers,
     canDeleteUsers,
+    canManageUsers,
     canRegisterUsers,
-    users,
+    canViewUsers,
     roles,
-    filters: {
-      search,
-      roleId,
-      state,
-      status,
+    users,
+  };
+}
+
+async function readPermissionNames(accessToken: string): Promise<Set<string>> {
+  try {
+    const permissions = await getMyPermissions({ accessToken });
+    return new Set(permissions.map((permission) => permission.name));
+  } catch {
+    return new Set();
+  }
+}
+
+async function readRoleOptions(
+  accessToken: string,
+): Promise<UserRoleFilterOption[]> {
+  try {
+    const roles = await getRoles({ limit: 200, page: 0 }, { accessToken });
+    return roles.data.map((role) => ({
+      id: role.id,
+      name: role.name,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function emptyUsers(limit: number): UsersResponse {
+  return {
+    data: [] satisfies UserResponse[],
+    meta: {
+      limit,
+      page: 0,
+      total: 0,
     },
   };
 }
 
-async function getUsers({
-  accessToken,
-  page,
-  limit,
-  search,
-  roleId,
-  state,
-  status,
-}: {
-  accessToken: string;
-  page: number;
-  limit: number;
-  search: string;
-  roleId: string;
-  state: UserStateFilterValue;
-  status: UserStatusFilterValue;
-}): Promise<UsersResponse> {
-  const url = new URL("/users", apiBaseUrl);
-  url.searchParams.set("page", String(page));
-  url.searchParams.set("limit", String(limit));
-
-  if (search) {
-    url.searchParams.set("search", search);
-  }
-
-  if (roleId) {
-    url.searchParams.set("role_id", roleId);
-  }
-
-  if (state) {
-    url.searchParams.set("state", state);
-  }
-
-  if (status) {
-    url.searchParams.set("status", status);
-  }
-
-  const response = await authenticatedFetch(accessToken, url);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch users.");
-  }
-
-  return (await response.json()) as UsersResponse;
-}
-
-async function getRoles(accessToken: string): Promise<UserRoleFilterOption[]> {
-  const url = new URL("/roles", apiBaseUrl);
-  url.searchParams.set("page", "0");
-  url.searchParams.set("limit", "100");
-
-  const response = await authenticatedFetch(accessToken, url);
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const roles = (await response.json()) as RolesResponse;
-  return roles.data.map((role) => ({
-    id: role.id,
-    name: role.name,
-  }));
-}
-
-function getUserStateFilter(
-  value: string | string[] | undefined,
-): UserStateFilterValue {
-  const state = getStringParam(value);
-  return ["online", "offline", "away", "dnd"].includes(state)
-    ? (state as UserStateFilterValue)
-    : "";
-}
-
-function getUserStatusFilter(
-  value: string | string[] | undefined,
-): UserStatusFilterValue {
-  const status = getStringParam(value);
-  return ["active", "suspended", "banned"].includes(status)
-    ? (status as UserStatusFilterValue)
-    : "";
+function optionalQueryValue(value: string): string | undefined {
+  return value || undefined;
 }

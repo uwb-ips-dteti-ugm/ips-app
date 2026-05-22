@@ -1,23 +1,23 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 type PageHeaderProps = {
-  title: string;
-  subtitle?: string;
   actions?: ReactNode;
+  subtitle?: string;
+  title: string;
 };
 
-export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
+export function PageHeader({ actions, subtitle, title }: PageHeaderProps) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 className="text-2xl font-semibold text-[#0F2854] dark:text-white">
           {title}
         </h1>
-        {subtitle && (
+        {subtitle ? (
           <p className="mt-1 text-sm text-[#4988C4] dark:text-[#BDE8F5]">
             {subtitle}
           </p>
-        )}
+        ) : null}
       </div>
       {actions}
     </header>
@@ -29,11 +29,11 @@ export function PageContent({ children }: { children: ReactNode }) {
 }
 
 export function AccessDenied({
-  title = "Access denied",
   message,
+  title = "Access denied",
 }: {
-  title?: string;
   message: string;
+  title?: string;
 }) {
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">

@@ -13,7 +13,7 @@ const apiBaseUrl =
   process.env.NEXT_PUBLIC_IPS_API_BASE_URL ??
   "http://localhost:8000";
 
-type BackendTokenResponse = {
+type TokenResponse = {
   access_token: string;
   refresh_token: string;
 };
@@ -27,12 +27,13 @@ export async function proxy(request: NextRequest) {
   }
 
   const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
-  const isSignedIn = Boolean(accessToken && !isJwtExpired(accessToken));
+  const hasAccessToken = Boolean(accessToken && !isJwtExpired(accessToken));
 
-  if (isSignedIn) {
+  if (hasAccessToken) {
     if (isSignInPath) {
       return NextResponse.redirect(new URL("/", nextUrl));
     }
+
     return NextResponse.next();
   }
 
@@ -40,6 +41,7 @@ export async function proxy(request: NextRequest) {
   if (refreshedTokens) {
     const redirectUrl = isSignInPath ? new URL("/", nextUrl) : nextUrl.clone();
     const response = NextResponse.redirect(redirectUrl);
+
     setAuthCookies(response, refreshedTokens);
     return response;
   }
@@ -52,12 +54,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/node/:path*", "/sign-in"],
+  matcher: ["/", "/admin/:path*", "/sign-in"],
 };
 
 async function refreshAuthTokens(
   request: NextRequest,
-): Promise<BackendTokenResponse | null> {
+): Promise<TokenResponse | null> {
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 
   if (!refreshToken || isJwtExpired(refreshToken, 0)) {
@@ -78,7 +80,7 @@ async function refreshAuthTokens(
   }
 
   const tokens = (await response.json().catch(() => null)) as
-    | BackendTokenResponse
+    | TokenResponse
     | null;
 
   if (!tokens?.access_token || !tokens.refresh_token) {
@@ -88,10 +90,7 @@ async function refreshAuthTokens(
   return tokens;
 }
 
-function setAuthCookies(
-  response: NextResponse,
-  tokens: BackendTokenResponse,
-): void {
+function setAuthCookies(response: NextResponse, tokens: TokenResponse): void {
   response.cookies.set(
     ACCESS_TOKEN_COOKIE,
     tokens.access_token,

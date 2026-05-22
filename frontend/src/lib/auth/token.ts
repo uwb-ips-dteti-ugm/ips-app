@@ -5,8 +5,7 @@ export type AccessTokenClaims = {
   exp?: number;
 };
 
-export type RefreshTokenClaims = {
-  user_id: string;
+type TokenExpiryClaims = {
   exp?: number;
 };
 
@@ -24,7 +23,7 @@ export function decodeJwtPayload<T>(token: string): T | null {
 }
 
 export function isJwtExpired(token: string, skewMs = 30_000): boolean {
-  const payload = decodeJwtPayload<{ exp?: number }>(token);
+  const payload = decodeJwtPayload<TokenExpiryClaims>(token);
 
   if (!payload?.exp) {
     return true;
@@ -34,7 +33,7 @@ export function isJwtExpired(token: string, skewMs = 30_000): boolean {
 }
 
 export function getTokenMaxAgeSeconds(token: string): number | undefined {
-  const payload = decodeJwtPayload<{ exp?: number }>(token);
+  const payload = decodeJwtPayload<TokenExpiryClaims>(token);
   if (!payload?.exp) {
     return undefined;
   }

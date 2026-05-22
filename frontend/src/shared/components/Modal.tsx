@@ -6,25 +6,25 @@ import { type ReactNode, useEffect, useId } from "react";
 import closeIcon from "../assets/CloseIcon.svg";
 
 type ModalProps = {
-  title: string;
   children: ReactNode;
   onClose: () => void;
+  title: string;
   widthClassName?: string;
 };
 
 type ModalActionsProps = {
-  submitLabel: string;
-  pendingLabel: string;
-  pending: boolean;
-  onClose: () => void;
-  submitDisabled?: boolean;
   destructive?: boolean;
+  onClose: () => void;
+  pending: boolean;
+  pendingLabel: string;
+  submitDisabled?: boolean;
+  submitLabel: string;
 };
 
 export function Modal({
-  title,
   children,
   onClose,
+  title,
   widthClassName = "max-w-lg",
 }: ModalProps) {
   const titleId = useId();
@@ -33,21 +33,21 @@ export function Modal({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    function handleKeyDown(event: KeyboardEvent) {
+    function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", closeOnEscape);
     };
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close modal"
@@ -78,7 +78,7 @@ export function Modal({
               alt=""
               width={16}
               height={16}
-              className="h-4 w-4 shrink-0 dark:brightness-0 dark:invert"
+              className="shrink-0 dark:brightness-0 dark:invert"
             />
           </button>
         </header>
@@ -89,12 +89,12 @@ export function Modal({
 }
 
 export function ModalActions({
-  submitLabel,
-  pendingLabel,
-  pending,
-  onClose,
-  submitDisabled = false,
   destructive = false,
+  onClose,
+  pending,
+  pendingLabel,
+  submitDisabled = false,
+  submitLabel,
 }: ModalActionsProps) {
   return (
     <div className="flex flex-wrap justify-end gap-2 border-t border-[#D9EEF7] pt-4 dark:border-[#1C4D8D]">

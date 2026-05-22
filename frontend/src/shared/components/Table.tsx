@@ -1,11 +1,7 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
-import { type ReactNode } from "react";
-
-type DataTableProps = {
-  children: ReactNode;
-};
+import type { ReactNode } from "react";
 
 type IconActionButtonProps = {
   icon: StaticImageData;
@@ -14,7 +10,19 @@ type IconActionButtonProps = {
   variant?: "default" | "danger";
 };
 
-export function DataTable({ children }: DataTableProps) {
+export function TableFrame({ children }: { children: ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-md border border-[#D9EEF7] bg-white dark:border-[#1C4D8D] dark:bg-[#07111F]">
+      {children}
+    </section>
+  );
+}
+
+export function TableViewport({ children }: { children: ReactNode }) {
+  return <div className="relative">{children}</div>;
+}
+
+export function DataTable({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
@@ -32,9 +40,7 @@ export function TableHead({
   className?: string;
 }) {
   return (
-    <th
-      className={`whitespace-nowrap px-4 py-3 text-center font-semibold ${className}`}
-    >
+    <th className={`whitespace-nowrap px-4 py-3 font-semibold ${className}`}>
       {children}
     </th>
   );
@@ -74,7 +80,7 @@ export function TableBadge({
 
 export function EmptyTableState({ message }: { message: string }) {
   return (
-    <div className="border-t border-[#D9EEF7] px-4 py-10 text-center text-sm text-[#4988C4] dark:border-[#1C4D8D] dark:text-[#BDE8F5]">
+    <div className="px-4 py-10 text-center text-sm text-[#4988C4] dark:text-[#BDE8F5]">
       {message}
     </div>
   );
@@ -95,8 +101,8 @@ export function IconActionButton({
   return (
     <button
       type="button"
-      onClick={onClick}
       aria-label={label}
+      onClick={onClick}
       className={
         isDanger
           ? "group relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E05A5A] bg-transparent text-[#E05A5A] transition hover:bg-[#E05A5A] hover:text-white"
@@ -110,8 +116,8 @@ export function IconActionButton({
         height={16}
         className={
           isDanger
-            ? "h-4 w-4 shrink-0 transition group-hover:brightness-0 group-hover:invert"
-            : "h-4 w-4 shrink-0 dark:brightness-0 dark:invert"
+            ? "shrink-0 transition group-hover:brightness-0 group-hover:invert"
+            : "shrink-0 dark:brightness-0 dark:invert"
         }
       />
       <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0F2854] px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-[#BDE8F5] dark:text-[#07111F]">

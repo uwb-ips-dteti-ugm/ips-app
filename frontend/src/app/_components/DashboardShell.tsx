@@ -1,10 +1,10 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { canAccessFeature } from "@/lib/api/featureAccess";
-import { type AuthSession } from "@/lib/auth/session";
+import { getMyPermissions } from "@/lib/api/user";
+import type { AuthSession } from "@/lib/auth/session";
 
 import { signOutAction } from "../_actions/sign-out";
-import { Sidebar, sidebarConfig } from "./Sidebar";
+import { Sidebar, sidebarConfig, type SidebarConfigMenu } from "./Sidebar";
 import { SignOutButton } from "./SignOutButton";
 
 type DashboardShellProps = {
@@ -32,33 +32,29 @@ export async function DashboardShell({
 }
 
 async function getAccessibleSidebarGroups(accessToken: string) {
-  const featureAccessEntries = await Promise.all(
-    sidebarConfig.flatMap((group) =>
-      group.menus.flatMap((menu) =>
-        getMenuFeatureNames(menu).map(async (featureName) => [
-          featureName,
-          await canAccessFeature(accessToken, featureName),
-        ] as const),
-      ),
-    ),
-  );
-  const featureAccess = new Map(featureAccessEntries);
+  const grantedPermissions = await readGrantedPermissionNames(accessToken);
 
   return sidebarConfig
     .map((group) => ({
       ...group,
       menus: group.menus.filter((menu) =>
-        getMenuFeatureNames(menu).every((featureName) =>
-          featureAccess.get(featureName),
+        getRequiredPermissionNames(menu).every((name) =>
+          grantedPermissions.has(name),
         ),
       ),
     }))
     .filter((group) => group.menus.length > 0);
 }
 
-function getMenuFeatureNames(menu: {
-  featureName?: string;
-  featureNames?: string[];
-}) {
-  return menu.featureNames ?? (menu.featureName ? [menu.featureName] : []);
+async function readGrantedPermissionNames(accessToken: string) {
+  try {
+    const permissions = await getMyPermissions({ accessToken });
+    return new Set(permissions.map((permission) => permission.name));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function getRequiredPermissionNames(menu: SidebarConfigMenu): string[] {
+  return menu.permissionNames ?? [];
 }

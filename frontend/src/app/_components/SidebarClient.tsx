@@ -37,7 +37,7 @@ export function SidebarClient({
           isOpen ? "justify-between gap-2" : "justify-center"
         }`}
       >
-        {isOpen && (
+        {isOpen ? (
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Image
               className="shrink-0 dark:hidden"
@@ -64,7 +64,7 @@ export function SidebarClient({
               </div>
             </div>
           </div>
-        )}
+        ) : null}
         <button
           type="button"
           aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
@@ -77,6 +77,7 @@ export function SidebarClient({
             alt=""
             width={22}
             height={22}
+            loading="eager"
             className="h-5.5 w-5.5 shrink-0 dark:brightness-0 dark:invert"
           />
         </button>
@@ -104,7 +105,10 @@ export function SidebarClient({
             )}
           </nav>
 
-          <form action={signOutAction} className="flex shrink-0 justify-center pt-4">
+          <form
+            action={signOutAction}
+            className="flex shrink-0 justify-center pt-4"
+          >
             <SidebarCollapsedSignOutButton />
           </form>
         </>
@@ -189,7 +193,7 @@ function SidebarCollapsedSignOutButton() {
         alt=""
         width={18}
         height={18}
-        className="h-4.5 w-4.5 shrink-0 transition group-hover:brightness-0 group-hover:invert"
+        className="shrink-0 transition group-hover:brightness-0 group-hover:invert"
       />
     </button>
   );

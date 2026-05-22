@@ -11,8 +11,8 @@ import {
 import chevronDownIcon from "../assets/ChevronDownIcon.svg";
 
 type FieldBaseProps = {
-  label: string;
   className?: string;
+  label: string;
 };
 
 type TextFieldProps = FieldBaseProps &
@@ -26,16 +26,11 @@ type SelectFieldProps = FieldBaseProps &
     selectClassName?: string;
   };
 
-type ActionMessageState = {
-  status: string;
-  message: string;
-};
-
 export function TextField({
-  label,
   className = "",
-  inputClassName = "",
   id,
+  inputClassName = "",
+  label,
   ...inputProps
 }: TextFieldProps) {
   const generatedId = useId();
@@ -49,7 +44,7 @@ export function TextField({
       {label}
       <input
         id={inputId}
-        className={`h-10 rounded-md border border-[#D9EEF7] bg-white px-3 text-sm font-normal normal-case text-[#0F2854] outline-none transition placeholder:text-[#4988C4] focus:border-[#4988C4] focus:ring-2 focus:ring-[#BDE8F5] dark:border-[#1C4D8D] dark:bg-[#07111F] dark:text-white dark:placeholder:text-[#BDE8F5]/70 ${inputClassName}`}
+        className={`h-10 min-w-0 rounded-md border border-[#D9EEF7] bg-white px-3 text-sm font-normal normal-case text-[#0F2854] outline-none transition placeholder:text-[#4988C4] focus:border-[#4988C4] focus:ring-2 focus:ring-[#BDE8F5] dark:border-[#1C4D8D] dark:bg-[#07111F] dark:text-white dark:placeholder:text-[#BDE8F5]/70 ${inputClassName}`}
         {...inputProps}
       />
     </label>
@@ -57,11 +52,11 @@ export function TextField({
 }
 
 export function SelectField({
-  label,
-  className = "",
-  selectClassName = "",
-  id,
   children,
+  className = "",
+  id,
+  label,
+  selectClassName = "",
   ...selectProps
 }: SelectFieldProps) {
   const generatedId = useId();
@@ -86,24 +81,9 @@ export function SelectField({
           alt=""
           width={16}
           height={16}
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 dark:brightness-0 dark:invert"
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 dark:brightness-0 dark:invert"
         />
       </div>
     </label>
-  );
-}
-
-export function ActionMessage({ state }: { state: ActionMessageState }) {
-  if (state.status !== "error") {
-    return null;
-  }
-
-  return (
-    <p
-      aria-live="polite"
-      className="rounded-md border border-[#F3B7B7] bg-[#FFF5F5] px-3 py-2 text-sm font-medium text-[#9F3A3A] dark:border-[#E05A5A]/50 dark:bg-[#2A1010] dark:text-[#F3B7B7]"
-    >
-      {state.message}
-    </p>
   );
 }

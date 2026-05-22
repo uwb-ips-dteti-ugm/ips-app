@@ -2,66 +2,78 @@
 
 import { redirect } from "next/navigation";
 
-import { setAuthCookies } from "@/lib/auth/session";
+import { signIn } from "@/lib/api/auth";
+import { isApiError } from "@/lib/api/client";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
-
-type BackendTokenResponse = {
-  access_token: string;
-  refresh_token: string;
-};
+import { setAuthCookies } from "@/lib/auth/session";
 
 export type SignInFormState = {
   error: string | null;
+  fieldError: SignInFieldError;
 };
 
-const apiBaseUrl =
-  process.env.IPS_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_IPS_API_BASE_URL ??
-  "http://localhost:8000";
+export type SignInFieldError = "credentials" | "password" | "username" | null;
 
 export async function signInAction(
   _previousState: SignInFormState,
   formData: FormData,
 ): Promise<SignInFormState> {
-  const signInIdentifier = String(
-    formData.get("sign_in_identifier") ?? "",
-  ).trim();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const callbackUrl = getSafeRedirectPath(formData.get("callbackUrl"));
 
-  if (!signInIdentifier || !password) {
+  if (!username && !password) {
     return {
       error: "Username and password are required.",
+      fieldError: "credentials",
     };
   }
 
-  let tokens: BackendTokenResponse;
+  if (!username) {
+    return {
+      error: "Username is required.",
+      fieldError: "username",
+    };
+  }
+
+  if (!password) {
+    return {
+      error: "Password is required.",
+      fieldError: "password",
+    };
+  }
+
   try {
-    const response = await fetch(`${apiBaseUrl}/auth/sign-in`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        sign_in_identifier: signInIdentifier,
-        password,
-      }),
-      cache: "no-store",
+    const tokens = await signIn({
+      username,
+      password,
     });
 
-    if (!response.ok) {
-      return {
-        error: "Invalid username or password.",
-      };
-    }
+    await setAuthCookies(tokens);
+  } catch (error) {
+    const errorMessage = isApiError(error)
+      ? error.message
+      : "The sign-in service is unavailable. Please try again.";
 
-    tokens = (await response.json()) as BackendTokenResponse;
-  } catch {
     return {
-      error: "Sign-in service is unavailable.",
+      error: errorMessage,
+      fieldError: getFieldError(errorMessage),
     };
   }
 
-  await setAuthCookies(tokens);
   redirect(callbackUrl);
+}
+
+function getFieldError(message: string): SignInFieldError {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("username")) {
+    return "username";
+  }
+
+  if (normalizedMessage.includes("password")) {
+    return "password";
+  }
+
+  return null;
 }

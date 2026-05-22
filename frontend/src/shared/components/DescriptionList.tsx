@@ -1,10 +1,6 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-export function DescriptionList({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function DescriptionList({ children }: { children: ReactNode }) {
   return <dl className="flex flex-col gap-3">{children}</dl>;
 }
 

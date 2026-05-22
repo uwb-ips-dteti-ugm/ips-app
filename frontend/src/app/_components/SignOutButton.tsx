@@ -19,7 +19,7 @@ export function SignOutButton() {
         alt=""
         width={18}
         height={18}
-        className="h-4.5 w-4.5 shrink-0 transition group-hover:brightness-0 group-hover:invert"
+        className="shrink-0 transition group-hover:brightness-0 group-hover:invert"
       />
       {pending ? "Signing out" : "Sign out"}
     </button>

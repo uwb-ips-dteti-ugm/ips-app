@@ -19,7 +19,8 @@ export default function SignInPage() {
             src="/lambang-ugm-putih.png"
             alt="Universitas Gadjah Mada"
             width={44}
-            height={44}
+            height={46}
+            style={{ height: "auto" }}
             priority
           />
         </div>

@@ -1,4 +1,6 @@
-export function getSafeRedirectPath(value: FormDataEntryValue | string | null): string {
+export function getSafeRedirectPath(
+  value: FormDataEntryValue | string | null,
+): string {
   if (typeof value !== "string") {
     return "/";
   }

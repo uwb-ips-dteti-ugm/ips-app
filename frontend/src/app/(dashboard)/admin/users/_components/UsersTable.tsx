@@ -1,59 +1,30 @@
-"use client";
+import type { ReactNode } from "react";
 
-import { formatDate, formatLabel } from "@/lib/format";
-import editIcon from "@/shared/assets/EditIcon.svg";
-import infoIcon from "@/shared/assets/InfoIcon.svg";
-import trashIcon from "@/shared/assets/TrashIcon.svg";
+import type { UserResponse, UserStatus } from "@/lib/api/user";
 import {
   DataTable,
   EmptyTableState,
-  IconActionButton,
   RowActions,
   TableBadge,
   TableCell,
   TableHead,
 } from "@/shared/components/Table";
 
-export type UserState = "online" | "offline" | "away" | "dnd";
-export type UserStatus = "active" | "suspended" | "banned";
-
-export type UserListItem = {
-  id: string;
-  name: string;
-  username: string | null;
-  bio: string;
-  state: UserState;
-  status: UserStatus;
-  role: {
-    id: string;
-    name: string;
-    description: string;
-    is_default: boolean;
-  } | null;
-  last_signed_in_at: string | null;
-  last_refreshed_at: string | null;
-  last_activity_at: string | null;
-  created_at: string;
-  updated_at: string | null;
-  version: number;
-};
+import type { UserRoleFilterOption } from "../_lib/get-users-page-data";
+import { UserRoleSelect, UserStatusSelect } from "./UserTableSelect";
 
 type UsersTableProps = {
-  users: UserListItem[];
   canManageUsers: boolean;
-  canDeleteUsers: boolean;
-  onViewUser: (user: UserListItem) => void;
-  onEditUser: (user: UserListItem) => void;
-  onDeleteUser: (user: UserListItem) => void;
+  renderActions?: (user: UserResponse) => ReactNode;
+  roles: UserRoleFilterOption[];
+  users: UserResponse[];
 };
 
 export function UsersTable({
-  users,
   canManageUsers,
-  canDeleteUsers,
-  onViewUser,
-  onEditUser,
-  onDeleteUser,
+  renderActions,
+  roles,
+  users,
 }: UsersTableProps) {
   if (users.length === 0) {
     return <EmptyTableState message="No users found." />;
@@ -65,11 +36,12 @@ export function UsersTable({
         <tr>
           <TableHead>Name</TableHead>
           <TableHead>Username</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>State</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Last Activity</TableHead>
-          <TableHead>Actions</TableHead>
+          <TableHead className="text-center">Role</TableHead>
+          <TableHead className="text-center">Status</TableHead>
+          <TableHead>Created</TableHead>
+          {renderActions ? (
+            <TableHead className="text-center">Actions</TableHead>
+          ) : null}
         </tr>
       </thead>
       <tbody>
@@ -79,52 +51,38 @@ export function UsersTable({
             className="border-b border-[#D9EEF7] last:border-b-0 dark:border-[#1C4D8D]"
           >
             <TableCell>
-              <div className="max-w-64">
+              <div className="max-w-72">
                 <div className="truncate font-semibold text-[#0F2854] dark:text-white">
                   {user.name}
                 </div>
-                {user.bio && (
+                {user.bio ? (
                   <div className="truncate text-xs text-[#4988C4] dark:text-[#BDE8F5]">
                     {user.bio}
                   </div>
-                )}
+                ) : null}
               </div>
             </TableCell>
             <TableCell>{user.username ?? "No username"}</TableCell>
             <TableCell className="text-center">
-              {user.role?.name ?? "No role"}
+              {canManageUsers && roles.length > 0 ? (
+                <UserRoleSelect roles={roles} user={user} />
+              ) : (
+                user.role.name
+              )}
             </TableCell>
             <TableCell className="text-center">
-              <UserStateBadge state={user.state} />
+              {canManageUsers ? (
+                <UserStatusSelect user={user} />
+              ) : (
+                <UserStatusBadge status={user.status} />
+              )}
             </TableCell>
-            <TableCell className="text-center">
-              <UserStatusBadge status={user.status} />
-            </TableCell>
-            <TableCell>{formatDate(user.last_activity_at)}</TableCell>
-            <TableCell className="text-center">
-              <RowActions>
-                <IconActionButton
-                  icon={infoIcon}
-                  label="Info"
-                  onClick={() => onViewUser(user)}
-                />
-                {canManageUsers && (
-                  <IconActionButton
-                    icon={editIcon}
-                    label="Edit"
-                    onClick={() => onEditUser(user)}
-                  />
-                )}
-                {canDeleteUsers && (
-                  <IconActionButton
-                    icon={trashIcon}
-                    label="Delete"
-                    onClick={() => onDeleteUser(user)}
-                    variant="danger"
-                  />
-                )}
-              </RowActions>
-            </TableCell>
+            <TableCell>{formatTimestamp(user.created_at)}</TableCell>
+            {renderActions ? (
+              <TableCell className="text-center">
+                <RowActions>{renderActions(user)}</RowActions>
+              </TableCell>
+            ) : null}
           </tr>
         ))}
       </tbody>
@@ -132,23 +90,32 @@ export function UsersTable({
   );
 }
 
-function UserStateBadge({ state }: { state: UserState }) {
-  const className = {
-    online: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    offline: "border-slate-400/40 bg-slate-400/10 text-slate-600 dark:text-slate-300",
-    away: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    dnd: "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
-  }[state];
-
-  return <TableBadge className={className}>{formatLabel(state)}</TableBadge>;
-}
-
 function UserStatusBadge({ status }: { status: UserStatus }) {
   const className = {
-    active: "border-[#4988C4]/40 bg-[#BDE8F5]/50 text-[#0F2854] dark:text-[#BDE8F5]",
-    suspended: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    banned: "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    active:
+      "border-[#4988C4]/40 bg-[#BDE8F5]/50 text-[#0F2854] dark:text-[#BDE8F5]",
+    banned:
+      "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    suspended:
+      "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
   }[status];
 
   return <TableBadge className={className}>{formatLabel(status)}</TableBadge>;
+}
+
+function formatTimestamp(value: string): string {
+  const timestamp = new Date(value);
+
+  if (Number.isNaN(timestamp.getTime())) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(timestamp);
+}
+
+function formatLabel(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
