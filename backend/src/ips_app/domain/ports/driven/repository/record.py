@@ -1,11 +1,8 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional
 
 from ips_app.domain.models.record import Record, RecordData, RecordDataLabel
-
-
-RecordIntervalField = Literal["recorded_at", "created_at"]
 
 
 class RecordRepository(ABC):
@@ -25,25 +22,23 @@ class RecordRepository(ABC):
     async def read_records_by_interval(
         self,
         label: RecordDataLabel,
-        interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
         source_node_device_ids: Optional[List[str]] = None,
         target_node_device_ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[Record]:
-        """Read records by label and recorded/created time interval."""
+        """Read records by label and recorded time interval."""
         ...
 
     @abstractmethod
     async def delete_records_by_interval(
         self,
         label: RecordDataLabel,
-        interval_field: RecordIntervalField,
         start: datetime,
         end: datetime,
         source_node_device_ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> int:
-        """Delete records by label and recorded/created time interval."""
+        """Delete records by label and recorded time interval."""
         ...
