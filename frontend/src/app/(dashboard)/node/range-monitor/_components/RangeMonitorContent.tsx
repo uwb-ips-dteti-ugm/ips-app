@@ -8,7 +8,6 @@ import { SelectField } from "@/shared/components/FormControls";
 import {
   DataTable,
   EmptyTableState,
-  TableBadge,
   TableCell,
   TableFrame,
   TableHead,
@@ -52,7 +51,8 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
     return nodes
       .filter(
         (node) =>
-          node.id !== selectedNode.id && node.network.id === selectedNode.network.id,
+          node.id !== selectedNode.id &&
+          node.network.id === selectedNode.network.id,
       )
       .sort((left, right) => left.name.localeCompare(right.name));
   }, [nodes, selectedNode]);
@@ -85,19 +85,16 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
     setPage(0);
   }, []);
 
-  const fetchRanges = useCallback(
-    async () => {
-      if (!selectedNode || visiblePeerDeviceIds.length === 0) {
-        return null;
-      }
+  const fetchRanges = useCallback(async () => {
+    if (!selectedNode || visiblePeerDeviceIds.length === 0) {
+      return null;
+    }
 
-      return getRangeMonitorRangesAction({
-        sourceNodeDeviceId: selectedNode.deviceId,
-        targetNodeDeviceIds: visiblePeerDeviceIds,
-      });
-    },
-    [selectedNode, visiblePeerDeviceIds],
-  );
+    return getRangeMonitorRangesAction({
+      sourceNodeDeviceId: selectedNode.deviceId,
+      targetNodeDeviceIds: visiblePeerDeviceIds,
+    });
+  }, [selectedNode, visiblePeerDeviceIds]);
 
   useEffect(() => {
     if (!selectedNode || visiblePeerDeviceIds.length === 0) {
@@ -158,11 +155,13 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
       <FilterBar>
         <SelectField
           id="range-monitor-node"
-          label="Node"
+          label="Source Node"
           name="node_id"
           value={selectedNodeId}
-          onChange={(event) => handleSelectedNodeChange(event.currentTarget.value)}
-          className="min-w-[260px] flex-1"
+          onChange={(event) =>
+            handleSelectedNodeChange(event.currentTarget.value)
+          }
+          className="min-w-65 flex-1"
         >
           <option value="">Select a node</option>
           {nodes.map((node) => (
@@ -208,7 +207,9 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
               {error
                 ? error
                 : `Refreshes every second${
-                    lastUpdatedAt ? ` - Last updated ${formatTime(lastUpdatedAt)}` : ""
+                    lastUpdatedAt
+                      ? ` - Last updated ${formatTime(lastUpdatedAt)}`
+                      : ""
                   }`}
             </span>
           ) : (
@@ -222,7 +223,9 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
           hasPrevious={boundedPage > 0}
           itemCount={visiblePeerNodes.length}
           itemLabel="range"
-          onNext={() => setPage((current) => Math.min(current + 1, pageCount - 1))}
+          onNext={() =>
+            setPage((current) => Math.min(current + 1, pageCount - 1))
+          }
           onPrevious={() => setPage((current) => Math.max(current - 1, 0))}
         />
       </TableFrame>
@@ -244,7 +247,9 @@ function RangeMonitorTable({
   }
 
   if (nodes.length === 0) {
-    return <EmptyTableState message="No other approved nodes in this network." />;
+    return (
+      <EmptyTableState message="No other approved nodes in this network." />
+    );
   }
 
   return (
@@ -255,7 +260,6 @@ function RangeMonitorTable({
           <TableHead>Device ID</TableHead>
           <TableHead>Address</TableHead>
           <TableHead>Distance</TableHead>
-          <TableHead>Direction</TableHead>
           <TableHead>Last Update</TableHead>
         </tr>
       </thead>
@@ -274,13 +278,8 @@ function RangeMonitorTable({
               </TableCell>
               <TableCell>{node.deviceId}</TableCell>
               <TableCell>{formatAddress(node.address)}</TableCell>
-              <TableCell>{range ? `${range.distance.toFixed(3)} m` : "-"}</TableCell>
-              <TableCell>
-                {range ? (
-                  <DirectionBadge range={range} selectedNode={selectedNode} />
-                ) : (
-                  "-"
-                )}
+              <TableCell className="text-base font-bold text-[#0F2854] dark:text-white">
+                {range ? `${range.distance.toFixed(3)} m` : "-"}
               </TableCell>
               <TableCell>
                 {range ? formatTimestamp(range.recordedAt) : "Waiting"}
@@ -290,22 +289,6 @@ function RangeMonitorTable({
         })}
       </tbody>
     </DataTable>
-  );
-}
-
-function DirectionBadge({
-  range,
-  selectedNode,
-}: {
-  range: RangeMonitorRange;
-  selectedNode: RangeMonitorNodeOption;
-}) {
-  const isOutgoing = range.sourceNodeDeviceId === selectedNode.deviceId;
-
-  return (
-    <TableBadge className="border-[#4988C4]/40 bg-[#BDE8F5]/50 text-[#0F2854] dark:text-[#BDE8F5]">
-      {isOutgoing ? "Outgoing" : "Incoming"}
-    </TableBadge>
   );
 }
 
