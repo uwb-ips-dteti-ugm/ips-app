@@ -29,6 +29,11 @@ class EnvVar:
     seeder_user_name: str
     seeder_user_username: str
     seeder_user_password: str
+    ranging_scheduler_listen_timeout_uus: int
+    ranging_scheduler_initiate_timeout_uus: int
+    ranging_scheduler_listen_to_initiate_delay_ms: int
+    ranging_scheduler_pair_delay_ms: int
+    ranging_scheduler_idle_delay_ms: int
 
 
 def load_env_var() -> EnvVar:
@@ -53,6 +58,26 @@ def load_env_var() -> EnvVar:
         seeder_user_name=_require("SEEDER_USER_NAME"),
         seeder_user_username=_require("SEEDER_USER_USERNAME"),
         seeder_user_password=_require("SEEDER_USER_PASSWORD"),
+        ranging_scheduler_listen_timeout_uus=_fallback_int(
+            "RANGING_SCHEDULER_LISTEN_TIMEOUT_UUS",
+            120000,
+        ),
+        ranging_scheduler_initiate_timeout_uus=_fallback_int(
+            "RANGING_SCHEDULER_INITIATE_TIMEOUT_UUS",
+            12000,
+        ),
+        ranging_scheduler_listen_to_initiate_delay_ms=_fallback_int(
+            "RANGING_SCHEDULER_LISTEN_TO_INITIATE_DELAY_MS",
+            80,
+        ),
+        ranging_scheduler_pair_delay_ms=_fallback_int(
+            "RANGING_SCHEDULER_PAIR_DELAY_MS",
+            80,
+        ),
+        ranging_scheduler_idle_delay_ms=_fallback_int(
+            "RANGING_SCHEDULER_IDLE_DELAY_MS",
+            250,
+        ),
     )
 
 

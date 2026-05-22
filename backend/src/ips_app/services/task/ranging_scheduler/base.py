@@ -98,7 +98,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
             await self._set_nodes_last_seen(
                 (pair.listener_device_id, pair.initiator_device_id)
             )
-            await self.log.info(
+            await self.log.debug(
                 tag,
                 "Successfully sent listen ranging command",
                 {
@@ -144,7 +144,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
             await self._set_nodes_last_seen(
                 (pair.listener_device_id, pair.initiator_device_id)
             )
-            await self.log.info(
+            await self.log.debug(
                 tag,
                 "Successfully sent initiate ranging command",
                 {
