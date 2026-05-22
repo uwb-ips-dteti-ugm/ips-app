@@ -186,6 +186,7 @@ class NodeHandler:
         status_filter: Optional[NodeStatus] = None,
         network_id: Optional[str] = None,
         address: Optional[int] = None,
+        is_online: Optional[bool] = None,
     ) -> Union[NodesResponse, JSONResponse]:
         try:
             items, total = await self.service.get_nodes(
@@ -196,6 +197,7 @@ class NodeHandler:
                 status=status_filter,
                 network_id=network_id,
                 address=address,
+                is_online=is_online,
             )
             return NodesResponse.from_domain(
                 items=items,

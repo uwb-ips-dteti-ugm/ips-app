@@ -50,6 +50,7 @@ class NodeRepository(ABC):
         status: Optional[NodeStatus] = None,
         network_id: Optional[Any] = None,
         address: Optional[int] = None,
+        is_online: Optional[bool] = None,
         **kwargs: Any,
     ) -> Tuple[List[Node], int]:
         """Read nodes with pagination and filtering."""

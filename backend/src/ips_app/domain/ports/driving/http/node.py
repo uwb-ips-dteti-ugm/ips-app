@@ -48,6 +48,7 @@ class NodeHTTP(ABC):
         status: Optional[NodeStatus] = None,
         network_id: Optional[Any] = None,
         address: Optional[int] = None,
+        is_online: Optional[bool] = None,
     ) -> Tuple[List[Node], int]:
         """Get nodes with cursor-compatible pagination and filtering."""
         ...

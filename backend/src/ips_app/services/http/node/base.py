@@ -140,6 +140,7 @@ class BaseNodeHTTP(NodeHTTP):
         status: Optional[NodeStatus] = None,
         network_id: Optional[Any] = None,
         address: Optional[int] = None,
+        is_online: Optional[bool] = None,
     ) -> Tuple[List[Node], int]:
         tag = f"{self.tag_class}.get_nodes"
         try:
@@ -151,6 +152,7 @@ class BaseNodeHTTP(NodeHTTP):
                 status=status,
                 network_id=network_id,
                 address=address,
+                is_online=is_online,
             )
         except DomainException:
             raise

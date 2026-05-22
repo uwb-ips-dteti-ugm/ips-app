@@ -87,6 +87,7 @@ def create_router(
         status: Optional[NodeStatus] = None,
         network_id: Optional[str] = None,
         address: Optional[int] = None,
+        is_online: Optional[bool] = None,
     ):
         return await handler.get_nodes(
             page=page,
@@ -96,6 +97,7 @@ def create_router(
             status_filter=status,
             network_id=network_id,
             address=address,
+            is_online=is_online,
         )
 
     @router.get(

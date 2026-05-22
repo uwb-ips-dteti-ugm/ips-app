@@ -171,26 +171,36 @@ class BeanieNodeRepository(NodeRepository):
         status: Optional[NodeStatus] = None,
         network_id: Optional[Any] = None,
         address: Optional[int] = None,
+        is_online: Optional[bool] = None,
         **kwargs: Any,
     ) -> Tuple[List[Node], int]:
         tag = f"{self.tag_class}.read_nodes_by_pagination"
         session = kwargs.get("session")
         try:
             query_filter: Dict[str, Any] = {}
+            and_filters: List[Dict[str, Any]] = []
             if cursor_id:
                 query_filter["_id"] = {"$gt": self._to_obj_id(cursor_id)}
             if search:
-                query_filter["$or"] = [
-                    {"name": {"$regex": search, "$options": "i"}},
-                    {"device_id": {"$regex": search, "$options": "i"}},
-                    {"description": {"$regex": search, "$options": "i"}},
-                ]
+                and_filters.append(
+                    {
+                        "$or": [
+                            {"name": {"$regex": search, "$options": "i"}},
+                            {"device_id": {"$regex": search, "$options": "i"}},
+                            {"description": {"$regex": search, "$options": "i"}},
+                        ]
+                    }
+                )
             if status:
                 query_filter["status"] = status.value
             if network_id:
                 query_filter[NODE_NETWORK_ID_FIELD] = self._to_obj_id(network_id)
             if address is not None:
                 query_filter["address"] = address
+            if is_online is not None:
+                and_filters.append(self._build_node_online_filter(is_online))
+            if and_filters:
+                query_filter["$and"] = and_filters
 
             query = NodeDocument.find(
                 query_filter,
@@ -210,6 +220,7 @@ class BeanieNodeRepository(NodeRepository):
                     "page": page,
                     "limit": limit,
                     "status": str(status) if status else None,
+                    "is_online": is_online,
                 },
             )
             raise UnexpectedDomainException(str(e)) from e
@@ -527,6 +538,46 @@ class BeanieNodeRepository(NodeRepository):
         existing = await NodeDocument.find_one(query_filter, session=session)
         if existing:
             raise DuplicateDomainException("network address", "nodes")
+
+    def _build_node_online_filter(self, is_online: bool) -> Dict[str, Any]:
+        if is_online:
+            return {
+                "$and": [
+                    {"last_connected_at": {"$ne": None}},
+                    {
+                        "$or": [
+                            {"last_disconnected_at": None},
+                            {
+                                "$expr": {
+                                    "$gt": [
+                                        "$last_connected_at",
+                                        "$last_disconnected_at",
+                                    ]
+                                }
+                            },
+                        ]
+                    },
+                ]
+            }
+
+        return {
+            "$or": [
+                {"last_connected_at": None},
+                {
+                    "$and": [
+                        {"last_disconnected_at": {"$ne": None}},
+                        {
+                            "$expr": {
+                                "$lte": [
+                                    "$last_connected_at",
+                                    "$last_disconnected_at",
+                                ]
+                            }
+                        },
+                    ]
+                },
+            ]
+        }
 
     async def _set_node_timestamps(
         self,
