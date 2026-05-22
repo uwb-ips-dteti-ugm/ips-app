@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 import type { ErrorResponse } from "./common";
 
 type ApiQueryValue = boolean | number | string | null | undefined;
@@ -19,10 +21,7 @@ type RequestOptions = ApiRequestOptions & {
   query?: ApiQuery;
 };
 
-export const apiBaseUrl =
-  process.env.IPS_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_IPS_API_BASE_URL ??
-  "http://localhost:8000";
+export const apiBaseUrl = env.apiBaseUrl;
 
 export class ApiError extends Error {
   readonly body: unknown;

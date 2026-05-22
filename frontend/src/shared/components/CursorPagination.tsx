@@ -22,7 +22,7 @@ export function CursorPagination({
   return (
     <div
       aria-busy={busy}
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D9EEF7] px-4 py-3 text-sm text-[#1C4D8D] dark:border-[#1C4D8D] dark:text-[#BDE8F5]"
+      className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#D9EEF7] px-4 py-3 text-sm text-[#1C4D8D] dark:border-[#1C4D8D] dark:text-[#BDE8F5]"
     >
       <span>
         Showing{" "}

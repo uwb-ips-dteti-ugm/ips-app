@@ -12,14 +12,14 @@ type IconActionButtonProps = {
 
 export function TableFrame({ children }: { children: ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-md border border-[#D9EEF7] bg-white dark:border-[#1C4D8D] dark:bg-[#07111F]">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-[#D9EEF7] bg-white dark:border-[#1C4D8D] dark:bg-[#07111F]">
       {children}
     </section>
   );
 }
 
 export function TableViewport({ children }: { children: ReactNode }) {
-  return <div className="relative">{children}</div>;
+  return <div className="relative min-h-0 flex-1 overflow-y-auto">{children}</div>;
 }
 
 export function DataTable({ children }: { children: ReactNode }) {

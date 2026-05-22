@@ -25,7 +25,11 @@ export function PageHeader({ actions, subtitle, title }: PageHeaderProps) {
 }
 
 export function PageContent({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-dvh flex-col gap-5 p-6">{children}</div>;
+  return (
+    <div className="flex h-dvh min-h-0 flex-col gap-5 overflow-hidden p-6">
+      {children}
+    </div>
+  );
 }
 
 export function AccessDenied({

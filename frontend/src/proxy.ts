@@ -6,12 +6,9 @@ import {
   REFRESH_TOKEN_COOKIE,
 } from "@/lib/auth/cookies";
 import { getTokenMaxAgeSeconds, isJwtExpired } from "@/lib/auth/token";
+import { env } from "@/lib/env";
 
 const signInPath = "/sign-in";
-const apiBaseUrl =
-  process.env.IPS_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_IPS_API_BASE_URL ??
-  "http://localhost:8000";
 
 type TokenResponse = {
   access_token: string;
@@ -54,7 +51,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/sign-in"],
+  matcher: ["/", "/admin/:path*", "/node/:path*", "/sign-in"],
 };
 
 async function refreshAuthTokens(
@@ -66,7 +63,7 @@ async function refreshAuthTokens(
     return null;
   }
 
-  const response = await fetch(`${apiBaseUrl}/auth/refresh-token`, {
+  const response = await fetch(`${env.apiBaseUrl}/auth/refresh-token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

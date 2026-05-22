@@ -1,6 +1,8 @@
 import type { StaticImageData } from "next/image";
 import type { ReactNode } from "react";
 
+import networkIcon from "../_assets/NetworkIcon.svg";
+import nodeIcon from "../_assets/NodeIcon.svg";
 import permissionIcon from "../_assets/PermissionIcon.svg";
 import roleIcon from "../_assets/RoleIcon.svg";
 import userIcon from "../_assets/UserIcon.svg";
@@ -19,6 +21,23 @@ export type SidebarConfigGroup = {
 };
 
 export const sidebarConfig = [
+  {
+    label: "Node",
+    menus: [
+      {
+        label: "Nodes",
+        href: "/node/nodes",
+        permissionNames: ["node/view"],
+        icon: nodeIcon,
+      },
+      {
+        label: "Networks",
+        href: "/node/network",
+        permissionNames: ["node-network/view"],
+        icon: networkIcon,
+      },
+    ],
+  },
   {
     label: "Admin",
     menus: [
