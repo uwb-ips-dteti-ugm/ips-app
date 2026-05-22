@@ -63,7 +63,7 @@ export function NodesFilterBar({
         value={searchValue}
         onChange={(event) => setSearchValue(event.currentTarget.value)}
         placeholder="Search node names or device IDs"
-        className="min-w-[220px] flex-1"
+        className="min-w-55 flex-1"
         inputClassName="w-full"
       />
 
@@ -78,7 +78,7 @@ export function NodesFilterBar({
             status: event.currentTarget.value as NodesListFilters["status"],
           })
         }
-        className="min-w-[150px] basis-40"
+        className="min-w-37.5 basis-40"
       >
         <option value="">All statuses</option>
         <option value="pending">Pending</option>
@@ -95,11 +95,10 @@ export function NodesFilterBar({
         onChange={(event) =>
           replaceFilters(replaceQuery, {
             ...filters,
-            isOnline: event.currentTarget
-              .value as NodesListFilters["isOnline"],
+            isOnline: event.currentTarget.value as NodesListFilters["isOnline"],
           })
         }
-        className="min-w-[150px] basis-40"
+        className="min-w-37.5 basis-40"
       >
         <option value="">All connections</option>
         <option value="true">Online</option>
@@ -117,7 +116,7 @@ export function NodesFilterBar({
             networkId: event.currentTarget.value,
           })
         }
-        className="min-w-[190px] basis-60"
+        className="min-w-47.5 basis-60"
       >
         <option value="">All networks</option>
         {networks.map((network) => (
