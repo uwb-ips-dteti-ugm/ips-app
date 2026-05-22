@@ -139,7 +139,7 @@ def create_app() -> FastAPI:
     user_handler = UserHandler(user_service)
     auth_handler = AuthHandler(auth_service)
     node_network_handler = NodeNetworkHandler(node_network_service)
-    node_handler = NodeHandler(node_service)
+    node_handler = NodeHandler(node_service, log)
     record_handler = RecordHandler(record_service)
     ranging_scheduler_handler = RangingSchedulerTaskHandler(
         service=ranging_scheduler_service,

@@ -28,12 +28,15 @@ from ips_app.domain.models.exception import (
 )
 from ips_app.domain.models.node import NodeStatus
 from ips_app.domain.models.record import RecordDataLabel
+from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driving.http.node import NodeHTTP
 
 
 class NodeHandler:
-    def __init__(self, service: NodeHTTP):
+    def __init__(self, service: NodeHTTP, log: LeveledLogging):
+        self.tag_class = self.__class__.__name__
         self.service = service
+        self.log = log
 
     async def post_node(
         self,
@@ -691,6 +694,10 @@ class NodeHandler:
             await self._handle_ranging_message(device_id, message)
             return
 
+        if message.get("label") == "error":
+            await self._handle_error_message(device_id, message)
+            return
+
         if message.get("event") in {"heartbeat", "ack"}:
             return
 
@@ -714,6 +721,33 @@ class NodeHandler:
                 "destination_address",
             ),
             distance=self._read_required_float(data, "distance"),
+        )
+
+    async def _handle_error_message(
+        self,
+        device_id: str,
+        message: Dict[str, Any],
+    ) -> None:
+        data = message.get("data") or {}
+        if not isinstance(data, dict):
+            raise ValidatorDomainException("Node error message data must be an object.")
+
+        error = data.get("message")
+        if not isinstance(error, str) or not error.strip():
+            raise ValidatorDomainException(
+                "Node error message must include a non-empty message."
+            )
+
+        await self.log.debug(
+            f"{self.tag_class}._handle_error_message",
+            "Node reported an error",
+            {
+                "device_id": device_id,
+                "pan_id": data.get("pan_id"),
+                "source_address": data.get("source_address"),
+                "destination_address": data.get("destination_address"),
+                "error": error,
+            },
         )
 
     def _read_required_integer(self, data: Dict[str, Any], field: str) -> int:
