@@ -16,7 +16,7 @@ from ips_app.domain.models.record import (
 )
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.record import RecordRepository
-from ips_app.utils.validator import validate_ids_list
+from ips_app.utils.validator import validate_ids_list, validate_record_interval
 
 
 class BeanieRecordRepository(RecordRepository):
@@ -148,7 +148,7 @@ class BeanieRecordRepository(RecordRepository):
         source_node_device_ids: Optional[List[str]] = None,
         target_node_device_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        self._validate_interval(start, end)
+        validate_record_interval(start, end)
         query_filter: Dict[str, Any] = {
             "label": label,
             "recorded_at": {
@@ -196,9 +196,3 @@ class BeanieRecordRepository(RecordRepository):
         if label == RecordDataLabel.MULTILATERATION:
             return "data.coordinates.node_device_id"
         return "data.target_node_device_id"
-
-    def _validate_interval(self, start: datetime, end: datetime) -> None:
-        if start > end:
-            raise ValidatorDomainException(
-                "The interval start must be before or equal to the interval end."
-            )

@@ -7,7 +7,6 @@ from ips_app.domain.models.exception import (
     ForbiddenDomainException,
     NotFoundDomainException,
     UnexpectedDomainException,
-    ValidatorDomainException,
 )
 from ips_app.domain.models.node import Node, NodeStatus
 from ips_app.domain.models.record import RecordDataLabel, RecordDataRanging
@@ -20,7 +19,11 @@ from ips_app.domain.ports.driven.repository.node_network import (
 from ips_app.domain.ports.driven.repository.record import RecordRepository
 from ips_app.domain.ports.driving.http.node import NodeHTTP
 from ips_app.utils.namegen import generate_name
-from ips_app.utils.validator import validate_non_empty_string
+from ips_app.utils.validator import (
+    validate_non_empty_string,
+    validate_non_negative_float,
+    validate_uwb_value,
+)
 
 
 class BaseNodeHTTP(NodeHTTP):
@@ -413,10 +416,10 @@ class BaseNodeHTTP(NodeHTTP):
         tag = f"{self.tag_class}.add_ranging_record_by_addresses"
         try:
             validate_non_empty_string(reported_by_device_id, "reported_by_device_id")
-            self._validate_uwb_value(pan_id, "pan_id")
-            self._validate_uwb_value(source_address, "source_address")
-            self._validate_uwb_value(destination_address, "destination_address")
-            self._validate_non_negative_float(distance, "distance")
+            validate_uwb_value(pan_id, "pan_id")
+            validate_uwb_value(source_address, "source_address")
+            validate_uwb_value(destination_address, "destination_address")
+            validate_non_negative_float(distance, "distance")
 
             network = await self.repo_node_network.read_node_network_by_pan_id(pan_id)
             source_node = await self.repo.read_node_by_network_id_and_address(
@@ -522,13 +525,3 @@ class BaseNodeHTTP(NodeHTTP):
             seen_device_ids.add(device_id)
 
         return unique_device_ids
-
-    def _validate_uwb_value(self, value: int, field: str) -> None:
-        if value < 0 or value > 0xFFFF:
-            raise ValidatorDomainException(
-                f"{field} must be between 0 and 65535."
-            )
-
-    def _validate_non_negative_float(self, value: float, field: str) -> None:
-        if value < 0:
-            raise ValidatorDomainException(f"{field} must be greater than or equal to 0.")

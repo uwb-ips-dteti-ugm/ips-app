@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.record import (
     Record,
     RecordData,
@@ -13,7 +12,7 @@ from ips_app.domain.models.record import (
     RecordDataMultilateration,
     RecordDataRanging,
 )
-from ips_app.utils.validator import validate_ids_list
+from ips_app.utils.validator import validate_ids_list, validate_record_interval
 
 
 class RecordIntervalRequest(BaseModel):
@@ -149,13 +148,6 @@ class RecordsResponse(BaseModel):
 
 class RemovedRecordsResponse(BaseModel):
     deleted_count: int = Field(..., examples=[42])
-
-
-def validate_record_interval(start: datetime, end: datetime) -> None:
-    if start > end:
-        raise ValidatorDomainException(
-            "The interval start must be before or equal to the interval end."
-        )
 
 
 def map_record_data_response(data: RecordData) -> RecordDataResponse:

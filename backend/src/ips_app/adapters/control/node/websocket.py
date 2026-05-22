@@ -5,11 +5,11 @@ from ips_app.domain.models.exception import (
     DomainException,
     NotFoundDomainException,
     UnexpectedDomainException,
-    ValidatorDomainException,
 )
 from ips_app.domain.models.node import NodeCommandCode
 from ips_app.domain.ports.driven.control.node import NodeControl
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
+from ips_app.utils.validator import validate_positive_integer, validate_uwb_value
 
 
 class WebSocketNodeControl(NodeControl):
@@ -119,10 +119,10 @@ class WebSocketNodeControl(NodeControl):
     ) -> None:
         tag = f"{self.tag_class}.listen_ranging"
         try:
-            self._validate_uwb_value(pan_id, "pan_id")
-            self._validate_uwb_value(listener_address, "listener_address")
-            self._validate_uwb_value(initiator_address, "initiator_address")
-            self._validate_positive_integer(timeout_uus, "timeout_uus")
+            validate_uwb_value(pan_id, "pan_id")
+            validate_uwb_value(listener_address, "listener_address")
+            validate_uwb_value(initiator_address, "initiator_address")
+            validate_positive_integer(timeout_uus, "timeout_uus")
             await self._send_command(
                 device_id=device_id,
                 command=NodeCommandCode.LISTEN_RANGING,
@@ -160,10 +160,10 @@ class WebSocketNodeControl(NodeControl):
     ) -> None:
         tag = f"{self.tag_class}.initiate_ranging"
         try:
-            self._validate_uwb_value(pan_id, "pan_id")
-            self._validate_uwb_value(initiator_address, "initiator_address")
-            self._validate_uwb_value(listener_address, "listener_address")
-            self._validate_positive_integer(timeout_uus, "timeout_uus")
+            validate_uwb_value(pan_id, "pan_id")
+            validate_uwb_value(initiator_address, "initiator_address")
+            validate_uwb_value(listener_address, "listener_address")
+            validate_positive_integer(timeout_uus, "timeout_uus")
             await self._send_command(
                 device_id=device_id,
                 command=NodeCommandCode.INITIATE_RANGING,
@@ -211,13 +211,3 @@ class WebSocketNodeControl(NodeControl):
         if connection is None:
             raise NotFoundDomainException(device_id, "node connections")
         return connection
-
-    def _validate_uwb_value(self, value: int, field: str) -> None:
-        if value < 0 or value > 0xFFFF:
-            raise ValidatorDomainException(
-                f"{field} must be between 0 and 65535."
-            )
-
-    def _validate_positive_integer(self, value: int, field: str) -> None:
-        if value <= 0:
-            raise ValidatorDomainException(f"{field} must be greater than 0.")

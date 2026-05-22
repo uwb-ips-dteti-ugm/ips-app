@@ -1,5 +1,6 @@
 import re
-from typing import Any, Dict, List
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from ips_app.domain.models.exception import ValidatorDomainException
 
@@ -72,3 +73,35 @@ def validate_ids_list(ids: List[str], field: str = "ids") -> None:
 def validate_preferences(value: Dict[str, Any]) -> None:
     if not isinstance(value, dict):
         raise ValidatorDomainException("Preferences must be a JSON object.")
+
+
+def validate_positive_integer(value: int, field: str) -> None:
+    if value <= 0:
+        raise ValidatorDomainException(f"{field} must be greater than 0.")
+
+
+def validate_non_negative_float(value: float, field: str) -> None:
+    if value < 0:
+        raise ValidatorDomainException(f"{field} must be greater than or equal to 0.")
+
+
+def validate_uwb_value(value: int, field: str) -> None:
+    if value < 0 or value > 0xFFFF:
+        raise ValidatorDomainException(f"{field} must be between 0 and 65535.")
+
+
+def validate_node_network_assignment(
+    network_id: Optional[Any],
+    address: Optional[int],
+) -> None:
+    if (network_id is None) != (address is None):
+        raise ValidatorDomainException(
+            "'network_id' and 'address' must be provided together."
+        )
+
+
+def validate_record_interval(start: datetime, end: datetime) -> None:
+    if start > end:
+        raise ValidatorDomainException(
+            "The interval start must be before or equal to the interval end."
+        )

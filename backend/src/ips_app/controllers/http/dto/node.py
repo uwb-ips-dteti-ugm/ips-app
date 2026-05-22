@@ -7,11 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ips_app.controllers.http.dto.common import PaginationMeta
 from ips_app.controllers.http.dto.node_network import NodeNetworkResponse
-from ips_app.domain.models.exception import ValidatorDomainException
 from ips_app.domain.models.node import Node, NodeStatus
 from ips_app.utils.validator import (
     validate_description,
     validate_name,
+    validate_node_network_assignment,
     validate_non_empty_string,
     validate_preferences,
 )
@@ -35,10 +35,7 @@ class AddNodeRequest(BaseModel):
         validate_name(self.name)
         validate_description(self.description)
         validate_preferences(self.preferences)
-        if (self.network_id is None) != (self.address is None):
-            raise ValidatorDomainException(
-                "'network_id' and 'address' must be provided together."
-            )
+        validate_node_network_assignment(self.network_id, self.address)
         if self.network_id is not None:
             validate_non_empty_string(self.network_id, "network_id")
 
@@ -63,10 +60,7 @@ class SetNodeNetworkAssignmentRequest(BaseModel):
     address: Optional[int] = Field(None, ge=0, le=0xFFFF, examples=[1])
 
     def validate_fields(self) -> None:
-        if (self.network_id is None) != (self.address is None):
-            raise ValidatorDomainException(
-                "'network_id' and 'address' must be provided together."
-            )
+        validate_node_network_assignment(self.network_id, self.address)
         if self.network_id is not None:
             validate_non_empty_string(self.network_id, "network_id")
 

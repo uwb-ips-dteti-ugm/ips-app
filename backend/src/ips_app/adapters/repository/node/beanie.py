@@ -19,6 +19,7 @@ from ips_app.domain.models.exception import (
 from ips_app.domain.models.node import Node, NodeStatus
 from ips_app.domain.ports.driven.logging.leveled import LeveledLogging
 from ips_app.domain.ports.driven.repository.node import NodeRepository
+from ips_app.utils.validator import validate_node_network_assignment
 
 
 class BeanieNodeRepository(NodeRepository):
@@ -40,7 +41,7 @@ class BeanieNodeRepository(NodeRepository):
         tag = f"{self.tag_class}.create_node"
         session = kwargs.get("session")
         try:
-            self._validate_network_assignment(network_id, address)
+            validate_node_network_assignment(network_id, address)
             network = None
             if network_id is not None:
                 network = await self._read_node_network_document(network_id, session)
@@ -251,7 +252,7 @@ class BeanieNodeRepository(NodeRepository):
         tag = f"{self.tag_class}.update_node_network_assignment_by_id"
         session = kwargs.get("session")
         try:
-            self._validate_network_assignment(network_id, address)
+            validate_node_network_assignment(network_id, address)
             doc = await self._read_node_document(id, session)
             network = None
             if network_id is not None:
@@ -456,16 +457,6 @@ class BeanieNodeRepository(NodeRepository):
         if "network.$id" in key_pattern and "address" in key_pattern:
             return "network address"
         return "node"
-
-    def _validate_network_assignment(
-        self,
-        network_id: Optional[Any],
-        address: Optional[int],
-    ) -> None:
-        if (network_id is None) != (address is None):
-            raise ValidatorDomainException(
-                "'network_id' and 'address' must be provided together."
-            )
 
     async def _read_node_document(
         self,

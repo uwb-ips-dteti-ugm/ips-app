@@ -16,6 +16,7 @@ from ips_app.domain.ports.driven.repository.node import NodeRepository
 from ips_app.domain.ports.driving.task.ranging_scheduler import (
     RangingSchedulerTask,
 )
+from ips_app.utils.validator import validate_positive_integer
 
 
 class BaseRangingSchedulerTask(RangingSchedulerTask):
@@ -84,7 +85,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
     ) -> None:
         tag = f"{self.tag_class}.listen_ranging"
         try:
-            self._validate_positive_integer(timeout_uus, "timeout_uus")
+            validate_positive_integer(timeout_uus, "timeout_uus")
             await self._ensure_registered_nodes(
                 (pair.listener_device_id, pair.initiator_device_id)
             )
@@ -130,7 +131,7 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
     ) -> None:
         tag = f"{self.tag_class}.initiate_ranging"
         try:
-            self._validate_positive_integer(timeout_uus, "timeout_uus")
+            validate_positive_integer(timeout_uus, "timeout_uus")
             await self._ensure_registered_nodes(
                 (pair.listener_device_id, pair.initiator_device_id)
             )
@@ -268,7 +269,3 @@ class BaseRangingSchedulerTask(RangingSchedulerTask):
             seen_device_ids.add(device_id)
 
         return unique_device_ids
-
-    def _validate_positive_integer(self, value: int, field: str) -> None:
-        if value <= 0:
-            raise ValidatorDomainException(f"{field} must be greater than 0.")
