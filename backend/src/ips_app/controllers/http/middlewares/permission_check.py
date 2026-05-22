@@ -1,16 +1,26 @@
 from collections.abc import Sequence
+from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ips_app.controllers.http.middlewares.auth_jwt import get_claims
 from ips_app.domain.models.exception import DomainException, NotFoundDomainException
 from ips_app.domain.ports.driving.http.role import RoleHTTP
 
 
+bearer_scheme = HTTPBearer(auto_error=False, scheme_name="BearerAuth")
+
+
 def permission_check(permission_names: Sequence[str], service: RoleHTTP):
     required_permissions = set(permission_names)
 
-    async def check() -> None:
+    async def check(
+        _credentials: Annotated[
+            HTTPAuthorizationCredentials | None,
+            Security(bearer_scheme),
+        ],
+    ) -> None:
         claims = get_claims()
         if not claims:
             raise HTTPException(
