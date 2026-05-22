@@ -2,7 +2,12 @@ import { env } from "@/lib/env";
 
 import type { ErrorResponse } from "./common";
 
-type ApiQueryValue = boolean | number | string | null | undefined;
+type ApiQueryPrimitive = boolean | number | string;
+type ApiQueryValue =
+  | ApiQueryPrimitive
+  | readonly ApiQueryPrimitive[]
+  | null
+  | undefined;
 
 export type ApiQuery = Record<string, ApiQueryValue>;
 
@@ -100,6 +105,13 @@ function buildUrl(
   const url = new URL(path, baseUrl);
 
   for (const [key, value] of Object.entries(query ?? {})) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        url.searchParams.append(key, String(item));
+      }
+      continue;
+    }
+
     if (value !== null && value !== undefined) {
       url.searchParams.set(key, String(value));
     }

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { FilterBar } from "@/shared/components/FilterBar";
 import { SelectField, TextField } from "@/shared/components/FormControls";
 
-import { useCursorListNavigation } from "../../../admin/_components/useCursorListNavigation";
+import { useCursorListNavigation } from "../../../admin/_hooks/use-cursor-list-navigation";
 import { LIST_LIMIT_OPTIONS } from "../../../admin/_lib/cursor-list-state";
 import type { NodeNetworkFilterOption } from "../_lib/get-nodes-page-data";
 import {
@@ -13,6 +13,7 @@ import {
   type NodesListFilters,
   writeNodesListFilters,
 } from "../_lib/nodes-list-state";
+import { RefreshNodesButton } from "./RefreshNodesButton";
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -87,6 +88,25 @@ export function NodesFilterBar({
       </SelectField>
 
       <SelectField
+        id="nodes-connection"
+        label="Connection"
+        name="is_online"
+        value={filters.isOnline}
+        onChange={(event) =>
+          replaceFilters(replaceQuery, {
+            ...filters,
+            isOnline: event.currentTarget
+              .value as NodesListFilters["isOnline"],
+          })
+        }
+        className="min-w-[150px] basis-40"
+      >
+        <option value="">All connections</option>
+        <option value="true">Online</option>
+        <option value="false">Offline</option>
+      </SelectField>
+
+      <SelectField
         id="nodes-network"
         label="Network"
         name="network_id"
@@ -142,6 +162,8 @@ export function NodesFilterBar({
           </option>
         ))}
       </SelectField>
+
+      <RefreshNodesButton />
     </FilterBar>
   );
 }

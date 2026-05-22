@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import networkIcon from "../_assets/NetworkIcon.svg";
 import nodeIcon from "../_assets/NodeIcon.svg";
 import permissionIcon from "../_assets/PermissionIcon.svg";
+import rangingIcon from "../_assets/RangingIcon.svg";
 import roleIcon from "../_assets/RoleIcon.svg";
 import userIcon from "../_assets/UserIcon.svg";
 import { SidebarClient } from "./SidebarClient";
@@ -35,6 +36,12 @@ export const sidebarConfig = [
         href: "/node/network",
         permissionNames: ["node-network/view"],
         icon: networkIcon,
+      },
+      {
+        label: "Range Monitor",
+        href: "/node/range-monitor",
+        permissionNames: ["node/view", "record/view"],
+        icon: rangingIcon,
       },
     ],
   },

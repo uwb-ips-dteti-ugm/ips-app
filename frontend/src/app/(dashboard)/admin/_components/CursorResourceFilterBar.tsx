@@ -11,7 +11,7 @@ import {
   type CursorListFilters,
   writeCursorListFilters,
 } from "../_lib/cursor-list-state";
-import { useCursorListNavigation } from "./useCursorListNavigation";
+import { useCursorListNavigation } from "../_hooks/use-cursor-list-navigation";
 
 const SEARCH_DEBOUNCE_MS = 400;
 

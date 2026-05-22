@@ -63,6 +63,7 @@ export type NodesResponse = PaginatedResponse<NodeResponse>;
 
 export type GetNodesQuery = PaginationQuery & {
   address?: number;
+  is_online?: boolean;
   network_id?: string;
   status?: NodeStatus;
 };

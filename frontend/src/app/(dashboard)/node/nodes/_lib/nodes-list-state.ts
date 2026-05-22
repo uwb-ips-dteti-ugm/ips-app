@@ -5,9 +5,11 @@ import { LIST_LIMIT_OPTIONS } from "../../../admin/_lib/cursor-list-state";
 const MAX_UWB_VALUE = 0xffff;
 
 export type NodeStatusFilter = "" | NodeStatus;
+export type NodeOnlineFilter = "" | "false" | "true";
 
 export type NodesListFilters = {
   address: string;
+  isOnline: NodeOnlineFilter;
   limit: number;
   networkId: string;
   search: string;
@@ -31,6 +33,7 @@ export function parseNodesListState(
     address: getAddress(searchParams.address),
     cursorId: getSearchParam(searchParams.cursor_id),
     cursorStack: getSearchParamValues(searchParams.cursor_stack),
+    isOnline: getOnline(searchParams.is_online),
     limit: getLimit(searchParams.limit),
     networkId: getSearchParam(searchParams.network_id),
     search: getSearchParam(searchParams.search).trim(),
@@ -43,6 +46,7 @@ export function getNodesListKey(state: NodesListState): string {
     state.address,
     state.cursorId,
     ...state.cursorStack,
+    state.isOnline,
     String(state.limit),
     state.networkId,
     state.search,
@@ -55,6 +59,7 @@ export function writeNodesListFilters(
   filters: NodesListFilters,
 ) {
   setOptionalParam(searchParams, "address", filters.address);
+  setOptionalParam(searchParams, "is_online", filters.isOnline);
   setOptionalParam(searchParams, "network_id", filters.networkId);
   setOptionalParam(searchParams, "search", filters.search.trim());
   setOptionalParam(searchParams, "status", filters.status);
@@ -98,6 +103,11 @@ function getStatus(value: string | string[] | undefined): NodeStatusFilter {
   return ["pending", "approved", "suspended", "revoked"].includes(status)
     ? (status as NodeStatus)
     : "";
+}
+
+function getOnline(value: string | string[] | undefined): NodeOnlineFilter {
+  const isOnline = getSearchParam(value);
+  return isOnline === "true" || isOnline === "false" ? isOnline : "";
 }
 
 function getSearchParam(value: string | string[] | undefined): string {

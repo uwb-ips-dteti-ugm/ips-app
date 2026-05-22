@@ -6,7 +6,7 @@ import {
   writeNextCursor,
   writePreviousCursor,
 } from "../_lib/cursor-list-state";
-import { useCursorListNavigation } from "./useCursorListNavigation";
+import { useCursorListNavigation } from "../_hooks/use-cursor-list-navigation";
 
 type CursorResourcePaginationProps = {
   cursorId: string;

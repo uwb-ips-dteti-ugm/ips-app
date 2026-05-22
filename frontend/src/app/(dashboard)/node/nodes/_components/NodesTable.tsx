@@ -25,12 +25,12 @@ export function NodesTable({ nodes, renderActions }: NodesTableProps) {
       <thead className="bg-[#EAF6FB] text-xs uppercase text-[#1C4D8D] dark:bg-[#0B1E38] dark:text-[#BDE8F5]">
         <tr>
           <TableHead>Node</TableHead>
+          <TableHead className="text-center">Connection</TableHead>
           <TableHead>Device ID</TableHead>
           <TableHead className="text-center">Status</TableHead>
           <TableHead>Network</TableHead>
           <TableHead>Address</TableHead>
           <TableHead>Last Seen</TableHead>
-          <TableHead>Created</TableHead>
           {renderActions ? (
             <TableHead className="text-center">Actions</TableHead>
           ) : null}
@@ -49,6 +49,9 @@ export function NodesTable({ nodes, renderActions }: NodesTableProps) {
                 </div>
               </div>
             </TableCell>
+            <TableCell className="text-center">
+              <NodeConnectionBadge node={node} />
+            </TableCell>
             <TableCell>{node.device_id}</TableCell>
             <TableCell className="text-center">
               <NodeStatusBadge status={node.status} />
@@ -58,7 +61,6 @@ export function NodesTable({ nodes, renderActions }: NodesTableProps) {
             </TableCell>
             <TableCell>{formatAddress(node.address)}</TableCell>
             <TableCell>{formatTimestamp(node.last_seen_at, "Never")}</TableCell>
-            <TableCell>{formatTimestamp(node.created_at, "Unknown")}</TableCell>
             {renderActions ? (
               <TableCell className="text-center">
                 <RowActions>{renderActions(node)}</RowActions>
@@ -68,6 +70,21 @@ export function NodesTable({ nodes, renderActions }: NodesTableProps) {
         ))}
       </tbody>
     </DataTable>
+  );
+}
+
+function NodeConnectionBadge({ node }: { node: NodeResponse }) {
+  const status = getConnectionStatus(node);
+  const className = {
+    never:
+      "border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    offline: "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    online:
+      "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  }[status];
+
+  return (
+    <TableBadge className={className}>{formatConnectionStatus(status)}</TableBadge>
   );
 }
 
@@ -105,8 +122,41 @@ export function formatTimestamp(value: string | null, fallback: string): string 
   }).format(timestamp);
 }
 
+function getConnectionStatus(
+  node: NodeResponse,
+): "never" | "offline" | "online" {
+  const connectedAt = parseTimestamp(node.last_connected_at);
+  if (connectedAt === null) {
+    return "never";
+  }
+
+  const disconnectedAt = parseTimestamp(node.last_disconnected_at);
+  if (disconnectedAt === null) {
+    return "online";
+  }
+
+  return connectedAt > disconnectedAt ? "online" : "offline";
+}
+
+function parseTimestamp(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
 function formatUwbValue(value: number): string {
   return `0x${value.toString(16).padStart(4, "0").toUpperCase()}`;
+}
+
+function formatConnectionStatus(value: "never" | "offline" | "online"): string {
+  if (value === "never") {
+    return "Never";
+  }
+
+  return formatLabel(value);
 }
 
 function formatLabel(value: string): string {

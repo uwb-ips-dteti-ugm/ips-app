@@ -4,5 +4,6 @@ export * from "./common";
 export * from "./node";
 export * from "./node-network";
 export * from "./permission";
+export * from "./record";
 export * from "./role";
 export * from "./user";

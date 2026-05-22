@@ -39,6 +39,7 @@ export async function getNodesPageData(
       {
         address: optionalAddressValue(state.address),
         cursor_id: optionalQueryValue(state.cursorId),
+        is_online: optionalBooleanValue(state.isOnline),
         limit: state.limit,
         network_id: optionalQueryValue(state.networkId),
         page: 0,
@@ -105,4 +106,16 @@ function optionalAddressValue(value: string): number | undefined {
 
 function optionalQueryValue(value: string): string | undefined {
   return value || undefined;
+}
+
+function optionalBooleanValue(value: string): boolean | undefined {
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  return undefined;
 }

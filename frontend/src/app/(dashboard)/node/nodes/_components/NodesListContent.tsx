@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 
 import type { PaginationMeta } from "@/lib/api/common";
 import type { NodeResponse } from "@/lib/api/node";
@@ -22,6 +23,8 @@ import { EditNodeModal } from "./EditNodeModal";
 import { NodeInfoModal } from "./NodeInfoModal";
 import { NodesFilterBar } from "./NodesFilterBar";
 import { NodesTable } from "./NodesTable";
+
+const NODES_AUTO_REFRESH_INTERVAL_MS = 3_000;
 
 type NodesListContentProps = {
   canManageNodes: boolean;
@@ -45,10 +48,26 @@ export function NodesListContent({
   nodes,
   state,
 }: NodesListContentProps) {
+  const router = useRouter();
   const [activeModal, setActiveModal] = useState<ActiveNodeModal>(null);
+  const [isAutoRefreshPending, startAutoRefreshTransition] = useTransition();
   const [isTableLoading, setIsTableLoading] = useState(false);
   const nextCursorId = nodes.at(-1)?.id;
   const hasNext = Boolean(nextCursorId) && meta.total > nodes.length;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (isAutoRefreshPending || isTableLoading) {
+        return;
+      }
+
+      startAutoRefreshTransition(() => {
+        router.refresh();
+      });
+    }, NODES_AUTO_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [isAutoRefreshPending, isTableLoading, router]);
 
   return (
     <>

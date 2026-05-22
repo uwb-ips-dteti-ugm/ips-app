@@ -27,8 +27,8 @@ export function NodeNetworksTable({
       <thead className="bg-[#EAF6FB] text-xs uppercase text-[#1C4D8D] dark:bg-[#0B1E38] dark:text-[#BDE8F5]">
         <tr>
           <TableHead>Name</TableHead>
-          <TableHead>PAN ID Hex</TableHead>
-          <TableHead>PAN ID Integer</TableHead>
+          <TableHead>PAN ID (Hex)</TableHead>
+          <TableHead>PAN ID (Dec)</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Created</TableHead>
           {renderActions ? (
