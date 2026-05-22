@@ -19,6 +19,16 @@ class RecordHTTP(ABC):
         ...
 
     @abstractmethod
+    async def get_latest_record_by_label(
+        self,
+        label: RecordDataLabel,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
+    ) -> Optional[Record]:
+        """Get the latest record by label and optional node filters."""
+        ...
+
+    @abstractmethod
     async def remove_records_by_interval(
         self,
         label: RecordDataLabel,

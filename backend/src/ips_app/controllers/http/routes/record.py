@@ -2,6 +2,8 @@ from fastapi import APIRouter
 
 from ips_app.controllers.http.dto.common import ErrorResponse
 from ips_app.controllers.http.dto.record import (
+    LatestRecordRequest,
+    LatestRecordResponse,
     RecordIntervalRequest,
     RecordsResponse,
     RemovedRecordsResponse,
@@ -51,6 +53,23 @@ def create_router(
     )
     async def get_records_by_interval(request: RecordIntervalRequest):
         return await handler.get_records_by_interval(request)
+
+    @router.post(
+        "/latest",
+        response_model=LatestRecordResponse,
+        dependencies=[
+            logger(
+                log,
+                tag="RecordRoutes.get_latest_record_by_label",
+                msg_2xx="Latest record fetched successfully",
+                msg_4xx="Latest record fetch rejected",
+                msg_5xx="Latest record fetch failed",
+            ),
+            guard_view,
+        ],
+    )
+    async def get_latest_record_by_label(request: LatestRecordRequest):
+        return await handler.get_latest_record_by_label(request)
 
     @router.delete(
         "",

@@ -38,6 +38,26 @@ class RecordIntervalRequest(BaseModel):
             validate_ids_list(self.target_node_device_ids, "target_node_device_ids")
 
 
+class LatestRecordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: RecordDataLabel = Field(..., examples=[RecordDataLabel.RANGING])
+    source_node_device_ids: Optional[List[str]] = Field(
+        None,
+        examples=[["node-anchor-001"]],
+    )
+    target_node_device_ids: Optional[List[str]] = Field(
+        None,
+        examples=[["node-tag-001"]],
+    )
+
+    def validate_fields(self) -> None:
+        if self.source_node_device_ids is not None:
+            validate_ids_list(self.source_node_device_ids, "source_node_device_ids")
+        if self.target_node_device_ids is not None:
+            validate_ids_list(self.target_node_device_ids, "target_node_device_ids")
+
+
 class RemoveRecordsByIntervalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -143,6 +163,16 @@ class RecordsResponse(BaseModel):
     def from_domain(cls, records: List[Record]) -> RecordsResponse:
         return cls(
             data=[RecordResponse.from_domain(record) for record in records],
+        )
+
+
+class LatestRecordResponse(BaseModel):
+    data: Optional[RecordResponse]
+
+    @classmethod
+    def from_domain(cls, record: Optional[Record]) -> LatestRecordResponse:
+        return cls(
+            data=RecordResponse.from_domain(record) if record is not None else None,
         )
 
 

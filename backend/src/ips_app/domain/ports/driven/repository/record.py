@@ -32,6 +32,17 @@ class RecordRepository(ABC):
         ...
 
     @abstractmethod
+    async def read_latest_record_by_label(
+        self,
+        label: RecordDataLabel,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Optional[Record]:
+        """Read the latest record by label and optional node filters."""
+        ...
+
+    @abstractmethod
     async def delete_records_by_interval(
         self,
         label: RecordDataLabel,

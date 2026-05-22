@@ -102,6 +102,48 @@ class BeanieRecordRepository(RecordRepository):
             )
             raise UnexpectedDomainException(str(e)) from e
 
+    async def read_latest_record_by_label(
+        self,
+        label: RecordDataLabel,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Optional[Record]:
+        tag = f"{self.tag_class}.read_latest_record_by_label"
+        session = kwargs.get("session")
+        try:
+            query_filter: Dict[str, Any] = {"label": label}
+            self._add_node_device_filters(
+                query_filter=query_filter,
+                label=label,
+                source_node_device_ids=source_node_device_ids,
+                target_node_device_ids=target_node_device_ids,
+            )
+            docs = (
+                await RecordDocument.find(query_filter, session=session)
+                .sort("-recorded_at")
+                .limit(1)
+                .to_list()
+            )
+            if not docs:
+                return None
+
+            return docs[0].to_domain()
+        except DomainException:
+            raise
+        except Exception as e:
+            await self.log.error(
+                tag,
+                "Failed to read latest record by label",
+                {
+                    "error": str(e),
+                    "label": str(label),
+                    "source_node_device_ids": source_node_device_ids,
+                    "target_node_device_ids": target_node_device_ids,
+                },
+            )
+            raise UnexpectedDomainException(str(e)) from e
+
     async def delete_records_by_interval(
         self,
         label: RecordDataLabel,

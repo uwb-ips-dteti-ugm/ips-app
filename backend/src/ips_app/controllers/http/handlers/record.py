@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 
 from ips_app.controllers.http.dto.common import ErrorResponse
 from ips_app.controllers.http.dto.record import (
+    LatestRecordRequest,
+    LatestRecordResponse,
     RecordIntervalRequest,
     RecordsResponse,
     RemovedRecordsResponse,
@@ -52,6 +54,38 @@ class RecordHandler:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content=ErrorResponse(
                     error="Something went wrong while loading records. Please try again."
+                ).model_dump(),
+            )
+
+    async def get_latest_record_by_label(
+        self,
+        request: LatestRecordRequest,
+    ) -> Union[LatestRecordResponse, JSONResponse]:
+        try:
+            request.validate_fields()
+            record = await self.service.get_latest_record_by_label(
+                label=request.label,
+                source_node_device_ids=request.source_node_device_ids,
+                target_node_device_ids=request.target_node_device_ids,
+            )
+            return LatestRecordResponse.from_domain(record)
+        except Exception as e:
+            if isinstance(e, ValidatorDomainException):
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content=ErrorResponse(error=str(e)).model_dump(),
+                )
+            if isinstance(e, UnexpectedDomainException):
+                return JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content=ErrorResponse(
+                        error="Something went wrong while loading the latest record. Please try again."
+                    ).model_dump(),
+                )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=ErrorResponse(
+                    error="Something went wrong while loading the latest record. Please try again."
                 ).model_dump(),
             )
 

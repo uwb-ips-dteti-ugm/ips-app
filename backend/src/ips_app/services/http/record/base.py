@@ -52,6 +52,40 @@ class BaseRecordHTTP(RecordHTTP):
             )
             raise UnexpectedDomainException(str(e)) from e
 
+    async def get_latest_record_by_label(
+        self,
+        label: RecordDataLabel,
+        source_node_device_ids: Optional[List[str]] = None,
+        target_node_device_ids: Optional[List[str]] = None,
+    ) -> Optional[Record]:
+        tag = f"{self.tag_class}.get_latest_record_by_label"
+        try:
+            record = await self.repo.read_latest_record_by_label(
+                label=label,
+                source_node_device_ids=source_node_device_ids,
+                target_node_device_ids=target_node_device_ids,
+            )
+            await self.log.info(
+                tag,
+                "Successfully fetched latest record by label",
+                {"label": str(label), "found": record is not None},
+            )
+            return record
+        except DomainException:
+            raise
+        except Exception as e:
+            await self.log.error(
+                tag,
+                "Failed to get latest record by label",
+                {
+                    "error": str(e),
+                    "label": str(label),
+                    "source_node_device_ids": source_node_device_ids,
+                    "target_node_device_ids": target_node_device_ids,
+                },
+            )
+            raise UnexpectedDomainException(str(e)) from e
+
     async def remove_records_by_interval(
         self,
         label: RecordDataLabel,
