@@ -2,25 +2,16 @@ class DomainException(Exception):
     """Base exception for all domain-related errors."""
     pass
 
-class EnvRequiredDomainException(DomainException):
-    def __init__(self, env_name: str):
-        self.env_name = env_name
-        super().__init__(f"Environment variable '{env_name}' is required.")
-
 class NotFoundDomainException(DomainException):
-    def __init__(self, data_label: str, group_name: str):
-        self.data_label = data_label
-        self.group_name = group_name
-        super().__init__(f"'{data_label}' data in '{group_name}' is not found.")
+    def __init__(self, message: str = "Data is not found"):
+        super().__init__(message)
 
 class DuplicateDomainException(DomainException):
-    def __init__(self, data_label: str, group_name: str):
-        self.data_label = data_label
-        self.group_name = group_name
-        super().__init__(f"Duplicate '{data_label}' data in `{group_name}`")
+    def __init__(self, message: str = "Duplicate data"):
+        super().__init__(message)
 
 class ValidatorDomainException(DomainException):
-    def __init__(self, message: str):
+    def __init__(self, message: str = "Invalid data"):
         super().__init__(message)
 
 class ForbiddenDomainException(DomainException):
@@ -28,17 +19,17 @@ class ForbiddenDomainException(DomainException):
         super().__init__(message)
 
 class InvalidCredentialsDomainException(DomainException):
-    def __init__(self):
-        super().__init__("Invalid credentials provided.")
+    def __init__(self, message: str = "Invalid credentials provided"):
+        super().__init__(message)
 
 class InvalidTokenDomainException(DomainException):
-    def __init__(self):
-        super().__init__("Token is invalid.")
+    def __init__(self, message: str = "Invalid token"):
+        super().__init__(message)
 
 class ExpiredTokenDomainException(DomainException):
-    def __init__(self):
-        super().__init__("Token has expired.")
+    def __init__(self, message: str = "Expired token"):
+        super().__init__(message)
 
 class UnexpectedDomainException(DomainException):
-    def __init__(self, error_msg: str):
-        super().__init__(f"Unexpected error: {error_msg}")
+    def __init__(self, message: str = "Unexpected error"):
+        super().__init__(message)
