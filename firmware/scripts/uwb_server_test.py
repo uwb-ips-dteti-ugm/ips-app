@@ -15,14 +15,28 @@ except ImportError as error:
 
 
 # Configuration
+#
+# Mirrors the real backend's `/nodes/ws/{device_id}` route and its
+# `{"command": <int>, "payload": {...}}` / `{"label": ..., "data": {...}}`
+# wire protocol (see `NodeCommandCode`, `presentation/http/handlers/node.py`,
+# and the ranging-scheduler-config defaults on the backend).
 
 HOST = "0.0.0.0"
 PORT = 8080
-ADDRESS = "/uwb"
+ADDRESS = "/nodes/ws"
 
 PAN_ID = 0x1234
+
+RESTART_COMMAND_CODE = 1
+LISTEN_COMMAND_CODE = 2
+INITIATE_COMMAND_CODE = 3
+
+# Real ranging-scheduler-config defaults (backend `.env`).
 LISTEN_TIMEOUT_UUS = 120000
-RANGING_TIMEOUT_UUS = 12000
+INITIATE_TIMEOUT_UUS = 12000
+LISTEN_TO_INITIATE_DELAY_S = 0.08
+PAIR_DELAY_S = 0.08
+IDLE_DELAY_S = 0.25
 
 DEVICE_ADDRESSES = {
     "E05A1B1FAF98": 0x1111,
@@ -30,12 +44,6 @@ DEVICE_ADDRESSES = {
     "A0A3B31F3994": 0x3333,
 }
 
-LISTEN_COMMAND_CODE = 300
-INITIATE_COMMAND_CODE = 200
-
-LISTEN_LEAD_TIME_S = 0.08
-PAIR_DELAY_S = 0.18
-SEQUENCE_DELAY_S = 0.10
 REPEAT_SEQUENCE = True
 
 
@@ -85,13 +93,13 @@ def websocket_route(address: str) -> str:
     return f"{normalized}/{{device_id}}"
 
 
-def build_command(code: int, source_id: str, target_id: str, timeout_uus: int) -> dict[str, Any]:
+def build_ranging_command(code: int, listener_id: str, initiator_id: str, timeout_uus: int) -> dict[str, Any]:
     return {
-        "code": code,
-        "args": {
+        "command": code,
+        "payload": {
             "pan_id": PAN_ID,
-            "destination_address": DEVICE_ADDRESSES[target_id],
-            "source_address": DEVICE_ADDRESSES[source_id],
+            "listener_address": DEVICE_ADDRESSES[listener_id],
+            "initiator_address": DEVICE_ADDRESSES[initiator_id],
             "timeout_uus": timeout_uus,
         },
     }
@@ -118,20 +126,20 @@ async def send_json(connection: DeviceConnection, payload: dict[str, Any]) -> No
     await connection.websocket.send_json(payload)
 
 
-async def run_pair(source_id: str, target_id: str) -> None:
-    source = await get_connection(source_id)
-    target = await get_connection(target_id)
-    if source is None or target is None:
+async def run_pair(initiator_id: str, listener_id: str) -> None:
+    initiator = await get_connection(initiator_id)
+    listener = await get_connection(listener_id)
+    if initiator is None or listener is None:
         return
 
-    listen_command = build_command(LISTEN_COMMAND_CODE, source_id, target_id, LISTEN_TIMEOUT_UUS)
-    initiate_command = build_command(INITIATE_COMMAND_CODE, source_id, target_id, RANGING_TIMEOUT_UUS)
+    listen_command = build_ranging_command(LISTEN_COMMAND_CODE, listener_id, initiator_id, LISTEN_TIMEOUT_UUS)
+    initiate_command = build_ranging_command(INITIATE_COMMAND_CODE, listener_id, initiator_id, INITIATE_TIMEOUT_UUS)
 
-    await send_json(target, listen_command)
+    await send_json(listener, listen_command)
 
-    await asyncio.sleep(LISTEN_LEAD_TIME_S)
+    await asyncio.sleep(LISTEN_TO_INITIATE_DELAY_S)
 
-    await send_json(source, initiate_command)
+    await send_json(initiator, initiate_command)
 
 
 async def run_sequence() -> None:
@@ -139,12 +147,12 @@ async def run_sequence() -> None:
     if len(device_ids) < 2:
         return
 
-    for source_id in device_ids:
-        for target_id in device_ids:
-            if source_id == target_id:
+    for initiator_id in device_ids:
+        for listener_id in device_ids:
+            if initiator_id == listener_id:
                 continue
 
-            await run_pair(source_id, target_id)
+            await run_pair(initiator_id, listener_id)
             await asyncio.sleep(PAIR_DELAY_S)
 
 
@@ -152,7 +160,7 @@ async def sequence_loop() -> None:
     while stop_event is not None and not stop_event.is_set():
         device_ids = await connected_device_ids()
         if len(device_ids) < 2:
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(IDLE_DELAY_S)
             continue
 
         await run_sequence()
@@ -161,7 +169,7 @@ async def sequence_loop() -> None:
             return
 
         try:
-            await asyncio.wait_for(stop_event.wait(), timeout=SEQUENCE_DELAY_S)
+            await asyncio.wait_for(stop_event.wait(), timeout=IDLE_DELAY_S)
         except asyncio.TimeoutError:
             pass
 
@@ -195,7 +203,23 @@ async def handle_message(connection: DeviceConnection, message: str) -> None:
     try:
         payload = json.loads(message)
     except json.JSONDecodeError:
-        payload = message
+        log(f"[RECV] device={connection.device_id} payload={message!r} (not JSON)")
+        return
+
+    if not isinstance(payload, dict):
+        log(f"[RECV] device={connection.device_id} payload={format_payload(payload)} (not an object)")
+        return
+
+    label = payload.get("label")
+    data = payload.get("data")
+
+    if label == "ranging":
+        log(f"[RANGING] device={connection.device_id} data={format_payload(data)}")
+        return
+
+    if label == "error":
+        log(f"[ERROR] device={connection.device_id} data={format_payload(data)}")
+        return
 
     log(f"[RECV] device={connection.device_id} payload={format_payload(payload)}")
 
@@ -233,6 +257,7 @@ async def handle_connection(websocket: WebSocket, device_id: str) -> None:
 
     await websocket.accept()
     connection = await register_connection(device_id, websocket)
+    log(f"[CONNECT] device={device_id}")
 
     try:
         while True:
@@ -242,6 +267,7 @@ async def handle_connection(websocket: WebSocket, device_id: str) -> None:
         pass
     finally:
         await unregister_connection(connection)
+        log(f"[DISCONNECT] device={device_id}")
 
 
 if __name__ == "__main__":

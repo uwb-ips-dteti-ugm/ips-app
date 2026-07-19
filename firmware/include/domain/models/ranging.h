@@ -5,6 +5,30 @@
 
 namespace models
 {
+    struct RangingCommand
+    {
+        uint16_t pan_id;
+        uint16_t listener_address;
+        uint16_t initiator_address;
+        uint32_t timeout_uus;
+    };
+
+    struct RangingResult
+    {
+        uint16_t pan_id;
+        uint16_t source_address;
+        uint16_t destination_address;
+        float distance;
+    };
+
+    struct RangingFailure
+    {
+        uint16_t pan_id;
+        uint16_t source_address;
+        uint16_t destination_address;
+        const char *message;
+    };
+
     namespace RangingFrameControl
     {
         constexpr uint16_t ShortAddress = 0x8841;

@@ -2,16 +2,16 @@
 
 #include <WebSocketsClient.h>
 
-#include "adapters/client/uwb_server/wsclient_impl.h"
-#include "adapters/device/control/esp32_impl.h"
-#include "adapters/logger/leveled/serial_impl.h"
-#include "adapters/ranging/stateless/dw3000_impl.h"
-#include "adapters/wifi/connection/esp32_impl.h"
-#include "composition/config.h"
-#include "controllers/task/uwb_stateless.h"
-#include "controllers/task/wifi_connection.h"
-#include "services/task/uwb_stateless/base_impl.h"
-#include "services/task/wifi_connection/base_impl.h"
+#include "application/task/uwb_stateless/base_impl.h"
+#include "application/task/wifi_connection/base_impl.h"
+#include "config/config.h"
+#include "infrastructure/client/uwb_server/wsclient_impl.h"
+#include "infrastructure/device/control/esp32_impl.h"
+#include "infrastructure/logger/leveled/serial_impl.h"
+#include "infrastructure/ranging/stateless/dw3000_impl.h"
+#include "infrastructure/wifi/connection/esp32_impl.h"
+#include "presentation/task/uwb_stateless.h"
+#include "presentation/task/wifi_connection.h"
 
 namespace composition
 {
@@ -24,21 +24,19 @@ namespace composition
         App &operator=(const App &) = delete;
 
         void setup();
-        void initInfrastructures();
-        void initServices();
         void initControllers();
         void run();
 
     private:
-        adapters::logger::leveled::SerialImpl logger;
+        infrastructure::logger::leveled::SerialImpl logger;
         WebSocketsClient websocket_client;
-        adapters::device::control::ESP32Impl device_control;
-        adapters::wifi::connection::ESP32Impl wifi_connection;
-        adapters::ranging::stateless::DW3000Impl ranging;
-        adapters::client::uwb_server::WSClientImpl uwb_server;
-        services::task::wifi_connection::BaseImpl wifi_service;
-        services::task::uwb_stateless::BaseImpl uwb_service;
-        controllers::task::WiFiConnection wifi_controller;
-        controllers::task::UWBStateless uwb_controller;
+        infrastructure::device::control::ESP32Impl device_control;
+        infrastructure::wifi::connection::ESP32Impl wifi_connection;
+        infrastructure::ranging::stateless::DW3000Impl ranging;
+        infrastructure::client::uwb_server::WSClientImpl uwb_server;
+        application::task::wifi_connection::BaseImpl wifi_service;
+        application::task::uwb_stateless::BaseImpl uwb_service;
+        presentation::task::WiFiConnection wifi_controller;
+        presentation::task::UWBStateless uwb_controller;
     };
 }

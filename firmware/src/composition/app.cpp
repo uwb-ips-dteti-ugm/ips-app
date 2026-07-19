@@ -11,8 +11,6 @@ extern dwt_txconfig_t txconfig_options;
 namespace composition
 {
     constexpr const char *setupTag = "composition::App::setup";
-    constexpr const char *infrastructureTag = "composition::App::initInfrastructures";
-    constexpr const char *serviceTag = "composition::App::initServices";
     constexpr const char *controllerTag = "composition::App::initControllers";
 
     dwt_config_t uwb_config = {
@@ -38,7 +36,7 @@ namespace composition
             vTaskDelay(0xFFFFFFFF);
     }
 
-    void haltOnFailure(ports::driven::logger::Leveled *logger, const char *tag, const char *message)
+    void haltOnFailure(contracts::logger::Leveled *logger, const char *tag, const char *message)
     {
         logger->error(tag, "%s", message);
         halt();
@@ -52,7 +50,7 @@ namespace composition
     // App implementations
 
     App::App()
-        : logger(&Serial, adapters::logger::leveled::LOG_LEVEL_INFO),
+        : logger(&Serial, infrastructure::logger::leveled::LOG_LEVEL_INFO),
           websocket_client(),
           device_control(),
           wifi_connection(),
@@ -82,6 +80,7 @@ namespace composition
           uwb_controller(
               &uwb_service,
               &websocket_client,
+              &logger,
               config::uwbTaskCheckIntervalMs,
               "uwb_stateless",
               config::uwbTaskStackDepth,
@@ -118,22 +117,12 @@ namespace composition
         dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
 
         logger.info(setupTag, "DW3000 ready");
-    }
 
-    void App::initInfrastructures()
-    {
         if (isEmpty(config::wifiSsid))
-            haltOnFailure(&logger, infrastructureTag, "WiFi SSID is empty");
+            haltOnFailure(&logger, setupTag, "WiFi SSID is empty");
 
         if (isEmpty(config::uwbServerHost) || config::uwbServerPort == 0)
-            haltOnFailure(&logger, infrastructureTag, "UWB server endpoint is invalid");
-
-        logger.info(infrastructureTag, "Infrastructures ready");
-    }
-
-    void App::initServices()
-    {
-        logger.info(serviceTag, "Services ready");
+            haltOnFailure(&logger, setupTag, "UWB server endpoint is invalid");
     }
 
     void App::initControllers()
@@ -150,8 +139,6 @@ namespace composition
     void App::run()
     {
         setup();
-        initInfrastructures();
-        initServices();
         initControllers();
 
         halt();
