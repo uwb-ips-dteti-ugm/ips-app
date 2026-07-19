@@ -37,12 +37,6 @@ class BaseRangingSchedulerUsecase(RangingSchedulerUsecase):
             self._registered_nodes = nodes
             self._node_pairs = self._build_node_pairs(nodes)
             self._node_pair_index = 0
-
-            await self.log.info(
-                tag,
-                "Successfully refreshed registered nodes",
-                {"node_count": len(nodes), "pair_count": len(self._node_pairs)},
-            )
         except Exception as e:
             await self.log.error(
                 tag, "Failed to refresh registered nodes", {"error": str(e)}
