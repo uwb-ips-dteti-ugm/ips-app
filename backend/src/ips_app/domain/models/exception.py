@@ -6,6 +6,10 @@ class NotFoundDomainException(DomainException):
     def __init__(self, message: str = "Data is not found"):
         super().__init__(message)
 
+class NodeNotConnectedDomainException(DomainException):
+    def __init__(self, message: str = "Node is not connected"):
+        super().__init__(message)
+
 class DuplicateDomainException(DomainException):
     def __init__(self, message: str = "Duplicate data"):
         super().__init__(message)
