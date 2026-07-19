@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import type { PaginationMeta } from "@/lib/api/common";
 import type { NodeNetworkResponse } from "@/lib/api/node-network";
 import editIcon from "@/shared/assets/EditIcon.svg";
 import infoIcon from "@/shared/assets/InfoIcon.svg";
@@ -16,9 +15,9 @@ import {
   TableViewport,
 } from "@/shared/components/Table";
 
-import { CursorResourceFilterBar } from "../../../admin/_components/CursorResourceFilterBar";
-import { CursorResourcePagination } from "../../../admin/_components/CursorResourcePagination";
-import type { CursorListState } from "../../../admin/_lib/cursor-list-state";
+import { ResourceFilterBar } from "../../../admin/_components/ResourceFilterBar";
+import { ResourcePagination } from "../../../admin/_components/ResourcePagination";
+import type { PageListState } from "../../../admin/_lib/page-list-state";
 import {
   AddNodeNetworkModal,
   DeleteNodeNetworkModal,
@@ -30,9 +29,10 @@ import { NodeNetworksTable } from "./NodeNetworksTable";
 type NodeNetworksListContentProps = {
   canDeleteNodeNetworks: boolean;
   canManageNodeNetworks: boolean;
-  meta: PaginationMeta;
+  limit: number;
   nodeNetworks: NodeNetworkResponse[];
-  state: CursorListState;
+  state: PageListState;
+  total: number;
 };
 
 type ActiveNodeNetworkModal =
@@ -48,18 +48,17 @@ type ActiveNodeNetworkModal =
 export function NodeNetworksListContent({
   canDeleteNodeNetworks,
   canManageNodeNetworks,
-  meta,
+  limit,
   nodeNetworks,
   state,
+  total,
 }: NodeNetworksListContentProps) {
   const [activeModal, setActiveModal] = useState<ActiveNodeNetworkModal>(null);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const nextCursorId = nodeNetworks.at(-1)?.id;
-  const hasNext = Boolean(nextCursorId) && meta.total > nodeNetworks.length;
 
   return (
     <>
-      <CursorResourceFilterBar
+      <ResourceFilterBar
         actions={
           canManageNodeNetworks ? (
             <button
@@ -120,13 +119,13 @@ export function NodeNetworksListContent({
           ) : null}
         </TableViewport>
 
-        <CursorResourcePagination
-          cursorId={state.cursorId}
-          hasNext={hasNext}
+        <ResourcePagination
           itemCount={nodeNetworks.length}
           itemLabel="node network"
-          nextCursorId={nextCursorId}
+          limit={limit}
           onTableLoadingChange={setIsTableLoading}
+          page={state.page}
+          total={total}
         />
       </TableFrame>
 

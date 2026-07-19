@@ -37,7 +37,7 @@ export function NodeInfoModal({ node, onClose }: NodeInfoModalProps) {
         <DescriptionRow label="Status" value={formatLabel(node.status)} />
         <DescriptionRow
           label="Approved"
-          value={node.is_approved ? "Yes" : "No"}
+          value={node.status === "approved" ? "Yes" : "No"}
         />
         <DescriptionRow
           label="Approved At"

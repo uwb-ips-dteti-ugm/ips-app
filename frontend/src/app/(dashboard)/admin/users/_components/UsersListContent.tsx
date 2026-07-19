@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import type { PaginationMeta } from "@/lib/api/common";
 import type { UserResponse } from "@/lib/api/user";
 import infoIcon from "@/shared/assets/InfoIcon.svg";
 import plusIcon from "@/shared/assets/PlusIcon.svg";
@@ -30,9 +29,10 @@ type UsersListContentProps = {
   canDeleteUsers: boolean;
   canManageUsers: boolean;
   canRegisterUsers: boolean;
-  meta: PaginationMeta;
+  limit: number;
   roles: UserRoleFilterOption[];
   state: UsersListState;
+  total: number;
   users: UserResponse[];
 };
 
@@ -54,15 +54,14 @@ export function UsersListContent({
   canDeleteUsers,
   canManageUsers,
   canRegisterUsers,
-  meta,
+  limit,
   roles,
   state,
+  total,
   users,
 }: UsersListContentProps) {
   const [activeModal, setActiveModal] = useState<ActiveUserModal>(null);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const nextCursorId = users.at(-1)?.id;
-  const hasNext = Boolean(nextCursorId) && meta.total > users.length;
 
   return (
     <>
@@ -122,11 +121,11 @@ export function UsersListContent({
         </TableViewport>
 
         <UsersPagination
-          cursorId={state.cursorId}
-          hasNext={hasNext}
           itemCount={users.length}
-          nextCursorId={nextCursorId}
+          limit={limit}
           onTableLoadingChange={setIsTableLoading}
+          page={state.page}
+          total={total}
         />
       </TableFrame>
 

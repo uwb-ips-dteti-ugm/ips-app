@@ -2,27 +2,26 @@
 
 import { Pagination } from "@/shared/components/Pagination";
 
-import {
-  writeNextUsersPage,
-  writePreviousUsersPage,
-} from "../_lib/users-list-state";
-import { useListNavigation } from "../../_hooks/use-list-navigation";
+import { writeNextPage, writePreviousPage } from "../_lib/page-list-state";
+import { useListNavigation } from "../_hooks/use-list-navigation";
 
-type UsersPaginationProps = {
+type ResourcePaginationProps = {
   itemCount: number;
+  itemLabel: string;
   limit: number;
   onTableLoadingChange: (isLoading: boolean) => void;
   page: number;
   total: number;
 };
 
-export function UsersPagination({
+export function ResourcePagination({
   itemCount,
+  itemLabel,
   limit,
   onTableLoadingChange,
   page,
   total,
-}: UsersPaginationProps) {
+}: ResourcePaginationProps) {
   const { isPending, replaceQuery } = useListNavigation(onTableLoadingChange);
 
   return (
@@ -31,15 +30,15 @@ export function UsersPagination({
       hasNext={(page + 1) * limit < total}
       hasPrevious={page > 0}
       itemCount={itemCount}
-      itemLabel="user"
+      itemLabel={itemLabel}
       onNext={() =>
         replaceQuery((searchParams) => {
-          writeNextUsersPage(searchParams, page);
+          writeNextPage(searchParams, page);
         })
       }
       onPrevious={() =>
         replaceQuery((searchParams) => {
-          writePreviousUsersPage(searchParams, page);
+          writePreviousPage(searchParams, page);
         })
       }
     />

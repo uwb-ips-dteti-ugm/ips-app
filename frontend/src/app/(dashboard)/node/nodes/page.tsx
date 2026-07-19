@@ -40,10 +40,11 @@ export default async function NodesPage({ searchParams }: NodesPageProps) {
       <NodesListContent
         canManageNodes={data.canManageNodes}
         key={getNodesListKey(state)}
-        meta={data.nodes.meta}
+        limit={data.nodes.limit}
         networks={data.networks}
-        nodes={data.nodes.data}
+        nodes={data.nodes.items}
         state={state}
+        total={data.nodes.total}
       />
     </PageContent>
   );

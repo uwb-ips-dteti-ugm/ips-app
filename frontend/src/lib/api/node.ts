@@ -1,5 +1,6 @@
 import { requestJson, type ApiRequestOptions } from "./client";
 import type {
+  AuditedFields,
   JsonObject,
   MessageResponse,
   PaginatedResponse,
@@ -7,7 +8,7 @@ import type {
 } from "./common";
 import type { NodeNetworkResponse } from "./node-network";
 
-export type NodeStatus = "pending" | "approved" | "suspended" | "revoked";
+export type NodeStatus = "pending" | "approved" | "suspended";
 
 export type AddNodeRequest = {
   address?: number;
@@ -32,23 +33,13 @@ export type SetNodeStatusRequest = {
   status: NodeStatus;
 };
 
-export type AddRangingRecordByAddressesRequest = {
-  destination_address: number;
-  distance: number;
-  pan_id: number;
-  reported_by_device_id: string;
-  source_address: number;
-};
-
-export type NodeResponse = {
+export type NodeResponse = AuditedFields & {
   address: number | null;
   approved_at: string | null;
   approved_by: string | null;
-  created_at: string;
   description: string;
   device_id: string;
   id: string;
-  is_approved: boolean;
   last_connected_at: string | null;
   last_disconnected_at: string | null;
   last_seen_at: string | null;
@@ -56,7 +47,6 @@ export type NodeResponse = {
   network: NodeNetworkResponse | null;
   preferences: JsonObject;
   status: NodeStatus;
-  updated_at: string | null;
 };
 
 export type NodesResponse = PaginatedResponse<NodeResponse>;
@@ -70,11 +60,11 @@ export type GetNodesQuery = PaginationQuery & {
 
 export type NodeRegistrationResponse = {
   device_id: string;
-  is_registered: boolean;
+  is_connected: boolean;
 };
 
 export type RegisteredNodesResponse = {
-  data: string[];
+  device_ids: string[];
 };
 
 export function createNode(
@@ -129,7 +119,7 @@ export function restartNode(
   options?: ApiRequestOptions,
 ): Promise<MessageResponse> {
   return requestJson<MessageResponse>(
-    `/nodes/device/${encodeURIComponent(deviceId)}/restart`,
+    `/nodes/${encodeURIComponent(deviceId)}/restart`,
     {
       ...options,
       method: "POST",
@@ -146,17 +136,6 @@ export function getNodeByNetworkAddress(
     `/nodes/network/${encodeURIComponent(networkId)}/address/${encodeURIComponent(String(address))}`,
     options,
   );
-}
-
-export function addRangingRecordByAddresses(
-  request: AddRangingRecordByAddressesRequest,
-  options?: ApiRequestOptions,
-): Promise<MessageResponse> {
-  return requestJson<MessageResponse>("/nodes/ranging-records", {
-    ...options,
-    json: request,
-    method: "POST",
-  });
 }
 
 export function getNode(

@@ -1,7 +1,7 @@
 import { getPermissions, type PermissionsResponse } from "@/lib/api/permission";
 import { getMyPermissions } from "@/lib/api/user";
 
-import type { CursorListState } from "../../_lib/cursor-list-state";
+import type { PageListState } from "../../_lib/page-list-state";
 
 export type PermissionsPageData = {
   canDeletePermissions: boolean;
@@ -12,7 +12,7 @@ export type PermissionsPageData = {
 
 export async function getPermissionsPageData(
   accessToken: string,
-  state: CursorListState,
+  state: PageListState,
 ): Promise<PermissionsPageData> {
   const permissionNames = await readPermissionNames(accessToken);
   const canDeletePermissions = permissionNames.has("permission/delete");
@@ -24,15 +24,14 @@ export async function getPermissionsPageData(
       canDeletePermissions,
       canManagePermissions,
       canViewPermissions,
-      permissions: emptyPermissions(state.limit),
+      permissions: emptyPermissions(state.page, state.limit),
     };
   }
 
   const permissions = await getPermissions(
     {
-      cursor_id: optionalQueryValue(state.cursorId),
       limit: state.limit,
-      page: 0,
+      page: state.page,
       search: optionalQueryValue(state.search),
     },
     { accessToken },
@@ -55,14 +54,12 @@ async function readPermissionNames(accessToken: string): Promise<Set<string>> {
   }
 }
 
-function emptyPermissions(limit: number): PermissionsResponse {
+function emptyPermissions(page: number, limit: number): PermissionsResponse {
   return {
-    data: [],
-    meta: {
-      limit,
-      page: 0,
-      total: 0,
-    },
+    items: [],
+    limit,
+    page,
+    total: 0,
   };
 }
 

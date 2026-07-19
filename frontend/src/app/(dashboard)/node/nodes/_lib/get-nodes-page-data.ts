@@ -30,7 +30,7 @@ export async function getNodesPageData(
       canManageNodes,
       canViewNodes,
       networks: [],
-      nodes: emptyNodes(state.limit),
+      nodes: emptyNodes(state.page, state.limit),
     };
   }
 
@@ -38,11 +38,10 @@ export async function getNodesPageData(
     getNodes(
       {
         address: optionalAddressValue(state.address),
-        cursor_id: optionalQueryValue(state.cursorId),
         is_online: optionalBooleanValue(state.isOnline),
         limit: state.limit,
         network_id: optionalQueryValue(state.networkId),
-        page: 0,
+        page: state.page,
         search: optionalQueryValue(state.search),
         status: state.status || undefined,
       },
@@ -75,11 +74,11 @@ async function readNetworkOptions(
 ): Promise<NodeNetworkFilterOption[]> {
   try {
     const networks = await getNodeNetworks(
-      { limit: 500, page: 0 },
+      { limit: 100, page: 0 },
       { accessToken },
     );
 
-    return networks.data.map((network) => ({
+    return networks.items.map((network) => ({
       id: network.id,
       name: network.name,
       panId: network.pan_id,
@@ -89,14 +88,12 @@ async function readNetworkOptions(
   }
 }
 
-function emptyNodes(limit: number): NodesResponse {
+function emptyNodes(page: number, limit: number): NodesResponse {
   return {
-    data: [],
-    meta: {
-      limit,
-      page: 0,
-      total: 0,
-    },
+    items: [],
+    limit,
+    page,
+    total: 0,
   };
 }
 

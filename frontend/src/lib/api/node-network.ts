@@ -1,5 +1,6 @@
 import { requestJson, type ApiRequestOptions } from "./client";
 import type {
+  AuditedFields,
   MessageResponse,
   PaginatedResponse,
   PaginationQuery,
@@ -17,13 +18,11 @@ export type SetNodeNetworkRequest = {
   description?: string;
 };
 
-export type NodeNetworkResponse = {
+export type NodeNetworkResponse = AuditedFields & {
   id: string;
   pan_id: number;
   name: string;
   description: string;
-  created_at: string;
-  updated_at: string | null;
 };
 
 export type NodeNetworksResponse = PaginatedResponse<NodeNetworkResponse>;

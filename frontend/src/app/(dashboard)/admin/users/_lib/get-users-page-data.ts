@@ -39,16 +39,15 @@ export async function getUsersPageData(
       canRegisterUsers,
       canViewUsers,
       roles: [],
-      users: emptyUsers(state.limit),
+      users: emptyUsers(state.page, state.limit),
     };
   }
 
   const [users, roles] = await Promise.all([
     getUsers(
       {
-        cursor_id: optionalQueryValue(state.cursorId),
         limit: state.limit,
-        page: 0,
+        page: state.page,
         role_id: optionalQueryValue(state.roleId),
         search: optionalQueryValue(state.search),
         status: state.status || undefined,
@@ -81,8 +80,8 @@ async function readRoleOptions(
   accessToken: string,
 ): Promise<UserRoleFilterOption[]> {
   try {
-    const roles = await getRoles({ limit: 200, page: 0 }, { accessToken });
-    return roles.data.map((role) => ({
+    const roles = await getRoles({ limit: 100, page: 0 }, { accessToken });
+    return roles.items.map((role) => ({
       id: role.id,
       name: role.name,
     }));
@@ -91,14 +90,12 @@ async function readRoleOptions(
   }
 }
 
-function emptyUsers(limit: number): UsersResponse {
+function emptyUsers(page: number, limit: number): UsersResponse {
   return {
-    data: [] satisfies UserResponse[],
-    meta: {
-      limit,
-      page: 0,
-      total: 0,
-    },
+    items: [] satisfies UserResponse[],
+    limit,
+    page,
+    total: 0,
   };
 }
 

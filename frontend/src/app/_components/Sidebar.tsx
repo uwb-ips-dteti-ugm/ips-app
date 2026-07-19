@@ -40,7 +40,7 @@ export const sidebarConfig = [
       {
         label: "Range Monitor",
         href: "/node/range-monitor",
-        permissionNames: ["node/view", "record/view"],
+        permissionNames: ["node/view", "ranging/view"],
         icon: rangingIcon,
       },
     ],

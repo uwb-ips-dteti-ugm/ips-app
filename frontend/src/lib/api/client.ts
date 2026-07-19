@@ -52,14 +52,6 @@ export async function requestJson<T>(
   return (await response.json()) as T;
 }
 
-export async function requestText(
-  path: string,
-  options: RequestOptions = {},
-): Promise<string> {
-  const response = await request(path, options);
-  return response.text();
-}
-
 async function request(
   path: string,
   {

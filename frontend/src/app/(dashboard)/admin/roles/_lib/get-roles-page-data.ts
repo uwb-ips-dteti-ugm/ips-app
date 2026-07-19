@@ -2,7 +2,7 @@ import { getPermissions, type PermissionResponse } from "@/lib/api/permission";
 import { getRoles, type RolesResponse } from "@/lib/api/role";
 import { getMyPermissions } from "@/lib/api/user";
 
-import type { CursorListState } from "../../_lib/cursor-list-state";
+import type { PageListState } from "../../_lib/page-list-state";
 
 export type RolesPageData = {
   canDeleteRoles: boolean;
@@ -15,7 +15,7 @@ export type RolesPageData = {
 
 export async function getRolesPageData(
   accessToken: string,
-  state: CursorListState,
+  state: PageListState,
 ): Promise<RolesPageData> {
   const permissionNames = await readPermissionNames(accessToken);
   const canDeleteRoles = permissionNames.has("role/delete");
@@ -30,16 +30,15 @@ export async function getRolesPageData(
       canViewPermissions,
       canViewRoles,
       permissions: [],
-      roles: emptyRoles(state.limit),
+      roles: emptyRoles(state.page, state.limit),
     };
   }
 
   const [roles, permissions] = await Promise.all([
     getRoles(
       {
-        cursor_id: optionalQueryValue(state.cursorId),
         limit: state.limit,
-        page: 0,
+        page: state.page,
         search: optionalQueryValue(state.search),
       },
       { accessToken },
@@ -71,23 +70,21 @@ async function readPermissions(
 ): Promise<PermissionResponse[]> {
   try {
     const permissions = await getPermissions(
-      { limit: 500, page: 0 },
+      { limit: 100, page: 0 },
       { accessToken },
     );
-    return permissions.data;
+    return permissions.items;
   } catch {
     return [];
   }
 }
 
-function emptyRoles(limit: number): RolesResponse {
+function emptyRoles(page: number, limit: number): RolesResponse {
   return {
-    data: [],
-    meta: {
-      limit,
-      page: 0,
-      total: 0,
-    },
+    items: [],
+    limit,
+    page,
+    total: 0,
   };
 }
 

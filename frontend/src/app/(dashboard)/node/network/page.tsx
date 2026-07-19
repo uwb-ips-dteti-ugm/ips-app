@@ -8,10 +8,10 @@ import {
 } from "@/shared/components/PageHeader";
 
 import {
-  getCursorListKey,
-  parseCursorListState,
+  getPageListKey,
+  parsePageListState,
   type PageSearchParams,
-} from "../../admin/_lib/cursor-list-state";
+} from "../../admin/_lib/page-list-state";
 import { NodeNetworksListContent } from "./_components/NodeNetworksListContent";
 import { getNodeNetworksPageData } from "./_lib/get-node-networks-page-data";
 
@@ -28,7 +28,7 @@ export default async function NodeNetworksPage({
     redirect("/sign-in");
   }
 
-  const state = parseCursorListState(await searchParams);
+  const state = parsePageListState(await searchParams);
   const data = await getNodeNetworksPageData(session.accessToken, state);
 
   if (!data.canViewNodeNetworks) {
@@ -45,12 +45,13 @@ export default async function NodeNetworksPage({
       />
 
       <NodeNetworksListContent
-        key={getCursorListKey(state)}
+        key={getPageListKey(state)}
         canDeleteNodeNetworks={data.canDeleteNodeNetworks}
         canManageNodeNetworks={data.canManageNodeNetworks}
-        meta={data.nodeNetworks.meta}
-        nodeNetworks={data.nodeNetworks.data}
+        limit={data.nodeNetworks.limit}
+        nodeNetworks={data.nodeNetworks.items}
         state={state}
+        total={data.nodeNetworks.total}
       />
     </PageContent>
   );

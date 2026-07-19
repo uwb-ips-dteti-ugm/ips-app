@@ -4,7 +4,7 @@ import {
 } from "@/lib/api/node-network";
 import { getMyPermissions } from "@/lib/api/user";
 
-import type { CursorListState } from "../../../admin/_lib/cursor-list-state";
+import type { PageListState } from "../../../admin/_lib/page-list-state";
 
 export type NodeNetworksPageData = {
   canDeleteNodeNetworks: boolean;
@@ -15,7 +15,7 @@ export type NodeNetworksPageData = {
 
 export async function getNodeNetworksPageData(
   accessToken: string,
-  state: CursorListState,
+  state: PageListState,
 ): Promise<NodeNetworksPageData> {
   const permissionNames = await readPermissionNames(accessToken);
   const canDeleteNodeNetworks = permissionNames.has("node-network/delete");
@@ -27,15 +27,14 @@ export async function getNodeNetworksPageData(
       canDeleteNodeNetworks,
       canManageNodeNetworks,
       canViewNodeNetworks,
-      nodeNetworks: emptyNodeNetworks(state.limit),
+      nodeNetworks: emptyNodeNetworks(state.page, state.limit),
     };
   }
 
   const nodeNetworks = await getNodeNetworks(
     {
-      cursor_id: optionalQueryValue(state.cursorId),
       limit: state.limit,
-      page: 0,
+      page: state.page,
       search: optionalQueryValue(state.search),
     },
     { accessToken },
@@ -58,14 +57,15 @@ async function readPermissionNames(accessToken: string): Promise<Set<string>> {
   }
 }
 
-function emptyNodeNetworks(limit: number): NodeNetworksResponse {
+function emptyNodeNetworks(
+  page: number,
+  limit: number,
+): NodeNetworksResponse {
   return {
-    data: [],
-    meta: {
-      limit,
-      page: 0,
-      total: 0,
-    },
+    items: [],
+    limit,
+    page,
+    total: 0,
   };
 }
 

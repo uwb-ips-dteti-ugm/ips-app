@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTransition } from "react";
 
-import type { PaginationMeta } from "@/lib/api/common";
 import type { PermissionResponse } from "@/lib/api/permission";
 import type { RoleResponse } from "@/lib/api/role";
 import editIcon from "@/shared/assets/EditIcon.svg";
@@ -21,9 +20,9 @@ import {
 } from "@/shared/components/Table";
 import { useErrorToast } from "@/shared/components/ErrorToast";
 
-import { CursorResourceFilterBar } from "../../_components/CursorResourceFilterBar";
-import { CursorResourcePagination } from "../../_components/CursorResourcePagination";
-import type { CursorListState } from "../../_lib/cursor-list-state";
+import { ResourceFilterBar } from "../../_components/ResourceFilterBar";
+import { ResourcePagination } from "../../_components/ResourcePagination";
+import type { PageListState } from "../../_lib/page-list-state";
 import {
   AddRoleModal,
   DeleteRoleModal,
@@ -38,10 +37,11 @@ type RolesListContentProps = {
   canDeleteRoles: boolean;
   canManageRoles: boolean;
   canViewPermissions: boolean;
-  meta: PaginationMeta;
+  limit: number;
   permissions: PermissionResponse[];
   roles: RoleResponse[];
-  state: CursorListState;
+  state: PageListState;
+  total: number;
 };
 
 type ActiveRoleModal =
@@ -58,20 +58,19 @@ export function RolesListContent({
   canDeleteRoles,
   canManageRoles,
   canViewPermissions,
-  meta,
+  limit,
   permissions,
   roles,
   state,
+  total,
 }: RolesListContentProps) {
   const [activeModal, setActiveModal] = useState<ActiveRoleModal>(null);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const nextCursorId = roles.at(-1)?.id;
-  const hasNext = Boolean(nextCursorId) && meta.total > roles.length;
   const canAssignPermissions = canManageRoles && canViewPermissions;
 
   return (
     <>
-      <CursorResourceFilterBar
+      <ResourceFilterBar
         actions={
           canManageRoles ? (
             <button
@@ -143,13 +142,13 @@ export function RolesListContent({
           {isTableLoading ? <TableLoadingOverlay label="Loading roles" /> : null}
         </TableViewport>
 
-        <CursorResourcePagination
-          cursorId={state.cursorId}
-          hasNext={hasNext}
+        <ResourcePagination
           itemCount={roles.length}
           itemLabel="role"
-          nextCursorId={nextCursorId}
+          limit={limit}
           onTableLoadingChange={setIsTableLoading}
+          page={state.page}
+          total={total}
         />
       </TableFrame>
 

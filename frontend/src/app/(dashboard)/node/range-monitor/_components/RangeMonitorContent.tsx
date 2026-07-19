@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CursorPagination } from "@/shared/components/CursorPagination";
+import { Pagination } from "@/shared/components/Pagination";
 import { FilterBar } from "@/shared/components/FilterBar";
 import { SelectField } from "@/shared/components/FormControls";
 import {
@@ -34,7 +34,7 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(0);
-  const [rangeByDeviceId, setRangeByDeviceId] = useState<
+  const [rangeById, setRangeById] = useState<
     Record<string, RangeMonitorRange | null>
   >({});
   const [selectedNodeId, setSelectedNodeId] = useState("");
@@ -62,14 +62,14 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
     () => peerNodes.slice(boundedPage * limit, boundedPage * limit + limit),
     [boundedPage, limit, peerNodes],
   );
-  const visiblePeerDeviceIds = useMemo(
-    () => visiblePeerNodes.map((node) => node.deviceId),
+  const visiblePeerIds = useMemo(
+    () => visiblePeerNodes.map((node) => node.id),
     [visiblePeerNodes],
   );
-  const visiblePeerKey = visiblePeerDeviceIds.join("\n");
+  const visiblePeerKey = visiblePeerIds.join("\n");
   const resetMonitorState = useCallback(() => {
     setPage(0);
-    setRangeByDeviceId({});
+    setRangeById({});
     setLastUpdatedAt(null);
     setError(null);
   }, []);
@@ -86,18 +86,18 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
   }, []);
 
   const fetchRanges = useCallback(async () => {
-    if (!selectedNode || visiblePeerDeviceIds.length === 0) {
+    if (!selectedNode || visiblePeerIds.length === 0) {
       return null;
     }
 
     return getRangeMonitorRangesAction({
-      sourceNodeDeviceId: selectedNode.deviceId,
-      targetNodeDeviceIds: visiblePeerDeviceIds,
+      sourceNodeId: selectedNode.id,
+      targetNodeIds: visiblePeerIds,
     });
-  }, [selectedNode, visiblePeerDeviceIds]);
+  }, [selectedNode, visiblePeerIds]);
 
   useEffect(() => {
-    if (!selectedNode || visiblePeerDeviceIds.length === 0) {
+    if (!selectedNode || visiblePeerIds.length === 0) {
       return;
     }
 
@@ -121,10 +121,10 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
       if (result?.ok) {
         setError(null);
         setLastUpdatedAt(new Date());
-        setRangeByDeviceId((current) => ({
+        setRangeById((current) => ({
           ...current,
           ...Object.fromEntries(
-            result.ranges.map((row) => [row.targetNodeDeviceId, row.range]),
+            result.ranges.map((row) => [row.targetNodeId, row.range]),
           ),
         }));
       }
@@ -148,7 +148,7 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [fetchRanges, selectedNode, visiblePeerKey, visiblePeerDeviceIds.length]);
+  }, [fetchRanges, selectedNode, visiblePeerKey, visiblePeerIds.length]);
 
   return (
     <>
@@ -193,7 +193,7 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
         <TableViewport>
           <RangeMonitorTable
             nodes={visiblePeerNodes}
-            rangeByDeviceId={rangeByDeviceId}
+            rangeById={rangeById}
             selectedNode={selectedNode}
           />
           {isRefreshing && selectedNode && visiblePeerNodes.length > 0 ? (
@@ -217,7 +217,7 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
           )}
         </div>
 
-        <CursorPagination
+        <Pagination
           busy={isRefreshing}
           hasNext={boundedPage < pageCount - 1}
           hasPrevious={boundedPage > 0}
@@ -235,11 +235,11 @@ export function RangeMonitorContent({ nodes }: RangeMonitorContentProps) {
 
 function RangeMonitorTable({
   nodes,
-  rangeByDeviceId,
+  rangeById,
   selectedNode,
 }: {
   nodes: RangeMonitorNodeOption[];
-  rangeByDeviceId: Record<string, RangeMonitorRange | null>;
+  rangeById: Record<string, RangeMonitorRange | null>;
   selectedNode: RangeMonitorNodeOption | null;
 }) {
   if (!selectedNode) {
@@ -265,7 +265,7 @@ function RangeMonitorTable({
       </thead>
       <tbody>
         {nodes.map((node) => {
-          const range = rangeByDeviceId[node.deviceId] ?? null;
+          const range = rangeById[node.id] ?? null;
           return (
             <tr
               key={node.id}

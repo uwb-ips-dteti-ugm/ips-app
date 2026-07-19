@@ -1,6 +1,6 @@
 "use client";
 
-type CursorPaginationProps = {
+type PaginationProps = {
   busy?: boolean;
   hasNext: boolean;
   hasPrevious: boolean;
@@ -10,7 +10,7 @@ type CursorPaginationProps = {
   onPrevious: () => void;
 };
 
-export function CursorPagination({
+export function Pagination({
   busy = false,
   hasNext,
   hasPrevious,
@@ -18,7 +18,7 @@ export function CursorPagination({
   itemLabel,
   onNext,
   onPrevious,
-}: CursorPaginationProps) {
+}: PaginationProps) {
   return (
     <div
       aria-busy={busy}

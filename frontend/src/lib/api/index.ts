@@ -4,6 +4,7 @@ export * from "./common";
 export * from "./node";
 export * from "./node-network";
 export * from "./permission";
-export * from "./record";
+export * from "./ranging";
+export * from "./ranging-scheduler-config";
 export * from "./role";
 export * from "./user";

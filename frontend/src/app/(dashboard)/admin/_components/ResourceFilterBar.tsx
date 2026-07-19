@@ -8,30 +8,30 @@ import { SelectField, TextField } from "@/shared/components/FormControls";
 
 import {
   LIST_LIMIT_OPTIONS,
-  type CursorListFilters,
-  writeCursorListFilters,
-} from "../_lib/cursor-list-state";
-import { useCursorListNavigation } from "../_hooks/use-cursor-list-navigation";
+  type PageListFilters,
+  writePageListFilters,
+} from "../_lib/page-list-state";
+import { useListNavigation } from "../_hooks/use-list-navigation";
 
 const SEARCH_DEBOUNCE_MS = 400;
 
-type CursorResourceFilterBarProps = {
+type ResourceFilterBarProps = {
   actions?: ReactNode;
-  filters: CursorListFilters;
+  filters: PageListFilters;
   onTableLoadingChange: (isLoading: boolean) => void;
   searchLabel: string;
   searchPlaceholder: string;
 };
 
-export function CursorResourceFilterBar({
+export function ResourceFilterBar({
   actions,
   filters,
   onTableLoadingChange,
   searchLabel,
   searchPlaceholder,
-}: CursorResourceFilterBarProps) {
+}: ResourceFilterBarProps) {
   const [searchValue, setSearchValue] = useState(filters.search);
-  const { replaceQuery } = useCursorListNavigation(onTableLoadingChange);
+  const { replaceQuery } = useListNavigation(onTableLoadingChange);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -41,7 +41,7 @@ export function CursorResourceFilterBar({
       }
 
       replaceQuery((searchParams) => {
-        writeCursorListFilters(searchParams, {
+        writePageListFilters(searchParams, {
           ...filters,
           search,
         });
@@ -70,7 +70,7 @@ export function CursorResourceFilterBar({
         value={String(filters.limit)}
         onChange={(event) =>
           replaceQuery((searchParams) => {
-            writeCursorListFilters(searchParams, {
+            writePageListFilters(searchParams, {
               ...filters,
               limit: Number.parseInt(event.currentTarget.value, 10),
             });

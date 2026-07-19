@@ -5,7 +5,7 @@ import { useCallback, useTransition } from "react";
 
 type SearchParamsUpdate = (searchParams: URLSearchParams) => void;
 
-export function useCursorListNavigation(
+export function useListNavigation(
   onTableLoadingChange: (isLoading: boolean) => void,
 ) {
   const pathname = usePathname();
