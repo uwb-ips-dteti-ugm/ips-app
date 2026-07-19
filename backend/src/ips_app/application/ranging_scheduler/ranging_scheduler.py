@@ -60,7 +60,6 @@ class BaseRangingSchedulerUsecase(RangingSchedulerUsecase):
                 await self._prune_unregistered_nodes()
 
             if not self._node_pairs:
-                await self.log.info(tag, "No ranging pair available", {})
                 return None
 
             pair = self._node_pairs[self._node_pair_index]
@@ -70,17 +69,7 @@ class BaseRangingSchedulerUsecase(RangingSchedulerUsecase):
             else:
                 self._node_pair_index += 1
 
-            next_pair = pair.model_copy(update={"cycle_done": cycle_done})
-            await self.log.info(
-                tag,
-                "Successfully retrieved next ranging pair",
-                {
-                    "listener_device_id": next_pair.listener_node.device_id,
-                    "initiator_device_id": next_pair.initiator_node.device_id,
-                    "cycle_done": cycle_done,
-                },
-            )
-            return next_pair
+            return pair.model_copy(update={"cycle_done": cycle_done})
         except Exception as e:
             await self.log.error(tag, "Failed to get next ranging pair", {"error": str(e)})
             if isinstance(e, DomainException):
