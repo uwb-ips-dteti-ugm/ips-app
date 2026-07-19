@@ -12,7 +12,7 @@ docker compose up -d --build
 
 This builds and starts four services: `mongo` (replica-set-enabled MongoDB), `mongo-init` (one-shot replica-set initializer), `seeder` (one-shot, seeds permissions/roles/users/ranging-scheduler-config then exits), `backend` (the API server, waits for `seeder` to complete successfully before starting).
 
-- **Base URL** (REST): `http://localhost:50002` — from `.env`'s `DOCKER_PORT_BACKEND=50002`, mapped to the container's internal port `8000` (`APP_PORT`).
+- **Base URL** (REST): `http://localhost:50002` — from `.env`'s `DOCKER_PORT_BACKEND=50002`, mapped to the container's internal port `8000`.
 - **Websocket base**: `ws://localhost:50002`.
 - **Mongo** is reachable at `localhost:50003` (`DOCKER_PORT_MONGO`) if a test needs a direct driver connection instead of `mongosh` inside the container.
 

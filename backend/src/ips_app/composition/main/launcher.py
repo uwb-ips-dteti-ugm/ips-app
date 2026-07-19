@@ -235,7 +235,7 @@ async def main() -> None:
         uvicorn.Config(
             app,
             host="0.0.0.0",
-            port=env.APP_PORT,
+            port=8000,
             access_log=False,
             log_level="warning",
         )
