@@ -8,10 +8,14 @@
 
 namespace infrastructure::wifi::connection
 {
+    constexpr const char *connectTag = "wifi::connection::ESP32Impl::isConnected";
 
     // Adapter implementations
 
-    ESP32Impl::ESP32Impl() : ntp_synced(false) {}
+    ESP32Impl::ESP32Impl(contracts::logger::Leveled *logger)
+        : logger(logger), connection_logged(false)
+    {
+    }
 
     void ESP32Impl::connect(const char *ssid, const char *password)
     {
@@ -22,16 +26,28 @@ namespace infrastructure::wifi::connection
     void ESP32Impl::disconnect()
     {
         WiFi.disconnect(true);
+        connection_logged = false;
     }
 
     bool ESP32Impl::isConnected() const
     {
         const bool connected = WiFi.status() == WL_CONNECTED;
 
-        if (connected && !ntp_synced)
+        if (connected && !connection_logged)
         {
+            logger->info(
+                connectTag,
+                "WiFi link up (ip=%s gateway=%s subnet=%s rssi=%d dBm)",
+                WiFi.localIP().toString().c_str(),
+                WiFi.gatewayIP().toString().c_str(),
+                WiFi.subnetMask().toString().c_str(),
+                static_cast<int>(WiFi.RSSI()));
             configTime(0, 0, "pool.ntp.org");
-            ntp_synced = true;
+            connection_logged = true;
+        }
+        else if (!connected)
+        {
+            connection_logged = false;
         }
 
         return connected;

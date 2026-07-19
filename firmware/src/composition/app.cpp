@@ -53,7 +53,7 @@ namespace composition
         : logger(&Serial, infrastructure::logger::leveled::LOG_LEVEL_INFO),
           websocket_client(),
           device_control(),
-          wifi_connection(),
+          wifi_connection(&logger),
           ranging(
               &logger,
               config::uwbTxAntennaDelay,
