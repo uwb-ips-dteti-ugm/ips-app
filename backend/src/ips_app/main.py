@@ -14,7 +14,8 @@ def main() -> None:
         from ips_app.composition.seeder.launcher import main as seeder_main
         asyncio.run(seeder_main())
     else:
-        raise NotImplementedError("The main app composition is not implemented yet.")
+        from ips_app.composition.main.launcher import main as main_app
+        asyncio.run(main_app())
 
 
 if __name__ == "__main__":

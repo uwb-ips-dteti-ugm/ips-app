@@ -2,7 +2,7 @@ services:
   seeder:
     build: .
     container_name: ips-app-seeder
-    command: python -m ips_app.compositions.seeder
+    command: python -m ips_app.main seeder
     env_file:
       - ./.env
     volumes:

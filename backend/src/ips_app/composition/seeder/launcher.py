@@ -4,15 +4,12 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from ips_app.application.permission.permission import BasePermissionUsecase
 from ips_app.application.role.role import BaseRoleUsecase
 from ips_app.application.user.user import BaseUserUsecase
+from ips_app.composition._shared.logger import create_logger
 from ips_app.composition.seeder.permission import seed_permissions
 from ips_app.composition.seeder.role import seed_roles
 from ips_app.composition.seeder.user import seed_users
 from ips_app.config import env
 from ips_app.config.seed_data import build_seed_users
-from ips_app.domain.contracts.logger.leveled import LeveledLogger
-from ips_app.domain.models.logger import LoggerFormat
-from ips_app.infrastructure.logger.leveled.basic import BasicLeveledLogging
-from ips_app.infrastructure.logger.leveled.json import JsonLeveledLogging
 from ips_app.infrastructure.repository.permission.beanie import BeaniePermissionRepository
 from ips_app.infrastructure.repository.permission.beanie_model import PermissionDocument
 from ips_app.infrastructure.repository.role.beanie import BeanieRoleRepository
@@ -24,7 +21,7 @@ from ips_app.infrastructure.utility.password.bcrypt import BcryptPasswordHasher
 
 async def main() -> None:
     env.load_env()
-    log = _create_logger()
+    log = create_logger()
 
     motor = AsyncIOMotorClient(env.APP_MONGO_URI)
     try:
@@ -53,9 +50,3 @@ async def main() -> None:
         )
     finally:
         motor.close()
-
-
-def _create_logger() -> LeveledLogger:
-    if env.APP_LOGGER_FORMAT == LoggerFormat.JSON:
-        return JsonLeveledLogging(env.APP_LOGGER_LEVEL)
-    return BasicLeveledLogging(env.APP_LOGGER_LEVEL)
