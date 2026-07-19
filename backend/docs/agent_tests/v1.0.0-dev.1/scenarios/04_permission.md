@@ -104,3 +104,15 @@ curl -s -w '\n%{http_code}' -X DELETE "http://localhost:50002/permissions/$WIDGE
 curl -s -w '\n%{http_code}' -X DELETE "http://localhost:50002/permissions/000000000000000000000000" -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 **Expected**: first call `403`; second call `404`.
+
+### PERM-15: rename a permission to an already-taken name (discovered during execution, not in the original plan)
+```bash
+curl -s -w '\n%{http_code}' -X POST http://localhost:50002/permissions -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"name":"dupcheck-a","description":"x"}'
+curl -s -w '\n%{http_code}' -X POST http://localhost:50002/permissions -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"name":"dupcheck-b","description":"x"}'
+curl -s -w '\n%{http_code}' -X PATCH "http://localhost:50002/permissions/$DUPCHECK_B_ID" -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"name":"dupcheck-a"}'
+```
+**Expected (by the same logic as `PERM-02`)**: `409`.
+
+**ACTUALLY OBSERVED**: `500`, `{"error": ""}`. Same root cause as `NETNET-11` in `07_node_network.md`: `infrastructure/repository/permission/beanie.py:update_permission_by_id` relies on `except DuplicateKeyError` around `doc.set(...)`, but Beanie raises `beanie.exceptions.RevisionIdWasChanged()` (empty message) instead when a unique-index write is rejected via `.set()`, not `DuplicateKeyError` — so the catch clause never fires and it falls through to `UnexpectedDomainException("") → 500`. See `07_node_network.md`'s `NETNET-11` for the full root-cause writeup (this is the same bug, confirmed on a second entity).
+
+**FIXED**: `update_permission_by_id` now catches `(DuplicateKeyError, RevisionIdWasChanged)` together. Re-verified live: renaming a permission to an already-taken name now returns `409 {"error": "Permission name '...' already exists"}`.

@@ -166,3 +166,15 @@ curl -s -w '\n%{http_code}' -X DELETE "http://localhost:50002/roles/000000000000
 curl -s -w '\n%{http_code}' -X DELETE "http://localhost:50002/roles/$USER_ROLE_ID" -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 **Expected**: `403` IF any user still has the `user` role assigned (very likely true in a freshly-seeded environment, since new registrations without an explicit role still land somewhere — but nothing in `register`/`create_user` auto-assigns the default role, so this depends entirely on whether any current user document actually references `user_role_id`; check `GET /users?role_id=$USER_ROLE_ID` first to know which branch you're actually exercising). If zero users reference it, expect `200` — deletion succeeds even though `is_default=true`, since `delete_role_by_id` has no separate check for the default flag, only for user references. **Do not actually run this against a freshly-seeded environment you intend to keep** (the seeded `user` account itself references this role, so it will almost certainly hit the `403` "used by a user" branch, not delete it) — treat this as a documentation of the two possible branches rather than a destructive step to run casually.
+
+### ROLE-23: rename a role to an already-taken name (discovered during execution, not in the original plan)
+```bash
+curl -s -w '\n%{http_code}' -X POST http://localhost:50002/roles -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"name":"roledup-a","description":"x"}'
+curl -s -w '\n%{http_code}' -X POST http://localhost:50002/roles -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"name":"roledup-b","description":"x"}'
+curl -s -w '\n%{http_code}' -X PATCH "http://localhost:50002/roles/$ROLEDUP_B_ID" -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"name":"roledup-a"}'
+```
+**Expected (by the same logic as `ROLE-02`)**: `409`.
+
+**ACTUALLY OBSERVED**: `500`, `{"error": ""}`. Same root cause as `NETNET-11` in `07_node_network.md` and `PERM-15` in `04_permission.md`: `infrastructure/repository/role/beanie.py:update_role_by_id` relies on `except DuplicateKeyError` around `doc.set(...)`, but Beanie raises `beanie.exceptions.RevisionIdWasChanged()` (empty message) instead when a unique-index write is rejected via `.set()` — the catch clause never fires. This is now confirmed on all three entities that share this exact repository pattern (node-network, permission, role); node's own address-reassignment path is unaffected because it uses a proactive existence check instead (see `07_node_network.md`'s `NETNET-11` writeup for the full explanation and the suggested fix direction).
+
+**FIXED**: `update_role_by_id` now catches `(DuplicateKeyError, RevisionIdWasChanged)` together. Re-verified live: renaming a role to an already-taken name now returns `409 {"error": "Role name '...' already exists"}`.

@@ -30,7 +30,11 @@ curl -s -w '\n%{http_code}' -X POST http://localhost:50002/auth/sign-in \
   -H 'Content-Type: application/json' \
   -d '{"username":"does-not-exist","password":"whatever123"}'
 ```
-**Expected**: `401`, `{"error": "Invalid credentials provided"}` — same message as wrong-password, so username existence isn't leaked.
+**Expected (as originally documented)**: `401`, `{"error": "Invalid credentials provided"}` — same message as wrong-password, so username existence isn't leaked.
+
+**ACTUALLY OBSERVED (run against a live deployment)**: `404`, `{"error": "User 'does-not-exist' not found"}`. This is a genuine username-enumeration bug, not a documentation error: `application/auth/auth.py:sign_in` calls `self.repo.read_user_by_username(username)` and lets any `DomainException` — including the repo's `NotFoundDomainException` for a missing user — propagate unchanged, instead of catching it and normalizing to `InvalidCredentialsDomainException` the way a wrong-password attempt does. A client can distinguish "no such account" (404) from "wrong password" (401) with zero rate-limiting, which leaks account existence. Worth a real fix (catch `NotFoundDomainException` in `sign_in` and re-raise as `InvalidCredentialsDomainException`), tracked here rather than silently treated as passing.
+
+**FIXED**: `application/auth/auth.py:sign_in` now wraps `self.repo.read_user_by_username(username)` in a `try/except NotFoundDomainException: raise InvalidCredentialsDomainException() from None`. Re-verified live: unknown username now returns `401 {"error": "Invalid credentials provided"}`, identical to the wrong-password case.
 
 ### AUTH-04: sign-in empty username/password
 ```bash
@@ -73,7 +77,11 @@ curl -s -w '\n%{http_code}' -X POST http://localhost:50002/auth/refresh-token \
   -H 'Content-Type: application/json' \
   -d "{\"refresh_token\":\"$ACCESS_TOKEN\"}"
 ```
-**Expected**: `401` (`InvalidTokenDomainException`) — access and refresh tokens are signed with different secrets (`APP_ACCESS_TOKEN_SECRET` vs `APP_REFRESH_TOKEN_SECRET`), so verifying an access token against the refresh secret fails signature validation.
+**Expected (by design)**: `401` (`InvalidTokenDomainException`) — access and refresh tokens are *meant* to be signed with different secrets (`APP_ACCESS_TOKEN_SECRET` vs `APP_REFRESH_TOKEN_SECRET`), so verifying an access token against the refresh secret should fail signature validation.
+
+**ACTUALLY OBSERVED (run against a live deployment)**: `200` — a fresh access/refresh token pair is returned. Root cause is a deployment-config issue, not a code bug: this `.env` sets both `APP_ACCESS_TOKEN_SECRET=CHANGE_ME` and `APP_REFRESH_TOKEN_SECRET=CHANGE_ME` to the identical placeholder value. `JwtTokenIssuer` correctly supports independently-configured secrets (`infrastructure/utility/token/jwt.py` takes `access_secret`/`refresh_secret` as separate constructor args and decodes each token type against its own secret) — but with both env vars set to the same literal string, HS256 signature verification can't tell an access token from a refresh token, so `validate_refresh_token` happily accepts an access token (both carry a `user_id` claim, which is all `UserRefreshTokenClaims` requires). **This means the two-secret security boundary is silently defeated by the shipped `.env`/`.env.example` default** — worth flagging as a real deployment hardening gap: any production `.env` MUST set these two secrets to different, non-placeholder values, and this test is the concrete proof of what breaks if they aren't. **Confirmed conclusively**: temporarily setting `APP_REFRESH_TOKEN_SECRET` to a different value than `APP_ACCESS_TOKEN_SECRET` and restarting `backend` (no reseed needed) makes this scenario return exactly the originally-expected `401 {"error":"Invalid token"}` — proving the code itself is correct and the only issue is the shipped `.env`/`.env.example` using the same placeholder for both secrets.
+
+**FIXED**: `.env` and `.env.example` now ship with distinct placeholders (`APP_ACCESS_TOKEN_SECRET=CHANGE_ME_ACCESS`, `APP_REFRESH_TOKEN_SECRET=CHANGE_ME_REFRESH`), plus a comment explaining why they must differ. Re-verified live: this scenario now returns `401` as originally expected.
 
 ### AUTH-10: refresh-token malformed string
 ```bash

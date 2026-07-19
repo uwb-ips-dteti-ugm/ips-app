@@ -85,7 +85,23 @@ curl -s -w '\n%{http_code}' -X PATCH "http://localhost:50002/node-networks/$SECO
   -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' \
   -d '{"pan_id":1}'
 ```
-**Expected**: `409`.
+**Expected (as originally documented)**: `409`.
+
+**ACTUALLY OBSERVED (run against a live deployment)**: `500`, body `{"error": ""}` (empty message). **This is a confirmed code bug, root-caused precisely, not a flaky test**: `infrastructure/repository/node_network/beanie.py:update_node_network_by_id` wraps `await doc.set(update_data, session=session)` in `except DuplicateKeyError as e: raise DuplicateDomainException(...)`, expecting Beanie to surface a `pymongo.errors.DuplicateKeyError` the same way `.insert()` does on `create_node_network`. It doesn't. Reproduced directly against the running container:
+```python
+# docker exec ips-app-backend python3 -c "... await doc.set({'pan_id': <taken>}) ..."
+# EXCEPTION TYPE: <class 'beanie.exceptions.RevisionIdWasChanged'>  STR: ''
+```
+Beanie's `Document.set()` uses its optimistic-concurrency revision mechanism: when the underlying `update_one` reports zero matched documents (which is what actually happens here, because the write is rejected by the unique index before Beange's revision check even matters), Beanie interprets that as "the document's revision changed underneath us" and raises `RevisionIdWasChanged()` — a different exception with an **empty** `str()` — instead of ever letting `DuplicateKeyError` bubble up. The repo's `except DuplicateKeyError` clause is therefore dead code for this failure path; the exception falls through to the generic `except Exception as e: raise UnexpectedDomainException(str(e))`, producing the empty-body `500`.
+
+**This is a systemic bug, not isolated to node-networks** — `infrastructure/repository/permission/beanie.py:update_permission_by_id` and `infrastructure/repository/role/beanie.py:update_role_by_id` use the identical `.set()` + `except DuplicateKeyError` pattern for their own unique `name` fields, and both were confirmed to fail identically:
+```
+permission rename-to-dup: 500 {"error":""}
+role rename-to-dup: 500 {"error":""}
+```
+See `PERM-15` in `04_permission.md` and `ROLE-23` in `03_role.md` for the same bug confirmed on those entities. **Node's own `update_node_network_assignment_by_id` is NOT affected** — it uses a proactive `find_one`-then-raise `_ensure_network_address_is_available` check before ever calling `.set()`, rather than relying on catching a write-time exception, so `NODE-25` (address-reassignment conflict) is unaffected and correctly returns `409`; this is the actual pattern to converge the other three repositories on when this gets fixed.
+
+**FIXED**: `update_node_network_by_id` now catches `(DuplicateKeyError, RevisionIdWasChanged)` together, converting either to `DuplicateDomainException`. Re-verified live: updating a node-network's `pan_id` to an already-taken value now returns `409 {"error": "PAN ID ... already exists"}` instead of `500`. The same fix was applied to `PERM-15`/`ROLE-23`'s repos (`permission`/`role`).
 
 ### NETNET-12: delete node network success
 **Preconditions**: `$SECOND_NETWORK_ID` has no nodes assigned.

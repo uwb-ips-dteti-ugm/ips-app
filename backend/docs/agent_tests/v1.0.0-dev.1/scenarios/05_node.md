@@ -188,6 +188,7 @@ curl -s -w '\n%{http_code}' -X PATCH "http://localhost:50002/nodes/$NODE_004_ID/
 **Expected**: `409` — the compound unique index `(network.$id, address)` (partial, only enforced when both fields are set) rejects the conflicting reassignment.
 
 ### NODE-26: update node status — approve a pending node
+**Preconditions**: **the node must already have a `network`+`address` assigned** — confirmed by running against a plain unassigned node first: approving it returns `400 {"error":"A node must have a network and address before approval."}` (a real, correctly-enforced business rule, not a bug — this scenario's original write-up omitted this precondition). Assign one first if not already set: `PATCH /nodes/$NODE_001_ID/network` with `{"network_id":"$NETWORK_ID","address":4}`.
 ```bash
 curl -s -w '\n%{http_code}' -X PATCH "http://localhost:50002/nodes/$NODE_001_ID/status" \
   -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' \
@@ -229,3 +230,41 @@ curl -s -w '\n%{http_code}' -X DELETE "http://localhost:50002/nodes/$NODE_004_ID
 curl -s -w '\n%{http_code}' -X DELETE "http://localhost:50002/nodes/000000000000000000000000" -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 **Expected**: `404`.
+
+### NODE-32: `PATCH /nodes/{id}/network` silently corrupts the node's `network` field from a Link into an embedded copy — CRITICAL bug, discovered during execution, not in the original plan
+
+**This is the single most severe finding in this entire test pass.** It was found while investigating why `NODE-WS-10` (in `06_node_websocket.md`) couldn't find a node it should have found, and turned out to be a real, reproducible data-integrity bug with consequences well beyond that one symptom.
+
+**Root cause**: `infrastructure/repository/node/beanie.py:update_node_network_assignment_by_id` builds its partial update as:
+```python
+network = await self._read_node_network_document(network_id, session)   # a full NodeNetworkDocument instance
+...
+await doc.set({"network": network, "address": address, ...}, session=session)
+```
+Compare this to `create_node`, which does `network=cast(Optional[Link[NodeNetworkDocument]], network)` before `doc.insert(...)` — `Document.insert()` respects the field's declared Pydantic type (`Node.network: Optional[Link[NodeNetworkDocument]]`) and serializes it as a proper Mongo `DBRef` (`{"$ref": "node_networks", "$id": ObjectId(...)}`). **`Document.set()` does not** — it performs a raw partial `$set` that bypasses the model's Link-aware serialization, so handing it a raw `NodeNetworkDocument` instance embeds the ENTIRE document as a nested subdocument (with `_id`, not `$id`) instead of storing a reference.
+
+**Reproduced directly against the raw MongoDB documents**:
+```bash
+# a node whose network was set at CREATION time (POST /nodes) — correct:
+db.nodes.findOne({device_id:"freshnode-created"}, {network:1})
+# network: DBRef('node_networks', ObjectId('...'))
+
+# a node whose network was set via PATCH /nodes/{id}/network — corrupted:
+db.nodes.findOne({device_id:"corrupt-test-b"}, {network:1})
+# network: { _id: ObjectId('...'), revision_id: null, pan_id: 1, name: 'lab-network', ... }  <- fully embedded, not a DBRef
+```
+
+**Consequences, both confirmed live**:
+1. **Node-by-network+address lookups silently stop finding the node.** `GET /nodes/network/{network_id}/address/{address}` and `ranging` reports both query via `NODE_NETWORK_ID_FIELD = "network.$id"` (`infrastructure/repository/node/beanie.py`). A corrupted node has no `network.$id` path anymore (it has `network._id` instead), so the query never matches it. This is exactly why `NODE-WS-10` failed to record a ranging measurement for `node-004` even though it was a real, approved, correctly-assigned node — its network field had been silently corrupted by the `NODE-22`/`NODE-23`/`NODE-25` reassignment calls run earlier in this same test pass.
+2. **The network+address uniqueness guarantee silently stops applying to a corrupted node — in both directions, proven with a live reproduction**:
+   - `_ensure_network_address_is_available` (the app-level pre-check `update_node_network_assignment_by_id` uses before writing) queries by `network.$id`, so it cannot see a corrupted node occupying an address, and will happily let a *different* node move onto that same address.
+   - The DB-level compound unique index on `(network.$id, address)` has a **partial filter** `{"network.$id": {"$exists": true}, "address": {"$exists": true}}` (see `infrastructure/repository/node/beanie_model.py`) — once a node's field is `network._id` instead of `network.$id`, it falls **outside the partial filter's scope entirely**, so the unique index doesn't apply to it either.
+   - **Live proof**: created node A with `network_id`+`address:60` at creation time (proper Link). Created node B plain, then `PATCH`-assigned it to `address:61` (this corrupts B's `network` field). Then `PATCH`-assigned A to `address:61` too (B's already-occupied address) — **this succeeded with `200`**, when it should have been rejected `409`. A follow-up raw Mongo query confirmed **both A and B ended up simultaneously at `address:61` on the same network**, with no error raised anywhere in the stack.
+
+**Blast radius**: any node whose network assignment is ever changed after creation via `PATCH /nodes/{id}/network` — which is the realistic, expected operational path for reassigning nodes over time, not an edge case — permanently loses both (a) discoverability by network+address lookup, including for ranging reports, and (b) the address-uniqueness guarantee for its network, from that point forward. Nodes that only ever get their network set once at creation time and never touched again are unaffected.
+
+**Suggested fix direction**: `update_node_network_assignment_by_id` should build the update payload the same way `create_node` effectively relies on Beanie to do at the type level — either explicitly construct the DBRef-shaped value before calling `.set()` (e.g. `Link(ref=DBRef(...), document_class=NodeNetworkDocument)` or equivalent), or avoid `.set()` for this field entirely and instead re-save the whole document via a path that goes through the model's normal Link serialization.
+
+**Test hygiene note**: this means every scenario in this file that exercises `PATCH /nodes/{id}/network` (`NODE-22` through `NODE-25`) leaves the affected node in this corrupted state afterward — `node-004` in particular is corrupted for the remainder of this test pass once `NODE-22` runs, which is exactly why it had to be worked around when writing `08_ranging.md`'s fixtures (see that file's notes).
+
+**FIXED**: `update_node_network_assignment_by_id` (`infrastructure/repository/node/beanie.py`) now explicitly wraps the fetched network as `Link(DBRef(NodeNetworkDocument.Settings.name, network.id), NodeNetworkDocument)` before handing it to `.set()`, instead of the raw fetched `NodeNetworkDocument`. Re-verified live end-to-end: (1) a node's `network` field stored via `PATCH` is now a proper `DBRef` in the raw Mongo document, matching what `POST /nodes` produces at creation; (2) `GET /nodes/network/{id}/address/{addr}` correctly finds a node after its network was reassigned via `PATCH`; (3) attempting to reassign a second node onto an address already held by a `PATCH`-reassigned node now correctly returns `409` instead of silently succeeding — the exact live reproduction from this writeup, re-run, now behaves correctly.
