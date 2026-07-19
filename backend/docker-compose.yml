@@ -18,7 +18,7 @@ services:
     build: .
     container_name: ips-app-backend
     ports:
-      - "${PORT_BACKEND:-8000}:8000"
+      - "${DOCKER_PORT_BACKEND:-50002}:8000"
     env_file:
       - ./.env
     volumes:
@@ -52,10 +52,10 @@ services:
         "/data/db/mongodb.key",
       ]
     ports:
-      - "${PORT_MONGO:-27017}:27017"
+      - "${DOCKER_PORT_MONGO:-50003}:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${DOCKER_MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DOCKER_MONGO_PASSWORD}
     volumes:
       - ips_app_mongo_data:/data/db
     healthcheck:
@@ -64,9 +64,9 @@ services:
           "CMD",
           "mongosh",
           "--username",
-          "${MONGO_USERNAME}",
+          "${DOCKER_MONGO_USERNAME}",
           "--password",
-          "${MONGO_PASSWORD}",
+          "${DOCKER_MONGO_PASSWORD}",
           "--authenticationDatabase",
           "admin",
           "--eval",
@@ -89,9 +89,9 @@ services:
       - --host
       - mongo:27017
       - --username
-      - ${MONGO_USERNAME}
+      - ${DOCKER_MONGO_USERNAME}
       - --password
-      - ${MONGO_PASSWORD}
+      - ${DOCKER_MONGO_PASSWORD}
       - --authenticationDatabase
       - admin
       - --eval
