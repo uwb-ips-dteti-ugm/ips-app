@@ -20,9 +20,7 @@ class BaseRangingSchedulerConfigUsecase(RangingSchedulerConfigUsecase):
     async def get_config(self) -> RangingSchedulerConfig:
         tag = f"{self.tag_class}/get_config"
         try:
-            config = await self.repo.get_cached_config()
-            await self.log.info(tag, "Successfully retrieved ranging scheduler config", {})
-            return config
+            return await self.repo.get_cached_config()
         except Exception as e:
             await self.log.error(
                 tag, "Failed to retrieve ranging scheduler config", {"error": str(e)}
