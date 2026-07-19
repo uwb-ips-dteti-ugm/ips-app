@@ -8,6 +8,7 @@ from ips_app.composition._shared.logger import create_logger
 from ips_app.composition.seeder.permission import seed_permissions
 from ips_app.composition.seeder.role import seed_roles
 from ips_app.composition.seeder.user import seed_users
+from ips_app.config import app as app_config
 from ips_app.config import env
 from ips_app.config.seed_data import build_seed_users
 from ips_app.domain.models.ranging_scheduler_config import RangingSchedulerConfig
@@ -27,6 +28,8 @@ from ips_app.infrastructure.utility.password.bcrypt import BcryptPasswordHasher
 
 
 async def main() -> None:
+    print(f"{app_config.APP_NAME} {app_config.APP_VERSION}")
+
     env.load_env()
     log = create_logger()
 

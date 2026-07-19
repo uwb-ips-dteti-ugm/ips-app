@@ -121,6 +121,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    print(f"{app_config.APP_NAME} {app_config.APP_VERSION}")
+    
     env.load_env()
     log = create_logger()
     motor = AsyncIOMotorClient(env.APP_MONGO_URI)
