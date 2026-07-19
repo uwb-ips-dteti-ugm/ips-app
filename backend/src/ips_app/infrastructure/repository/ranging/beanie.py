@@ -13,7 +13,7 @@ from ips_app.domain.models.exception import (
 )
 from ips_app.domain.models.ranging import RangingRecord
 from ips_app.infrastructure.repository._shared.link import link_id, resolved_link
-from ips_app.infrastructure.repository._shared.object_id import to_object_id
+from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
 from ips_app.infrastructure.repository.node.beanie_model import NodeDocument
 from ips_app.infrastructure.repository.node_network.beanie_model import (
     NodeNetworkDocument,
@@ -168,7 +168,20 @@ class BeanieRangingRepository(RangingRepository):
             nesting_depth=2,
             session=session,
         ).to_list()
-        by_id = {doc.id: doc for doc in resolved_docs}
+        by_id = {
+            doc.id: doc
+            for doc in resolved_docs
+            # A record whose network/listener/initiator node has since been deleted
+            # can't be fetch_links-resolved -- those fields stay unresolved `Link`
+            # instances instead of the fully-fetched documents `to_domain()` expects.
+            # `to_domain()` would raise on such a record, so it's excluded from
+            # results here rather than crashing the whole list for one stale record.
+            if not (
+                isinstance(doc.network, Link)
+                or isinstance(doc.listener_node, Link)
+                or isinstance(doc.initiator_node, Link)
+            )
+        }
         return [by_id[doc_id] for doc_id in ordered_ids if doc_id in by_id]
 
     async def _read_node_document(
@@ -176,11 +189,7 @@ class BeanieRangingRepository(RangingRepository):
         id: Any,
         session: Optional[Any],
     ) -> NodeDocument:
-        doc = await NodeDocument.get(
-            to_object_id(id),
-            fetch_links=True,
-            session=session,
-        )
+        doc = await get_by_id(NodeDocument, id, fetch_links=True, session=session)
         if not doc:
             raise NotFoundDomainException(f"Node '{id}' not found")
         return doc

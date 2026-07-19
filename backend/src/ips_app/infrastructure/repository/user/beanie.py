@@ -14,7 +14,7 @@ from ips_app.domain.models.exception import (
 from ips_app.domain.models.permission import Permission
 from ips_app.domain.models.user import User, UserStatus
 from ips_app.infrastructure.repository._shared.link import link_id
-from ips_app.infrastructure.repository._shared.object_id import to_object_id
+from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
 from ips_app.infrastructure.repository._shared.pagination import paginate_with_links
 from ips_app.infrastructure.repository.role.beanie_model import RoleDocument
 from ips_app.infrastructure.repository.user.beanie_model import UserDocument
@@ -117,11 +117,7 @@ class BeanieUserRepository(UserRepository):
         try:
             user = await self._read_user_document(id, session, fetch_links=True)
             role_id = link_id(user.role)
-            role = await RoleDocument.get(
-                to_object_id(role_id),
-                fetch_links=True,
-                session=session,
-            )
+            role = await get_by_id(RoleDocument, role_id, fetch_links=True, session=session)
             if not role:
                 raise NotFoundDomainException(f"Role '{role_id}' not found")
             return role.to_domain().permissions
@@ -272,11 +268,7 @@ class BeanieUserRepository(UserRepository):
         session: Optional[Any],
         fetch_links: bool = False,
     ) -> UserDocument:
-        doc = await UserDocument.get(
-            to_object_id(id),
-            fetch_links=fetch_links,
-            session=session,
-        )
+        doc = await get_by_id(UserDocument, id, fetch_links=fetch_links, session=session)
         if not doc:
             raise NotFoundDomainException(f"User '{id}' not found")
         return doc
@@ -286,11 +278,7 @@ class BeanieUserRepository(UserRepository):
         role_id: Any,
         session: Optional[Any],
     ) -> RoleDocument:
-        role = await RoleDocument.get(
-            to_object_id(role_id),
-            fetch_links=True,
-            session=session,
-        )
+        role = await get_by_id(RoleDocument, role_id, fetch_links=True, session=session)
         if not role:
             raise NotFoundDomainException(f"Role '{role_id}' not found")
         return role

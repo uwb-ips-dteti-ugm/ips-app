@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from beanie.exceptions import RevisionIdWasChanged
 from pymongo.errors import DuplicateKeyError
 
 from ips_app.domain.contracts.repository.permission import PermissionRepository
@@ -12,7 +13,7 @@ from ips_app.domain.models.exception import (
     UnexpectedDomainException,
 )
 from ips_app.domain.models.permission import Permission
-from ips_app.infrastructure.repository._shared.object_id import to_object_id
+from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
 from ips_app.infrastructure.repository._shared.pagination import paginate
 from ips_app.infrastructure.repository.permission.beanie_model import (
     PermissionDocument,
@@ -49,7 +50,7 @@ class BeaniePermissionRepository(PermissionRepository):
         session: Optional[Any] = None,
     ) -> Permission:
         try:
-            doc = await PermissionDocument.get(to_object_id(id), session=session)
+            doc = await get_by_id(PermissionDocument, id, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Permission '{id}' not found")
             return doc.to_domain()
@@ -102,7 +103,7 @@ class BeaniePermissionRepository(PermissionRepository):
         session: Optional[Any] = None,
     ) -> Permission:
         try:
-            doc = await PermissionDocument.get(to_object_id(id), session=session)
+            doc = await get_by_id(PermissionDocument, id, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Permission '{id}' not found")
 
@@ -117,7 +118,11 @@ class BeaniePermissionRepository(PermissionRepository):
 
             await doc.set(update_data, session=session)
             return doc.to_domain()
-        except DuplicateKeyError as e:
+        except (DuplicateKeyError, RevisionIdWasChanged) as e:
+            # Beanie's Document.update() internally catches DuplicateKeyError from the
+            # underlying write and always re-raises it as RevisionIdWasChanged (empty
+            # message), so a unique-index violation via `.set()` never actually
+            # surfaces as DuplicateKeyError here, only as RevisionIdWasChanged.
             raise DuplicateDomainException(
                 f"Permission name '{name}' already exists"
             ) from e
@@ -134,7 +139,7 @@ class BeaniePermissionRepository(PermissionRepository):
         session: Optional[Any] = None,
     ) -> Permission:
         try:
-            doc = await PermissionDocument.get(to_object_id(id), session=session)
+            doc = await get_by_id(PermissionDocument, id, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Permission '{id}' not found")
 
@@ -159,7 +164,7 @@ class BeaniePermissionRepository(PermissionRepository):
     ) -> None:
         try:
             permission_id = to_object_id(id)
-            doc = await PermissionDocument.get(permission_id, session=session)
+            doc = await get_by_id(PermissionDocument, permission_id, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Permission '{id}' not found")
 

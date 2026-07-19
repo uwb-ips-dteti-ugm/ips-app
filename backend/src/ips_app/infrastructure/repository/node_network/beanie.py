@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from beanie.exceptions import RevisionIdWasChanged
 from pymongo.errors import DuplicateKeyError
 
 from ips_app.domain.contracts.repository.node_network import NodeNetworkRepository
@@ -12,7 +13,7 @@ from ips_app.domain.models.exception import (
     UnexpectedDomainException,
 )
 from ips_app.domain.models.node_network import NodeNetwork
-from ips_app.infrastructure.repository._shared.object_id import to_object_id
+from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
 from ips_app.infrastructure.repository._shared.pagination import paginate
 from ips_app.infrastructure.repository.node.beanie_model import NodeDocument
 from ips_app.infrastructure.repository.node_network.beanie_model import (
@@ -123,7 +124,12 @@ class BeanieNodeNetworkRepository(NodeNetworkRepository):
 
             await doc.set(update_data, session=session)
             return doc.to_domain()
-        except DuplicateKeyError as e:
+        except (DuplicateKeyError, RevisionIdWasChanged) as e:
+            # Beanie's Document.update() internally catches DuplicateKeyError from the
+            # underlying write and always re-raises it as RevisionIdWasChanged (empty
+            # message), regardless of whether optimistic-concurrency revisioning is
+            # enabled on this model -- so a unique-index violation via `.set()` never
+            # actually surfaces as DuplicateKeyError here, only as RevisionIdWasChanged.
             raise DuplicateDomainException(f"PAN ID {pan_id} already exists") from e
         except DomainException:
             raise
@@ -157,7 +163,7 @@ class BeanieNodeNetworkRepository(NodeNetworkRepository):
         id: Any,
         session: Optional[Any],
     ) -> NodeNetworkDocument:
-        doc = await NodeNetworkDocument.get(to_object_id(id), session=session)
+        doc = await get_by_id(NodeNetworkDocument, id, session=session)
         if not doc:
             raise NotFoundDomainException(f"Node network '{id}' not found")
         return doc

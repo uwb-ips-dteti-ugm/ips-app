@@ -36,11 +36,17 @@ class JwtTokenIssuer(TokenIssuer):
     def validate_access_token(self, token: str) -> UserAccessTokenClaims:
         try:
             payload = self._decode_token(token, self.access_secret)
-            return UserAccessTokenClaims(
-                user_id=payload["user_id"],
-                role_id=payload["role_id"],
-                name=payload["name"],
-            )
+            try:
+                return UserAccessTokenClaims(
+                    user_id=payload["user_id"],
+                    role_id=payload["role_id"],
+                    name=payload["name"],
+                )
+            except KeyError:
+                # A well-signed token missing an expected claim (e.g. a refresh token
+                # presented where an access token is expected) is an invalid token,
+                # not an unexpected server error.
+                raise InvalidTokenDomainException() from None
         except DomainException:
             raise
         except Exception as e:
@@ -57,7 +63,10 @@ class JwtTokenIssuer(TokenIssuer):
     def validate_refresh_token(self, token: str) -> UserRefreshTokenClaims:
         try:
             payload = self._decode_token(token, self.refresh_secret)
-            return UserRefreshTokenClaims(user_id=payload["user_id"])
+            try:
+                return UserRefreshTokenClaims(user_id=payload["user_id"])
+            except KeyError:
+                raise InvalidTokenDomainException() from None
         except DomainException:
             raise
         except Exception as e:

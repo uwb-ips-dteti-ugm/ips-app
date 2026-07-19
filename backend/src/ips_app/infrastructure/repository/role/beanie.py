@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from beanie.exceptions import RevisionIdWasChanged
 from beanie.operators import In
 from pymongo.errors import DuplicateKeyError
 
@@ -15,7 +16,7 @@ from ips_app.domain.models.exception import (
 from ips_app.domain.models.permission import Permission
 from ips_app.domain.models.role import Role
 from ips_app.infrastructure.repository._shared.link import link_id
-from ips_app.infrastructure.repository._shared.object_id import to_object_id
+from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
 from ips_app.infrastructure.repository._shared.pagination import paginate
 from ips_app.infrastructure.repository.permission.beanie_model import (
     PermissionDocument,
@@ -64,11 +65,7 @@ class BeanieRoleRepository(RoleRepository):
 
     async def read_role_by_id(self, id: Any, session: Optional[Any] = None) -> Role:
         try:
-            doc = await RoleDocument.get(
-                to_object_id(id),
-                fetch_links=True,
-                session=session,
-            )
+            doc = await get_by_id(RoleDocument, id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
             return doc.to_domain()
@@ -133,11 +130,7 @@ class BeanieRoleRepository(RoleRepository):
         session: Optional[Any] = None,
     ) -> List[Permission]:
         try:
-            doc = await RoleDocument.get(
-                to_object_id(id),
-                fetch_links=True,
-                session=session,
-            )
+            doc = await get_by_id(RoleDocument, id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
             return doc.to_domain().permissions
@@ -155,11 +148,7 @@ class BeanieRoleRepository(RoleRepository):
         session: Optional[Any] = None,
     ) -> Role:
         try:
-            doc = await RoleDocument.get(
-                to_object_id(id),
-                fetch_links=True,
-                session=session,
-            )
+            doc = await get_by_id(RoleDocument, id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
 
@@ -174,7 +163,11 @@ class BeanieRoleRepository(RoleRepository):
 
             await doc.set(update_data, session=session)
             return doc.to_domain()
-        except DuplicateKeyError as e:
+        except (DuplicateKeyError, RevisionIdWasChanged) as e:
+            # Beanie's Document.update() internally catches DuplicateKeyError from the
+            # underlying write and always re-raises it as RevisionIdWasChanged (empty
+            # message), so a unique-index violation via `.set()` never actually
+            # surfaces as DuplicateKeyError here, only as RevisionIdWasChanged.
             raise DuplicateDomainException(f"Role name '{name}' already exists") from e
         except DomainException:
             raise
@@ -189,7 +182,7 @@ class BeanieRoleRepository(RoleRepository):
     ) -> Role:
         try:
             role_id = to_object_id(id)
-            doc = await RoleDocument.get(role_id, fetch_links=True, session=session)
+            doc = await get_by_id(RoleDocument, role_id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
 
@@ -230,11 +223,7 @@ class BeanieRoleRepository(RoleRepository):
         session: Optional[Any] = None,
     ) -> Role:
         try:
-            doc = await RoleDocument.get(
-                to_object_id(id),
-                fetch_links=True,
-                session=session,
-            )
+            doc = await get_by_id(RoleDocument, id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
 
@@ -255,7 +244,7 @@ class BeanieRoleRepository(RoleRepository):
     async def delete_role_by_id(self, id: Any, session: Optional[Any] = None) -> None:
         try:
             role_id = to_object_id(id)
-            doc = await RoleDocument.get(role_id, session=session)
+            doc = await get_by_id(RoleDocument, role_id, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
 
@@ -280,11 +269,7 @@ class BeanieRoleRepository(RoleRepository):
         session: Optional[Any] = None,
     ) -> Role:
         try:
-            doc = await RoleDocument.get(
-                to_object_id(id),
-                fetch_links=True,
-                session=session,
-            )
+            doc = await get_by_id(RoleDocument, id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
 
@@ -320,11 +305,7 @@ class BeanieRoleRepository(RoleRepository):
         session: Optional[Any] = None,
     ) -> Role:
         try:
-            doc = await RoleDocument.get(
-                to_object_id(id),
-                fetch_links=True,
-                session=session,
-            )
+            doc = await get_by_id(RoleDocument, id, fetch_links=True, session=session)
             if not doc:
                 raise NotFoundDomainException(f"Role '{id}' not found")
 

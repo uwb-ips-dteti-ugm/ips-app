@@ -8,6 +8,7 @@ from ips_app.domain.models.exception import (
     DomainException,
     ForbiddenDomainException,
     InvalidCredentialsDomainException,
+    NotFoundDomainException,
     UnexpectedDomainException,
 )
 from ips_app.domain.models.user import (
@@ -44,7 +45,10 @@ class BaseAuthUsecase(AuthUsecase):
             validate_non_empty_string(username, "username")
             validate_non_empty_string(password, "password")
 
-            user = await self.repo.read_user_by_username(username)
+            try:
+                user = await self.repo.read_user_by_username(username)
+            except NotFoundDomainException:
+                raise InvalidCredentialsDomainException() from None
             if not self.password_hasher.verify(password, user.password_hash):
                 raise InvalidCredentialsDomainException()
             self._ensure_user_can_authenticate(user)

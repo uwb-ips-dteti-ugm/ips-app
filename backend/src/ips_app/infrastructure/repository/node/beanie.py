@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 from beanie import Link
+from bson import DBRef
 from pymongo.errors import DuplicateKeyError
 
 from ips_app.domain.contracts.repository.node import NodeRepository
@@ -15,7 +16,7 @@ from ips_app.domain.models.exception import (
 from ips_app.domain.models.node import Node, NodeStatus
 from ips_app.infrastructure.repository._shared.duplicate import duplicate_key_fields
 from ips_app.infrastructure.repository._shared.link import find_one_with_links
-from ips_app.infrastructure.repository._shared.object_id import to_object_id
+from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
 from ips_app.infrastructure.repository._shared.pagination import paginate_with_links
 from ips_app.infrastructure.repository.node.beanie_model import NodeDocument
 from ips_app.infrastructure.repository.node_network.beanie_model import (
@@ -204,6 +205,7 @@ class BeanieNodeRepository(NodeRepository):
             self._ensure_network_assignment_is_valid(network_id, address)
             doc = await self._read_node_document(id, session, fetch_links=True)
             network = None
+            network_link: Optional[Link[NodeNetworkDocument]] = None
             if network_id is not None:
                 network = await self._read_node_network_document(network_id, session)
                 await self._ensure_network_address_is_available(
@@ -212,10 +214,18 @@ class BeanieNodeRepository(NodeRepository):
                     session=session,
                     excluded_node_id=doc.id,
                 )
+                # `.set()` performs a raw partial update that bypasses the document's
+                # own Link-aware serialization (unlike `.insert()`), so a raw fetched
+                # Document must be wrapped as a Link/DBRef explicitly here or it gets
+                # written as a fully embedded subdocument instead of a reference.
+                network_link = Link(
+                    DBRef(NodeNetworkDocument.Settings.name, network.id),
+                    NodeNetworkDocument,
+                )
 
             await doc.set(
                 {
-                    "network": network,
+                    "network": network_link,
                     "address": address,
                     "updated_at": datetime.now(timezone.utc),
                     "updated_by": updated_by,
@@ -391,11 +401,7 @@ class BeanieNodeRepository(NodeRepository):
         session: Optional[Any],
         fetch_links: bool = False,
     ) -> NodeDocument:
-        doc = await NodeDocument.get(
-            to_object_id(id),
-            fetch_links=fetch_links,
-            session=session,
-        )
+        doc = await get_by_id(NodeDocument, id, fetch_links=fetch_links, session=session)
         if not doc:
             raise NotFoundDomainException(f"Node '{id}' not found")
         return doc
@@ -420,7 +426,7 @@ class BeanieNodeRepository(NodeRepository):
         id: Any,
         session: Optional[Any],
     ) -> NodeNetworkDocument:
-        doc = await NodeNetworkDocument.get(to_object_id(id), session=session)
+        doc = await get_by_id(NodeNetworkDocument, id, session=session)
         if not doc:
             raise NotFoundDomainException(f"Node network '{id}' not found")
         return doc
