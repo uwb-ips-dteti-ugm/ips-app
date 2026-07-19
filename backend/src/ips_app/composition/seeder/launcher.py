@@ -10,8 +10,15 @@ from ips_app.composition.seeder.role import seed_roles
 from ips_app.composition.seeder.user import seed_users
 from ips_app.config import env
 from ips_app.config.seed_data import build_seed_users
+from ips_app.domain.models.ranging_scheduler_config import RangingSchedulerConfig
 from ips_app.infrastructure.repository.permission.beanie import BeaniePermissionRepository
 from ips_app.infrastructure.repository.permission.beanie_model import PermissionDocument
+from ips_app.infrastructure.repository.ranging_scheduler_config.beanie import (
+    BeanieRangingSchedulerConfigRepository,
+)
+from ips_app.infrastructure.repository.ranging_scheduler_config.beanie_model import (
+    RangingSchedulerConfigDocument,
+)
 from ips_app.infrastructure.repository.role.beanie import BeanieRoleRepository
 from ips_app.infrastructure.repository.role.beanie_model import RoleDocument
 from ips_app.infrastructure.repository.user.beanie import BeanieUserRepository
@@ -27,7 +34,12 @@ async def main() -> None:
     try:
         await init_beanie(
             database=motor[env.APP_MONGO_DB],
-            document_models=[PermissionDocument, RoleDocument, UserDocument],
+            document_models=[
+                PermissionDocument,
+                RoleDocument,
+                UserDocument,
+                RangingSchedulerConfigDocument,
+            ],
         )
 
         permission_usecase = BasePermissionUsecase(BeaniePermissionRepository(), log)
@@ -48,5 +60,16 @@ async def main() -> None:
                 user_password=env.APP_SEEDER_USER_PASSWORD,
             ),
         )
+
+        ranging_scheduler_config_repo = BeanieRangingSchedulerConfigRepository(
+            defaults=RangingSchedulerConfig(
+                listen_timeout_uus=env.APP_RANGING_SCHEDULER_LISTEN_TIMEOUT_UUS,
+                initiate_timeout_uus=env.APP_RANGING_SCHEDULER_INITIATE_TIMEOUT_UUS,
+                listen_to_initiate_delay_ms=env.APP_RANGING_SCHEDULER_LISTEN_TO_INITIATE_DELAY_MS,
+                pair_delay_ms=env.APP_RANGING_SCHEDULER_PAIR_DELAY_MS,
+                idle_delay_ms=env.APP_RANGING_SCHEDULER_IDLE_DELAY_MS,
+            )
+        )
+        await ranging_scheduler_config_repo.load_cache()
     finally:
         motor.close()

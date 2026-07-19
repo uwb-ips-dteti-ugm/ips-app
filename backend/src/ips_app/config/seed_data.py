@@ -20,6 +20,8 @@ SEED_PERMISSIONS: List[Dict[str, str]] = [
     {"name": "ranging/manage", "description": "Report ranging measurements."},
     {"name": "ranging/view", "description": "View ranging records."},
     {"name": "ranging/delete", "description": "Delete ranging records."},
+    {"name": "ranging-scheduler-config/manage", "description": "Update ranging scheduler configuration."},
+    {"name": "ranging-scheduler-config/view", "description": "View ranging scheduler configuration."},
 ]
 
 ADMIN_ROLE_NAME = "admin"

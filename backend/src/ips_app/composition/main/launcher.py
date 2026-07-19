@@ -18,11 +18,15 @@ from ips_app.application.ranging.ranging import BaseRangingUsecase
 from ips_app.application.ranging_scheduler.ranging_scheduler import (
     BaseRangingSchedulerUsecase,
 )
+from ips_app.application.ranging_scheduler_config.ranging_scheduler_config import (
+    BaseRangingSchedulerConfigUsecase,
+)
 from ips_app.application.role.role import BaseRoleUsecase
 from ips_app.application.user.user import BaseUserUsecase
 from ips_app.composition._shared.logger import create_logger
 from ips_app.config import app as app_config
 from ips_app.config import env
+from ips_app.domain.models.ranging_scheduler_config import RangingSchedulerConfig
 from ips_app.infrastructure.node.control.websocket import WebSocketNodeControl
 from ips_app.infrastructure.repository.node.beanie import BeanieNodeRepository
 from ips_app.infrastructure.repository.node.beanie_model import NodeDocument
@@ -42,6 +46,12 @@ from ips_app.infrastructure.repository.ranging.beanie import BeanieRangingReposi
 from ips_app.infrastructure.repository.ranging.beanie_model import (
     RangingRecordDocument,
 )
+from ips_app.infrastructure.repository.ranging_scheduler_config.beanie import (
+    BeanieRangingSchedulerConfigRepository,
+)
+from ips_app.infrastructure.repository.ranging_scheduler_config.beanie_model import (
+    RangingSchedulerConfigDocument,
+)
 from ips_app.infrastructure.repository.role.beanie import BeanieRoleRepository
 from ips_app.infrastructure.repository.role.beanie_model import RoleDocument
 from ips_app.infrastructure.repository.user.beanie import BeanieUserRepository
@@ -55,6 +65,9 @@ from ips_app.presentation.http.handlers.node import NodeHandler
 from ips_app.presentation.http.handlers.node_network import NodeNetworkHandler
 from ips_app.presentation.http.handlers.permission import PermissionHandler
 from ips_app.presentation.http.handlers.ranging import RangingHandler
+from ips_app.presentation.http.handlers.ranging_scheduler_config import (
+    RangingSchedulerConfigHandler,
+)
 from ips_app.presentation.http.handlers.role import RoleHandler
 from ips_app.presentation.http.handlers.user import UserHandler
 from ips_app.presentation.http.middlewares.auth_jwt import JwtMiddleware
@@ -64,6 +77,7 @@ from ips_app.presentation.http.routes import (
     node_network,
     permission,
     ranging,
+    ranging_scheduler_config,
     role,
     user,
 )
@@ -81,6 +95,7 @@ DOCUMENT_MODELS = [
     NodeNetworkDocument,
     NodeDocument,
     RangingRecordDocument,
+    RangingSchedulerConfigDocument,
 ]
 
 
@@ -88,11 +103,13 @@ DOCUMENT_MODELS = [
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     motor = app.state.motor
     runner = app.state.ranging_scheduler_runner
+    ranging_scheduler_config_repo = app.state.ranging_scheduler_config_repo
 
     await init_beanie(
         database=motor[env.APP_MONGO_DB],
         document_models=DOCUMENT_MODELS,
     )
+    await ranging_scheduler_config_repo.load_cache()
 
     task = asyncio.create_task(runner(), name="ranging_scheduler")
     try:
@@ -114,6 +131,15 @@ def create_app() -> FastAPI:
     repo_node_network = BeanieNodeNetworkRepository()
     repo_node = BeanieNodeRepository()
     repo_ranging = BeanieRangingRepository()
+    repo_ranging_scheduler_config = BeanieRangingSchedulerConfigRepository(
+        defaults=RangingSchedulerConfig(
+            listen_timeout_uus=env.APP_RANGING_SCHEDULER_LISTEN_TIMEOUT_UUS,
+            initiate_timeout_uus=env.APP_RANGING_SCHEDULER_INITIATE_TIMEOUT_UUS,
+            listen_to_initiate_delay_ms=env.APP_RANGING_SCHEDULER_LISTEN_TO_INITIATE_DELAY_MS,
+            pair_delay_ms=env.APP_RANGING_SCHEDULER_PAIR_DELAY_MS,
+            idle_delay_ms=env.APP_RANGING_SCHEDULER_IDLE_DELAY_MS,
+        )
+    )
 
     node_control = WebSocketNodeControl()
     password_hasher = BcryptPasswordHasher()
@@ -138,6 +164,9 @@ def create_app() -> FastAPI:
         repo_ranging, repo_node, repo_node_network, log
     )
     ranging_scheduler_usecase = BaseRangingSchedulerUsecase(repo_node, node_control, log)
+    ranging_scheduler_config_usecase = BaseRangingSchedulerConfigUsecase(
+        repo_ranging_scheduler_config, log
+    )
 
     permission_handler = PermissionHandler(permission_usecase)
     role_handler = RoleHandler(role_usecase)
@@ -147,14 +176,13 @@ def create_app() -> FastAPI:
     node_handler = NodeHandler(node_usecase, node_connection_usecase, ranging_usecase, log)
     ranging_handler = RangingHandler(ranging_usecase)
     ranging_scheduler_handler = RangingSchedulerHandler(ranging_scheduler_usecase, log)
+    ranging_scheduler_config_handler = RangingSchedulerConfigHandler(
+        ranging_scheduler_config_usecase
+    )
 
     ranging_scheduler_runner = create_ranging_scheduler_runner(
         ranging_scheduler_handler,
-        listen_timeout_uus=env.APP_RANGING_SCHEDULER_LISTEN_TIMEOUT_UUS,
-        initiate_timeout_uus=env.APP_RANGING_SCHEDULER_INITIATE_TIMEOUT_UUS,
-        listen_to_initiate_delay_ms=env.APP_RANGING_SCHEDULER_LISTEN_TO_INITIATE_DELAY_MS,
-        pair_delay_ms=env.APP_RANGING_SCHEDULER_PAIR_DELAY_MS,
-        idle_delay_ms=env.APP_RANGING_SCHEDULER_IDLE_DELAY_MS,
+        ranging_scheduler_config_usecase,
     )
 
     app = FastAPI(
@@ -164,6 +192,7 @@ def create_app() -> FastAPI:
     )
     app.state.motor = motor
     app.state.ranging_scheduler_runner = ranging_scheduler_runner
+    app.state.ranging_scheduler_config_repo = repo_ranging_scheduler_config
 
     register_exception_handlers(app)
 
@@ -176,6 +205,11 @@ def create_app() -> FastAPI:
     )
     app.include_router(node.create_router(node_handler, role_usecase, log))
     app.include_router(ranging.create_router(ranging_handler, role_usecase, log))
+    app.include_router(
+        ranging_scheduler_config.create_router(
+            ranging_scheduler_config_handler, role_usecase, log
+        )
+    )
 
     app.add_middleware(
         JwtMiddleware,
