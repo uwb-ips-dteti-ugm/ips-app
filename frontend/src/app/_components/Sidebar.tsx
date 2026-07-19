@@ -6,6 +6,7 @@ import nodeIcon from "../_assets/NodeIcon.svg";
 import permissionIcon from "../_assets/PermissionIcon.svg";
 import rangingIcon from "../_assets/RangingIcon.svg";
 import roleIcon from "../_assets/RoleIcon.svg";
+import settingsIcon from "../_assets/SettingsIcon.svg";
 import userIcon from "../_assets/UserIcon.svg";
 import { SidebarClient } from "./SidebarClient";
 
@@ -65,6 +66,12 @@ export const sidebarConfig = [
         href: "/admin/permissions",
         permissionNames: ["permission/view"],
         icon: permissionIcon,
+      },
+      {
+        label: "Settings",
+        href: "/admin/settings",
+        permissionNames: ["ranging-scheduler-config/view"],
+        icon: settingsIcon,
       },
     ],
   },

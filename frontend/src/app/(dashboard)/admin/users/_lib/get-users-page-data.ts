@@ -17,6 +17,7 @@ export type UsersPageData = {
   canDeleteUsers: boolean;
   canManageUsers: boolean;
   canRegisterUsers: boolean;
+  canResetUserPasswords: boolean;
   canViewUsers: boolean;
   roles: UserRoleFilterOption[];
   users: UsersResponse;
@@ -30,6 +31,7 @@ export async function getUsersPageData(
   const canDeleteUsers = permissionNames.has("user/delete");
   const canManageUsers = permissionNames.has("user/manage");
   const canRegisterUsers = permissionNames.has("auth/manage");
+  const canResetUserPasswords = permissionNames.has("auth/manage");
   const canViewUsers = permissionNames.has("user/view");
 
   if (!canViewUsers) {
@@ -37,6 +39,7 @@ export async function getUsersPageData(
       canDeleteUsers,
       canManageUsers,
       canRegisterUsers,
+      canResetUserPasswords,
       canViewUsers,
       roles: [],
       users: emptyUsers(state.page, state.limit),
@@ -61,6 +64,7 @@ export async function getUsersPageData(
     canDeleteUsers,
     canManageUsers,
     canRegisterUsers,
+    canResetUserPasswords,
     canViewUsers,
     roles,
     users,

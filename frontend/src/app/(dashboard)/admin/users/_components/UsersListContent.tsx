@@ -4,7 +4,9 @@ import Image from "next/image";
 import { useState } from "react";
 
 import type { UserResponse } from "@/lib/api/user";
+import editIcon from "@/shared/assets/EditIcon.svg";
 import infoIcon from "@/shared/assets/InfoIcon.svg";
+import keyIcon from "@/shared/assets/KeyIcon.svg";
 import plusIcon from "@/shared/assets/PlusIcon.svg";
 import trashIcon from "@/shared/assets/TrashIcon.svg";
 import {
@@ -19,7 +21,9 @@ import type { UsersListState } from "../_lib/users-list-state";
 import {
   AddUserModal,
   DeleteUserModal,
+  EditUserModal,
   InfoUserModal,
+  ResetUserPasswordModal,
 } from "./UserActionModals";
 import { UsersFilterBar } from "./UsersFilterBar";
 import { UsersPagination } from "./UsersPagination";
@@ -29,6 +33,7 @@ type UsersListContentProps = {
   canDeleteUsers: boolean;
   canManageUsers: boolean;
   canRegisterUsers: boolean;
+  canResetUserPasswords: boolean;
   limit: number;
   roles: UserRoleFilterOption[];
   state: UsersListState;
@@ -45,7 +50,15 @@ type ActiveUserModal =
       user: UserResponse;
     }
   | {
+      type: "edit";
+      user: UserResponse;
+    }
+  | {
       type: "info";
+      user: UserResponse;
+    }
+  | {
+      type: "reset-password";
       user: UserResponse;
     }
   | null;
@@ -54,6 +67,7 @@ export function UsersListContent({
   canDeleteUsers,
   canManageUsers,
   canRegisterUsers,
+  canResetUserPasswords,
   limit,
   roles,
   state,
@@ -102,6 +116,22 @@ export function UsersListContent({
                   label="Info"
                   onClick={() => setActiveModal({ type: "info", user })}
                 />
+                {canManageUsers ? (
+                  <IconActionButton
+                    icon={editIcon}
+                    label="Edit"
+                    onClick={() => setActiveModal({ type: "edit", user })}
+                  />
+                ) : null}
+                {canResetUserPasswords ? (
+                  <IconActionButton
+                    icon={keyIcon}
+                    label="Change password"
+                    onClick={() =>
+                      setActiveModal({ type: "reset-password", user })
+                    }
+                  />
+                ) : null}
                 {canDeleteUsers ? (
                   <IconActionButton
                     icon={trashIcon}
@@ -137,6 +167,18 @@ export function UsersListContent({
       ) : null}
       {activeModal?.type === "add" ? (
         <AddUserModal roles={roles} onClose={() => setActiveModal(null)} />
+      ) : null}
+      {activeModal?.type === "edit" ? (
+        <EditUserModal
+          user={activeModal.user}
+          onClose={() => setActiveModal(null)}
+        />
+      ) : null}
+      {activeModal?.type === "reset-password" ? (
+        <ResetUserPasswordModal
+          user={activeModal.user}
+          onClose={() => setActiveModal(null)}
+        />
       ) : null}
       {activeModal?.type === "delete" ? (
         <DeleteUserModal
