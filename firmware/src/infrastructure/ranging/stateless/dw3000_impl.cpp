@@ -221,7 +221,7 @@ namespace infrastructure::ranging::stateless
         const int32_t rtd_init = static_cast<int32_t>(resp_rx_ts - poll_tx_ts);
         const int32_t rtd_resp = static_cast<int32_t>(resp_tx_ts - poll_rx_ts);
         const double tof = ((rtd_init - rtd_resp * (1.0 - clock_offset_ratio)) / 2.0) * DWT_TIME_UNITS;
-        *distance = static_cast<float>(tof * SPEED_OF_LIGHT);
+        *distance = tof > 0.0 ? static_cast<float>(tof * SPEED_OF_LIGHT) : 0.0F;
 
         return models::Error::Ok;
     }
