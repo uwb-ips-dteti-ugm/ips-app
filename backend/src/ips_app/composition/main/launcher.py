@@ -5,9 +5,10 @@ from typing import AsyncIterator
 import uvicorn
 from beanie import init_beanie
 from fastapi import FastAPI
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 
 from ips_app.application.auth.auth import BaseAuthUsecase
+from ips_app.application.firmware.firmware import BaseFirmwareUsecase
 from ips_app.application.node.node import BaseNodeUsecase
 from ips_app.application.node_connection.node_connection import (
     BaseNodeConnectionUsecase,
@@ -28,6 +29,8 @@ from ips_app.config import app as app_config
 from ips_app.config import env
 from ips_app.domain.models.ranging_scheduler_config import RangingSchedulerConfig
 from ips_app.infrastructure.node.control.websocket import WebSocketNodeControl
+from ips_app.infrastructure.repository.firmware.beanie_model import FirmwareDocument
+from ips_app.infrastructure.repository.firmware.gridfs import GridFsFirmwareRepository
 from ips_app.infrastructure.repository.node.beanie import BeanieNodeRepository
 from ips_app.infrastructure.repository.node.beanie_model import NodeDocument
 from ips_app.infrastructure.repository.node_network.beanie import (
@@ -61,6 +64,7 @@ from ips_app.infrastructure.utility.password.bcrypt import BcryptPasswordHasher
 from ips_app.infrastructure.utility.token.jwt import JwtTokenIssuer
 from ips_app.presentation.http.exception import register_exception_handlers
 from ips_app.presentation.http.handlers.auth import AuthHandler
+from ips_app.presentation.http.handlers.firmware import FirmwareHandler
 from ips_app.presentation.http.handlers.node import NodeHandler
 from ips_app.presentation.http.handlers.node_network import NodeNetworkHandler
 from ips_app.presentation.http.handlers.permission import PermissionHandler
@@ -73,6 +77,7 @@ from ips_app.presentation.http.handlers.user import UserHandler
 from ips_app.presentation.http.middlewares.auth_jwt import JwtMiddleware
 from ips_app.presentation.http.routes import (
     auth,
+    firmware,
     node,
     node_network,
     permission,
@@ -96,6 +101,7 @@ DOCUMENT_MODELS = [
     NodeDocument,
     RangingRecordDocument,
     RangingSchedulerConfigDocument,
+    FirmwareDocument,
 ]
 
 
@@ -133,6 +139,8 @@ def create_app() -> FastAPI:
     repo_node_network = BeanieNodeNetworkRepository()
     repo_node = BeanieNodeRepository()
     repo_ranging = BeanieRangingRepository()
+    firmware_bucket = AsyncIOMotorGridFSBucket(motor[env.APP_MONGO_DB], bucket_name="firmware")
+    repo_firmware = GridFsFirmwareRepository(firmware_bucket)
     repo_ranging_scheduler_config = BeanieRangingSchedulerConfigRepository(
         defaults=RangingSchedulerConfig(
             listen_timeout_uus=env.APP_RANGING_SCHEDULER_LISTEN_TIMEOUT_UUS,
@@ -166,6 +174,7 @@ def create_app() -> FastAPI:
         repo_ranging, repo_node, repo_node_network, log
     )
     ranging_scheduler_usecase = BaseRangingSchedulerUsecase(repo_node, node_control, log)
+    firmware_usecase = BaseFirmwareUsecase(repo_firmware, node_control, log)
     ranging_scheduler_config_usecase = BaseRangingSchedulerConfigUsecase(
         repo_ranging_scheduler_config, log
     )
@@ -178,6 +187,7 @@ def create_app() -> FastAPI:
     node_handler = NodeHandler(node_usecase, node_connection_usecase, ranging_usecase, log)
     ranging_handler = RangingHandler(ranging_usecase)
     ranging_scheduler_handler = RangingSchedulerHandler(ranging_scheduler_usecase, log)
+    firmware_handler = FirmwareHandler(firmware_usecase)
     ranging_scheduler_config_handler = RangingSchedulerConfigHandler(
         ranging_scheduler_config_usecase
     )
@@ -212,6 +222,7 @@ def create_app() -> FastAPI:
             ranging_scheduler_config_handler, role_usecase, log
         )
     )
+    app.include_router(firmware.create_router(firmware_handler, role_usecase, log))
 
     app.add_middleware(
         JwtMiddleware,
@@ -223,6 +234,7 @@ def create_app() -> FastAPI:
             "/openapi.json",
             "/auth/sign-in",
             "/auth/refresh-token",
+            "/firmware/download",
         ],
     )
 

@@ -246,6 +246,9 @@ class NodeHandler:
         if message.get("label") == "error":
             await self._handle_error_message(device_id, message)
             return
+        if message.get("label") == "ota":
+            await self._handle_ota_message(device_id, message)
+            return
         if message.get("event") in {"heartbeat", "ack"}:
             return
 
@@ -273,6 +276,13 @@ class NodeHandler:
         await self.log.debug(
             f"{self.tag_class}/_handle_error_message",
             "Received error message from node websocket",
+            {"device_id": device_id, "message": message},
+        )
+
+    async def _handle_ota_message(self, device_id: str, message: Dict[str, Any]) -> None:
+        await self.log.debug(
+            f"{self.tag_class}/_handle_ota_message",
+            "Received OTA status message from node websocket",
             {"device_id": device_id, "message": message},
         )
 

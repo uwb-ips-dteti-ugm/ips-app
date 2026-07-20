@@ -37,3 +37,13 @@ class NodeControl(ABC):
         listener_address: int,
         timeout_uus: int,
     ) -> None: ...
+
+    @abstractmethod
+    async def firmware_update(
+        self,
+        device_id: str,
+        download_url: str,
+        version: str,
+        size: int,
+        checksum: str,
+    ) -> None: ...

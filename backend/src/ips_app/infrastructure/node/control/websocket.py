@@ -141,6 +141,38 @@ class WebSocketNodeControl(NodeControl):
         except Exception as e:
             raise UnexpectedDomainException(str(e)) from e
 
+    async def firmware_update(
+        self,
+        device_id: str,
+        download_url: str,
+        version: str,
+        size: int,
+        checksum: str,
+    ) -> None:
+        try:
+            self._ensure_non_empty(download_url, "download_url")
+            self._ensure_non_empty(version, "version")
+            self._ensure_non_empty(checksum, "checksum")
+            self._ensure_positive_integer(size, "size")
+            await self._send_command(
+                device_id=device_id,
+                command=NodeCommandCode.FIRMWARE_UPDATE,
+                payload={
+                    "url": download_url,
+                    "version": version,
+                    "size": size,
+                    "checksum": checksum,
+                },
+            )
+        except DomainException:
+            raise
+        except Exception as e:
+            raise UnexpectedDomainException(str(e)) from e
+
+    def _ensure_non_empty(self, value: str, field: str) -> None:
+        if not value:
+            raise ValidatorDomainException(f"'{field}' must not be empty.")
+
     def _ensure_uwb_value(self, value: int, field: str) -> None:
         if value < 0 or value > 0xFFFF:
             raise ValidatorDomainException(f"'{field}' must be between 0 and 65535.")

@@ -11,6 +11,7 @@ class NodeCommandCode(IntEnum):
     RESTART = 1
     RANGING_LISTEN = 2
     RANGING_INITIATE = 3
+    FIRMWARE_UPDATE = 4
 
 
 class NodeStatus(StrEnum):
