@@ -9,6 +9,9 @@ namespace application::task::uwb_stateless
     constexpr const char *restartTag = "task::uwb_stateless::BaseImpl::restart";
     constexpr const char *rangingResultTag = "task::uwb_stateless::BaseImpl::sendRangingResult";
     constexpr const char *errorTag = "task::uwb_stateless::BaseImpl::sendError";
+    constexpr const char *otaTag = "task::uwb_stateless::BaseImpl::ota";
+    constexpr const char *otaResultTag = "task::uwb_stateless::BaseImpl::sendOtaResult";
+    constexpr const char *otaErrorTag = "task::uwb_stateless::BaseImpl::sendOtaError";
 
     // Helpers
 
@@ -47,12 +50,14 @@ namespace application::task::uwb_stateless
         contracts::client::UWBServer *client,
         contracts::device::Control *device,
         contracts::ranging::Stateless *ranging,
-        contracts::wifi::Connection *wifi)
+        contracts::wifi::Connection *wifi,
+        contracts::device::Ota *ota)
         : logger(logger),
           client(client),
           device(device),
           ranging(ranging),
-          wifi(wifi)
+          wifi(wifi),
+          ota_device(ota)
     {
     }
 
@@ -243,5 +248,66 @@ namespace application::task::uwb_stateless
 
         logger->info(errorTag, "Error sent (device_id=%s)", device_id);
         return models::Error::Ok;
+    }
+
+    models::Error BaseImpl::ota(const models::OtaCommand &command)
+    {
+        const models::Error wifi_error = requireWiFi(logger, wifi, otaTag);
+        if (wifi_error != models::Error::Ok)
+            return wifi_error;
+
+        logger->info(otaTag, "Starting OTA update (version=%s size=%lu)", command.version, static_cast<unsigned long>(command.size));
+
+        const models::Error error = ota_device->update(command);
+        if (error != models::Error::Ok)
+        {
+            logOperationError(logger, otaTag, "OTA update", error);
+            return error;
+        }
+
+        logger->info(otaTag, "OTA update flashed successfully (version=%s)", command.version);
+        return models::Error::Ok;
+    }
+
+    models::Error BaseImpl::sendOtaResult(
+        const char *device_id,
+        const models::OtaResult &result)
+    {
+        if (isEmpty(device_id))
+        {
+            logger->error(otaResultTag, "Invalid argument: device_id is empty");
+            return models::Error::InvalidArgument;
+        }
+
+        const models::Error wifi_error = requireWiFi(logger, wifi, otaResultTag);
+        if (wifi_error != models::Error::Ok)
+            return wifi_error;
+
+        const models::Error error = client->sendOtaResult(device_id, result);
+        if (error != models::Error::Ok)
+            logOperationError(logger, otaResultTag, "Send OTA result", error);
+
+        return error;
+    }
+
+    models::Error BaseImpl::sendOtaError(
+        const char *device_id,
+        const models::OtaFailure &failure)
+    {
+        if (isEmpty(device_id))
+        {
+            logger->error(otaErrorTag, "Invalid argument: device_id is empty");
+            return models::Error::InvalidArgument;
+        }
+
+        const models::Error wifi_error = requireWiFi(logger, wifi, otaErrorTag);
+        if (wifi_error != models::Error::Ok)
+            return wifi_error;
+
+        const models::Error error = client->sendOtaError(device_id, failure);
+        if (error != models::Error::Ok)
+            logOperationError(logger, otaErrorTag, "Send OTA error", error);
+
+        return error;
     }
 }

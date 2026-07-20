@@ -5,6 +5,7 @@
 
 #include "domain/contracts/client/uwb_server.h"
 #include "domain/contracts/device/control.h"
+#include "domain/contracts/device/ota.h"
 #include "domain/contracts/logger/leveled.h"
 #include "domain/contracts/ranging/stateless.h"
 #include "domain/contracts/wifi/connection.h"
@@ -20,7 +21,8 @@ namespace application::task::uwb_stateless
             contracts::client::UWBServer *client,
             contracts::device::Control *device,
             contracts::ranging::Stateless *ranging,
-            contracts::wifi::Connection *wifi);
+            contracts::wifi::Connection *wifi,
+            contracts::device::Ota *ota);
         ~BaseImpl() override = default;
         BaseImpl(const BaseImpl &) = delete;
         BaseImpl &operator=(const BaseImpl &) = delete;
@@ -37,6 +39,13 @@ namespace application::task::uwb_stateless
         models::Error sendError(
             const char *device_id,
             const models::RangingFailure &failure) override;
+        models::Error ota(const models::OtaCommand &command) override;
+        models::Error sendOtaResult(
+            const char *device_id,
+            const models::OtaResult &result) override;
+        models::Error sendOtaError(
+            const char *device_id,
+            const models::OtaFailure &failure) override;
 
     private:
         contracts::logger::Leveled *logger;
@@ -44,5 +53,6 @@ namespace application::task::uwb_stateless
         contracts::device::Control *device;
         contracts::ranging::Stateless *ranging;
         contracts::wifi::Connection *wifi;
+        contracts::device::Ota *ota_device;
     };
 }

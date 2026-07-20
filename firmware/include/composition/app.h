@@ -7,6 +7,7 @@
 #include "config/config.h"
 #include "infrastructure/client/uwb_server/wsclient_impl.h"
 #include "infrastructure/device/control/esp32_impl.h"
+#include "infrastructure/device/ota/esp32_impl.h"
 #include "infrastructure/logger/leveled/serial_impl.h"
 #include "infrastructure/ranging/stateless/dw3000_impl.h"
 #include "infrastructure/wifi/connection/esp32_impl.h"
@@ -31,6 +32,7 @@ namespace composition
         infrastructure::logger::leveled::SerialImpl logger;
         WebSocketsClient websocket_client;
         infrastructure::device::control::ESP32Impl device_control;
+        infrastructure::device::ota::ESP32Impl ota;
         infrastructure::wifi::connection::ESP32Impl wifi_connection;
         infrastructure::ranging::stateless::DW3000Impl ranging;
         infrastructure::client::uwb_server::WSClientImpl uwb_server;

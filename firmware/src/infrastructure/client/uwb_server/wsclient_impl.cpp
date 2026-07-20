@@ -9,6 +9,8 @@ namespace infrastructure::client::uwb_server
     constexpr const char *connectTag = "client::uwb_server::WSClientImpl::sendConnectRequest";
     constexpr const char *rangingTag = "client::uwb_server::WSClientImpl::sendRangingResult";
     constexpr const char *errorTag = "client::uwb_server::WSClientImpl::sendError";
+    constexpr const char *otaResultTag = "client::uwb_server::WSClientImpl::sendOtaResult";
+    constexpr const char *otaErrorTag = "client::uwb_server::WSClientImpl::sendOtaError";
 
     // Helpers
 
@@ -212,5 +214,66 @@ namespace infrastructure::client::uwb_server
         }
 
         return sendJson(client, logger, errorTag, payload);
+    }
+
+    models::Error WSClientImpl::sendOtaResult(
+        const char *device_id,
+        const models::OtaResult &result)
+    {
+        if (isEmpty(device_id))
+        {
+            logger->error(otaResultTag, "Invalid argument: device_id is empty");
+            return models::Error::InvalidArgument;
+        }
+
+        JsonDocument document;
+        document["label"] = "ota";
+        JsonObject data = document["data"].to<JsonObject>();
+        data["success"] = result.success;
+        data["version"] = result.version;
+
+        String payload;
+        serializeJson(document, payload);
+        if (payload.length() == 0)
+        {
+            logger->error(otaResultTag, "Failed to serialize OTA result");
+            return models::Error::MemoryAllocation;
+        }
+
+        return sendJson(client, logger, otaResultTag, payload);
+    }
+
+    models::Error WSClientImpl::sendOtaError(
+        const char *device_id,
+        const models::OtaFailure &failure)
+    {
+        if (isEmpty(device_id))
+        {
+            logger->error(otaErrorTag, "Invalid argument: device_id is empty");
+            return models::Error::InvalidArgument;
+        }
+
+        if (isEmpty(failure.message))
+        {
+            logger->error(otaErrorTag, "Invalid argument: message is empty");
+            return models::Error::InvalidArgument;
+        }
+
+        JsonDocument document;
+        document["label"] = "ota";
+        JsonObject data = document["data"].to<JsonObject>();
+        data["success"] = false;
+        data["version"] = failure.version;
+        data["message"] = failure.message;
+
+        String payload;
+        serializeJson(document, payload);
+        if (payload.length() == 0)
+        {
+            logger->error(otaErrorTag, "Failed to serialize OTA error");
+            return models::Error::MemoryAllocation;
+        }
+
+        return sendJson(client, logger, otaErrorTag, payload);
     }
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #ifndef UWB_FIRMWARE_WIFI_SSID
@@ -57,4 +58,7 @@ namespace config
     constexpr uint32_t uwbTaskCheckIntervalMs = 20;
     constexpr uint32_t uwbTaskStackDepth = 8192;
     constexpr uint8_t uwbTaskPriority = 9;
+
+    constexpr uint32_t otaHttpTimeoutMs = 15000;
+    constexpr std::size_t otaDownloadBufferSize = 4096;
 }

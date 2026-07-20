@@ -32,6 +32,12 @@ namespace infrastructure::client::uwb_server
         models::Error sendError(
             const char *device_id,
             const models::RangingFailure &failure) override;
+        models::Error sendOtaResult(
+            const char *device_id,
+            const models::OtaResult &result) override;
+        models::Error sendOtaError(
+            const char *device_id,
+            const models::OtaFailure &failure) override;
 
     private:
         WebSocketsClient *client;

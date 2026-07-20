@@ -1,8 +1,12 @@
 #include "presentation/task/uwb_stateless.h"
 
+#include <cctype>
+#include <cstring>
+
 #include <ArduinoJson.h>
 
 #include "domain/models/error.h"
+#include "domain/models/ota.h"
 #include "domain/models/ranging.h"
 
 namespace presentation::task
@@ -10,6 +14,7 @@ namespace presentation::task
     constexpr int restartCommandCode = 1;
     constexpr int listenCommandCode = 2;
     constexpr int initiateCommandCode = 3;
+    constexpr int otaUpdateCommandCode = 4;
 
     constexpr const char *commandTag = "task::UWBStateless::handleCommand";
 
@@ -49,6 +54,52 @@ namespace presentation::task
                readUint16(payload, "listener_address", &command->listener_address) &&
                readUint16(payload, "initiator_address", &command->initiator_address) &&
                readUint32(payload, "timeout_uus", &command->timeout_uus);
+    }
+
+    bool readString(JsonObjectConst args, const char *key, char *out, std::size_t capacity)
+    {
+        JsonVariantConst field = args[key];
+        if (field.isNull() || !field.is<const char *>())
+            return false;
+
+        const char *value = field.as<const char *>();
+        const std::size_t value_length = strlen(value);
+        if (value_length == 0 || value_length >= capacity)
+            return false;
+
+        strncpy(out, value, capacity - 1);
+        out[capacity - 1] = '\0';
+        return true;
+    }
+
+    bool isHexChecksum(const char *value)
+    {
+        const std::size_t value_length = strlen(value);
+        if (value_length != 64)
+            return false;
+
+        for (std::size_t i = 0; i < value_length; ++i)
+        {
+            if (!isxdigit(static_cast<unsigned char>(value[i])))
+                return false;
+        }
+        return true;
+    }
+
+    bool readOtaCommand(JsonObjectConst payload, models::OtaCommand *command)
+    {
+        if (!readString(payload, "url", command->url, sizeof(command->url)))
+            return false;
+        if (!readString(payload, "version", command->version, sizeof(command->version)))
+            return false;
+        if (!readUint32(payload, "size", &command->size) || command->size == 0)
+            return false;
+        if (!readString(payload, "checksum", command->checksum, sizeof(command->checksum)))
+            return false;
+        if (!isHexChecksum(command->checksum))
+            return false;
+
+        return true;
     }
 
     // Controller implementations
@@ -189,6 +240,34 @@ namespace presentation::task
         if (command == restartCommandCode)
         {
             service->restart();
+            return;
+        }
+
+        if (command == otaUpdateCommandCode)
+        {
+            models::OtaCommand ota_command = {};
+            if (!readOtaCommand(payload_object, &ota_command))
+            {
+                logger->warn(commandTag, "Rejected command %ld: invalid OTA payload fields", command);
+                return;
+            }
+
+            const models::Error error = service->ota(ota_command);
+            if (error == models::Error::Ok)
+            {
+                models::OtaResult result = {};
+                result.success = true;
+                strncpy(result.version, ota_command.version, sizeof(result.version) - 1);
+                service->sendOtaResult(device_id, result);
+                service->restart();
+            }
+            else
+            {
+                models::OtaFailure failure = {};
+                strncpy(failure.version, ota_command.version, sizeof(failure.version) - 1);
+                failure.message = models::errorToString(error);
+                service->sendOtaError(device_id, failure);
+            }
             return;
         }
 

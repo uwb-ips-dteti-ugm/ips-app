@@ -34,7 +34,7 @@ All concrete dependencies (adapters, application implementations, controllers) a
 
 Important directories:
 
-- `include/domain/models`: `models::RangingCommand`, `models::RangingResult`, `models::RangingFailure` (the ranging command/result/failure value types — see "Domain Value Types" below), `models::Error`, and UWB frame-layout constants (`RangingFrameControl`, `RangingFunctionCode`, `RangingFrameLength`, `RangingFrameIndex`).
+- `include/domain/models`: `models::RangingCommand`, `models::RangingResult`, `models::RangingFailure`, `models::OtaCommand`, `models::OtaResult`, `models::OtaFailure` (value types — see "Domain Value Types" below), `models::Error`, and UWB frame-layout constants (`RangingFrameControl`, `RangingFunctionCode`, `RangingFrameLength`, `RangingFrameIndex`).
 - `include/domain/contracts`: infrastructure-facing interfaces implemented by `infrastructure/`.
 - `include/domain/usecases`: application-facing interfaces used by `presentation/`.
 - `include/application` and `src/application`: usecase implementations. Application depends on `domain/contracts`/`domain/usecases`, not concrete infrastructure.
@@ -44,6 +44,7 @@ Important directories:
 - `include/config`: compile-time configuration constants.
 - `scripts/load_env.py`: PlatformIO pre-script that loads local `.env` values into compile-time macros.
 - `scripts/uwb_server_test.py`: a standalone FastAPI dev server that speaks the same `/nodes/ws/{device_id}` protocol as the real backend, for testing firmware without a full backend deployment.
+- `scripts/upload_firmware.py`: uploads a locally compiled `.bin` plus its version/board variant/checksum metadata to the backend's `/firmware` endpoint. See "Uploading Firmware" below.
 - `partitions`: custom flash partition tables for 8MB and 16MB ESP32 variants.
 - `lib/DW3000`: local DW3000 library and examples used as the source of truth for radio setup.
 
@@ -78,6 +79,32 @@ struct RangingFailure
 ```
 
 `RangingCommand` maps 1:1 onto the WebSocket command payload for both `listen` and `initiate` (see below) and is threaded through `domain/contracts/ranging/stateless.h`, `domain/usecases/task/uwb_stateless.h`, `application/task/uwb_stateless/base_impl.*`, `infrastructure/ranging/stateless/dw3000_impl.*`, and `presentation/task/uwb_stateless.*` — there is no separate positional-parameter form of these calls anywhere in the codebase.
+
+OTA commands follow the same struct convention in `domain/models/ota.h`:
+
+```cpp
+struct OtaCommand
+{
+    char url[256];
+    char version[32];
+    uint32_t size;
+    char checksum[65]; // lowercase hex sha256 digest + null terminator
+};
+
+struct OtaResult
+{
+    bool success;
+    char version[32];
+};
+
+struct OtaFailure
+{
+    char version[32];
+    const char *message;
+};
+```
+
+`OtaCommand` is threaded through `domain/contracts/device/ota.h`, `domain/usecases/task/uwb_stateless.h`, `application/task/uwb_stateless/base_impl.*`, `infrastructure/device/ota/esp32_impl.*`, and `presentation/task/uwb_stateless.*`, same as the ranging structs.
 
 ## Runtime Configuration
 
@@ -137,6 +164,7 @@ This is exactly the backend's `NodeCommandCode` payload shape (`infrastructure/n
 - `1`: restart the device. Still requires a non-null `payload` object in the message (its contents are ignored).
 - `2`: listen for a ranging poll, send the DW3000 response frame, then send an error only if the operation fails.
 - `3`: initiate ranging, then send a ranging result or error.
+- `4`: OTA firmware update. Payload is `{"url": "http://.../firmware/download?firmware_id=...", "version": "1.2.0", "size": 987654, "checksum": "<64 lowercase hex sha256>"}`. The device downloads `url` over plain `HTTPClient`, streams the body into `Update.write()` while incrementally hashing it with mbedtls SHA-256, verifies the downloaded size and hash against `size`/`checksum` before `Update.end()`, then restarts on success (sending the `ota` ack first) or reports an `ota` error and stays on the current firmware on failure.
 
 Malformed JSON, a missing/invalid `command` or `payload`, an invalid ranging payload, or an unrecognized command code are rejected with a `warn`-level log (`presentation::task::UWBStateless`'s injected logger) — no WebSocket error frame is sent back for these cases, mirroring the backend's own `_handle_node_message` philosophy of logging rejected messages rather than always answering them.
 
@@ -162,6 +190,27 @@ Node messages sent back to the server use `label` and `data`:
     "source_address": 1111,
     "destination_address": 2222,
     "message": "UWB response RX timeout"
+  }
+}
+```
+
+```json
+{
+  "label": "ota",
+  "data": {
+    "success": true,
+    "version": "1.2.0"
+  }
+}
+```
+
+```json
+{
+  "label": "ota",
+  "data": {
+    "success": false,
+    "version": "1.2.0",
+    "message": "OTA checksum mismatch"
   }
 }
 ```
@@ -219,6 +268,22 @@ python3 scripts/uwb_server_test.py
 ```
 
 It accepts connections from the three device IDs hardcoded in `DEVICE_ADDRESSES`, and once at least two are connected, cycles ranging pairs using the real backend's default scheduler timing (`listen_timeout_uus=120000`, `initiate_timeout_uus=12000`, `listen_to_initiate_delay_ms=80`, `pair_delay_ms=80`, `idle_delay_ms=250`). Incoming `"label":"ranging"`/`"error"` messages from firmware are logged distinctly.
+
+## Uploading Firmware
+
+There is no CI/CD for OTA — after a local `pio run` build, upload the resulting `.bin` to the backend manually with `scripts/upload_firmware.py`:
+
+```bash
+python3 -m pip install -r scripts/requirements.txt
+python3 scripts/upload_firmware.py \
+  --file .pio/build/esp32dev-16mb/firmware.bin \
+  --version 1.2.0 \
+  --board-variant esp32dev-16mb \
+  --backend-url http://localhost:8000 \
+  --username admin --password CHANGE_ME
+```
+
+The script computes the file's size and SHA-256 checksum locally, signs in to obtain a bearer token (or accepts `--token` directly), and `POST`s the binary plus metadata as `multipart/form-data` to `/firmware`. The backend re-derives the checksum from the received bytes itself — the client-sent checksum is only used to reject a corrupted upload early. From there, an admin can list and push the uploaded version to all currently connected nodes from the frontend's Firmware page (`POST /firmware/{id}/deploy`), which fans out an OTA command (code `4`) to every node over its existing WebSocket connection.
 
 ## Development Guide
 
