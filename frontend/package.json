@@ -1,6 +1,6 @@
 {
   "name": "ips_app_frontend",
-  "version": "v1.0.0-dev.2",
+  "version": "v1.0.0-dev.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
