@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "v1.0.0-dev.2",
   "backend_url": "http://localhost:8000",
   "board_variant": "esp32dev-16mb",
   "username": "admin",
