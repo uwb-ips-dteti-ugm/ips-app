@@ -13,6 +13,7 @@ export type FirmwareDeployResponse = {
   targeted_count: number;
   succeeded_count: number;
   failed_device_ids: string[];
+  skipped_count: number;
 };
 
 export function getFirmwares(

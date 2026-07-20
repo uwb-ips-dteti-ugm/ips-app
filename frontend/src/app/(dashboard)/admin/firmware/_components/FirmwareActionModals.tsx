@@ -45,6 +45,10 @@ export function DeployFirmwareModal({
                   : `${result.failed_device_ids.length} (${result.failed_device_ids.join(", ")})`
               }
             />
+            <DescriptionRow
+              label="Skipped (board variant mismatch)"
+              value={String(result.skipped_count)}
+            />
           </DescriptionList>
           <div className="flex justify-end">
             <button
