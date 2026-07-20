@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./client";
 export * from "./common";
+export * from "./firmware";
 export * from "./node";
 export * from "./node-network";
 export * from "./permission";
