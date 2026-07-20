@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-dev.3",
+  "version": "v1.0.0-stg.1",
   "backend_url": "https://api-ips.context.my.id",
   "board_variant": "esp32dev-16mb",
   "username": "changeme",
