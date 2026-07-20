@@ -46,6 +46,7 @@ class NodeResponse(AuditedResponse):
     name: str
     description: str
     address: Optional[int]
+    board_variant: Optional[str]
     status: NodeStatus
     approved_at: Optional[datetime]
     approved_by: Optional[str]
@@ -63,6 +64,7 @@ class NodeResponse(AuditedResponse):
             name=node.name,
             description=node.description,
             address=node.address,
+            board_variant=node.board_variant,
             status=node.status,
             approved_at=node.approved_at,
             approved_by=stringify_id(node.approved_by),
