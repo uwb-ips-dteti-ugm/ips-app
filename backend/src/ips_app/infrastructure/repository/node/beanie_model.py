@@ -19,6 +19,7 @@ class NodeDocument(Document):
     description: str = Field(default="")
     network: Optional[Link[NodeNetworkDocument]] = None
     address: Optional[int] = Field(None, ge=0, le=0xFFFF)
+    board_variant: Optional[str] = None
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
     status: NodeStatus = Field(default=NodeStatus.PENDING)
@@ -64,6 +65,7 @@ class NodeDocument(Document):
             description=self.description,
             network=network,
             address=self.address,
+            board_variant=self.board_variant,
             preferences=self.preferences,
             status=self.status,
             approved_at=self.approved_at,

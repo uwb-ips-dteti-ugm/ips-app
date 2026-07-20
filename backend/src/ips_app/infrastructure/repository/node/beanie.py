@@ -35,6 +35,7 @@ class BeanieNodeRepository(NodeRepository):
         network_id: Optional[Any] = None,
         address: Optional[int] = None,
         preferences: Optional[Dict[str, Any]] = None,
+        board_variant: Optional[str] = None,
         created_by: Optional[Any] = None,
         session: Optional[Any] = None,
     ) -> Node:
@@ -55,6 +56,7 @@ class BeanieNodeRepository(NodeRepository):
                 description=description,
                 network=cast(Optional[Link[NodeNetworkDocument]], network),
                 address=address,
+                board_variant=board_variant,
                 preferences=preferences or {},
                 created_by=created_by,
             )
@@ -322,6 +324,7 @@ class BeanieNodeRepository(NodeRepository):
     async def update_node_last_connected_at_by_device_id(
         self,
         device_id: str,
+        board_variant: Optional[str] = None,
         session: Optional[Any] = None,
     ) -> Node:
         try:
@@ -329,12 +332,15 @@ class BeanieNodeRepository(NodeRepository):
                 device_id, session, fetch_links=True
             )
             now = datetime.now(timezone.utc)
-            await self._set_node_timestamps(
-                doc=doc,
-                session=session,
-                last_seen_at=now,
-                last_connected_at=now,
-            )
+            update_data: Dict[str, Any] = {
+                "last_seen_at": now,
+                "last_connected_at": now,
+                "updated_at": now,
+            }
+            if board_variant:
+                update_data["board_variant"] = board_variant
+
+            await doc.set(update_data, session=session)
             return doc.to_domain()
         except DomainException:
             raise

@@ -14,6 +14,7 @@ class NodeRepository(ABC):
         network_id: Optional[Any] = None,
         address: Optional[int] = None,
         preferences: Optional[Dict[str, Any]] = None,
+        board_variant: Optional[str] = None,
         created_by: Optional[Any] = None,
         session: Optional[Any] = None,
     ) -> Node: ...
@@ -102,6 +103,7 @@ class NodeRepository(ABC):
     async def update_node_last_connected_at_by_device_id(
         self,
         device_id: str,
+        board_variant: Optional[str] = None,
         session: Optional[Any] = None,
     ) -> Node: ...
 

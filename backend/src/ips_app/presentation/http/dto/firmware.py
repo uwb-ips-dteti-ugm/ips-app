@@ -31,3 +31,4 @@ class FirmwareDeployResponse(BaseModel):
     targeted_count: int
     succeeded_count: int
     failed_device_ids: List[str]
+    skipped_count: int

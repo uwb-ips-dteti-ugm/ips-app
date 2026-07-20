@@ -55,4 +55,5 @@ class FirmwareHandler:
             targeted_count=len(result.targeted_device_ids),
             succeeded_count=len(result.succeeded_device_ids),
             failed_device_ids=result.failed_device_ids,
+            skipped_count=len(result.skipped_device_ids),
         )

@@ -31,12 +31,17 @@ class BaseNodeConnectionUsecase(NodeConnectionUsecase):
         self.log = log
         self.tag_class = self.__class__.__name__
 
-    async def register_connection(self, device_id: str, connection: Any) -> None:
+    async def register_connection(
+        self,
+        device_id: str,
+        connection: Any,
+        board_variant: Optional[str] = None,
+    ) -> None:
         tag = f"{self.tag_class}/register_connection"
         registered = False
         try:
             validate_non_empty_string(device_id, "device_id")
-            await self._create_node_registration_if_missing(device_id)
+            await self._create_node_registration_if_missing(device_id, board_variant)
 
             node = await self.repo.read_node_by_device_id(device_id)
             if node.status != NodeStatus.APPROVED:
@@ -45,7 +50,9 @@ class BaseNodeConnectionUsecase(NodeConnectionUsecase):
             await self.control.register(device_id, connection)
             registered = True
 
-            await self.repo.update_node_last_connected_at_by_device_id(device_id)
+            await self.repo.update_node_last_connected_at_by_device_id(
+                device_id, board_variant=board_variant
+            )
             await self.log.info(
                 tag, "Successfully registered node connection", {"device_id": device_id}
             )
@@ -153,7 +160,9 @@ class BaseNodeConnectionUsecase(NodeConnectionUsecase):
                 raise
             raise UnexpectedDomainException(str(e)) from e
 
-    async def _create_node_registration_if_missing(self, device_id: str) -> None:
+    async def _create_node_registration_if_missing(
+        self, device_id: str, board_variant: Optional[str] = None
+    ) -> None:
         try:
             await self.repo.read_node_by_device_id(device_id)
             return
@@ -165,6 +174,7 @@ class BaseNodeConnectionUsecase(NodeConnectionUsecase):
                 device_id=device_id,
                 name=self.name_generator.generate(),
                 description="Registered from node websocket connection",
+                board_variant=board_variant,
             )
         except DuplicateDomainException:
             return

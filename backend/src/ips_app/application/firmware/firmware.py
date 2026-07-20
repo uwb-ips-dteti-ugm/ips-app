@@ -4,6 +4,7 @@ from ips_app.config import env
 from ips_app.domain.contracts.logger.leveled import LeveledLogger
 from ips_app.domain.contracts.node.control import NodeControl
 from ips_app.domain.contracts.repository.firmware import FirmwareRepository
+from ips_app.domain.contracts.repository.node import NodeRepository
 from ips_app.domain.models.exception import DomainException, UnexpectedDomainException
 from ips_app.domain.models.firmware import Firmware, FirmwareDeployResult
 from ips_app.domain.usecases.firmware import FirmwareUsecase
@@ -12,8 +13,15 @@ from ips_app.application._shared.validator import validate_non_empty_string
 
 
 class BaseFirmwareUsecase(FirmwareUsecase):
-    def __init__(self, repo: FirmwareRepository, control: NodeControl, log: LeveledLogger) -> None:
+    def __init__(
+        self,
+        repo: FirmwareRepository,
+        repo_node: NodeRepository,
+        control: NodeControl,
+        log: LeveledLogger,
+    ) -> None:
         self.repo = repo
+        self.repo_node = repo_node
         self.control = control
         self.log = log
         self.tag_class = self.__class__.__name__
@@ -103,7 +111,18 @@ class BaseFirmwareUsecase(FirmwareUsecase):
             device_ids = await self.control.get_registered()
             succeeded_device_ids: List[str] = []
             failed_device_ids: List[str] = []
+            skipped_device_ids: List[str] = []
             for device_id in device_ids:
+                try:
+                    node = await self.repo_node.read_node_by_device_id(device_id)
+                except DomainException:
+                    skipped_device_ids.append(device_id)
+                    continue
+
+                if node.board_variant != firmware.board_variant:
+                    skipped_device_ids.append(device_id)
+                    continue
+
                 try:
                     await self.control.firmware_update(
                         device_id=device_id,
@@ -120,6 +139,7 @@ class BaseFirmwareUsecase(FirmwareUsecase):
                 targeted_device_ids=device_ids,
                 succeeded_device_ids=succeeded_device_ids,
                 failed_device_ids=failed_device_ids,
+                skipped_device_ids=skipped_device_ids,
             )
             await self.log.info(
                 tag,
@@ -129,6 +149,7 @@ class BaseFirmwareUsecase(FirmwareUsecase):
                     "targeted_count": len(device_ids),
                     "succeeded_count": len(succeeded_device_ids),
                     "failed_count": len(failed_device_ids),
+                    "skipped_count": len(skipped_device_ids),
                 },
             )
             return result

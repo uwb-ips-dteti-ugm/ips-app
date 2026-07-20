@@ -20,3 +20,4 @@ class FirmwareDeployResult(BaseModel):
     targeted_device_ids: List[str] = Field(default_factory=list)
     succeeded_device_ids: List[str] = Field(default_factory=list)
     failed_device_ids: List[str] = Field(default_factory=list)
+    skipped_device_ids: List[str] = Field(default_factory=list)

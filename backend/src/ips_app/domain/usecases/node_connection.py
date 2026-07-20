@@ -4,7 +4,12 @@ from typing import Any, List, Optional
 
 class NodeConnectionUsecase(ABC):
     @abstractmethod
-    async def register_connection(self, device_id: str, connection: Any) -> None: ...
+    async def register_connection(
+        self,
+        device_id: str,
+        connection: Any,
+        board_variant: Optional[str] = None,
+    ) -> None: ...
 
     @abstractmethod
     async def unregister_connection(

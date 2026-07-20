@@ -174,7 +174,7 @@ def create_app() -> FastAPI:
         repo_ranging, repo_node, repo_node_network, log
     )
     ranging_scheduler_usecase = BaseRangingSchedulerUsecase(repo_node, node_control, log)
-    firmware_usecase = BaseFirmwareUsecase(repo_firmware, node_control, log)
+    firmware_usecase = BaseFirmwareUsecase(repo_firmware, repo_node, node_control, log)
     ranging_scheduler_config_usecase = BaseRangingSchedulerConfigUsecase(
         repo_ranging_scheduler_config, log
     )

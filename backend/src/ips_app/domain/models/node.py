@@ -26,6 +26,7 @@ class Node(BaseModel):
     name: str = Field(..., min_length=1)
     description: str = Field("", max_length=2000)
     address: Optional[int] = Field(None, ge=0, le=0xFFFF)
+    board_variant: Optional[str] = None
     status: NodeStatus = NodeStatus.PENDING
     approved_at: Optional[datetime] = None
     approved_by: Optional[Any] = None

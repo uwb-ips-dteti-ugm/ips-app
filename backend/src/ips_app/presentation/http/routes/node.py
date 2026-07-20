@@ -35,8 +35,12 @@ def create_router(
     router = APIRouter(prefix="/nodes", tags=["Node"])
 
     @router.websocket("/ws/{device_id}")
-    async def connect_node_websocket(device_id: str, websocket: WebSocket) -> None:
-        await handler.connect_node_websocket(device_id, websocket)
+    async def connect_node_websocket(
+        device_id: str,
+        websocket: WebSocket,
+        board_variant: Optional[str] = Query(None),
+    ) -> None:
+        await handler.connect_node_websocket(device_id, websocket, board_variant)
 
     @router.post(
         "",

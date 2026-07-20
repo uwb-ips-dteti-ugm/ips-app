@@ -165,11 +165,18 @@ class NodeHandler:
         await self.connection_usecase.restart_node(device_id)
         return MessageResponse(message="Node restart command sent successfully.")
 
-    async def connect_node_websocket(self, device_id: str, connection: Any) -> None:
+    async def connect_node_websocket(
+        self,
+        device_id: str,
+        connection: Any,
+        board_variant: Optional[str] = None,
+    ) -> None:
         tag = f"{self.tag_class}/connect_node_websocket"
         registered = False
         try:
-            await self.connection_usecase.register_connection(device_id, connection)
+            await self.connection_usecase.register_connection(
+                device_id, connection, board_variant
+            )
             registered = True
 
             await self._accept_node_connection(connection)
