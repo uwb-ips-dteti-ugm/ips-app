@@ -15,6 +15,17 @@ namespace infrastructure::wifi::connection
     ESP32Impl::ESP32Impl(contracts::logger::Leveled *logger)
         : logger(logger), connection_logged(false)
     {
+        // The ESP32 Arduino WiFi library defaults to WiFi.persistent(true), so esp_wifi
+        // auto-reconnects at boot using whatever SSID/password was last saved to NVS by a
+        // previous flash/test, independent of the compiled-in config::wifiSsid/wifiPassword.
+        // If that stale network is reachable, isConnected() reports true before the WiFi task
+        // ever calls connect() with the correct credentials, so the device silently stays on
+        // the old network. Disable persistence and clear any stale auto-join here, before
+        // App::initControllers() starts the WiFi task's connectivity checks, so the compiled
+        // .env SSID always wins.
+        WiFi.mode(WIFI_STA);
+        WiFi.persistent(false);
+        WiFi.disconnect(true);
     }
 
     void ESP32Impl::connect(const char *ssid, const char *password)
