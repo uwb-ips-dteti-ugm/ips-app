@@ -31,6 +31,10 @@
 #define UWB_FIRMWARE_BOARD_VARIANT "unknown"
 #endif
 
+#ifndef UWB_FIRMWARE_VERSION
+#define UWB_FIRMWARE_VERSION "unknown"
+#endif
+
 namespace config
 {
     constexpr uint32_t serialBaud = 115200;
@@ -56,6 +60,7 @@ namespace config
     constexpr uint32_t uwbServerConnectTimeoutMs = 5000;
 
     constexpr const char *boardVariant = UWB_FIRMWARE_BOARD_VARIANT;
+    constexpr const char *firmwareVersion = UWB_FIRMWARE_VERSION;
 
     constexpr uint32_t wifiTaskCheckIntervalMs = 5000;
     constexpr uint32_t wifiTaskStackDepth = 4096;

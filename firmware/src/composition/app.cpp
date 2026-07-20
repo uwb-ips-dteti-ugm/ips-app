@@ -95,6 +95,8 @@ namespace composition
         Serial.begin(config::serialBaud);
         delay(100);
 
+        logger.info(setupTag, "Firmware version %s (board_variant=%s)", config::firmwareVersion, config::boardVariant);
+
         _fastSPI = SPISettings(config::uwbSpiFastClockHz, MSBFIRST, SPI_MODE0);
         spiBegin(config::uwbPinIrq, config::uwbPinReset);
         spiSelect(config::uwbPinSelect);
