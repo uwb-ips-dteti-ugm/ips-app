@@ -119,7 +119,7 @@ namespace infrastructure::device::ota
         mbedtls_sha256_starts(&sha_ctx, 0);
 
         WiFiClient *stream = http.getStreamPtr();
-        uint8_t buffer[config::otaDownloadBufferSize];
+        static uint8_t buffer[config::otaDownloadBufferSize];
         uint32_t written = 0;
         models::Error result = models::Error::Ok;
 

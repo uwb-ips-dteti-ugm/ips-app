@@ -56,7 +56,7 @@ namespace config
     constexpr uint8_t wifiTaskPriority = 3;
 
     constexpr uint32_t uwbTaskCheckIntervalMs = 20;
-    constexpr uint32_t uwbTaskStackDepth = 8192;
+    constexpr uint32_t uwbTaskStackDepth = 20480;
     constexpr uint8_t uwbTaskPriority = 9;
 
     constexpr uint32_t otaHttpTimeoutMs = 15000;
