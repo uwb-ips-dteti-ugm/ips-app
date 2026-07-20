@@ -1,22 +1,28 @@
 "use server";
 
 import {
-  getLatestRangingRecord,
-  isRangingRecordData,
-  type RecordResponse,
-} from "@/lib/api/record";
+  getRangingRecords,
+  type RangingRecordResponse,
+} from "@/lib/api/ranging";
 import { getAuthSession } from "@/lib/auth/session";
+
+// The backend can only filter ranging records by a single node_id (returning
+// records where that node is either side of the pair), not "the latest
+// between specifically A and B" -- so we fetch everything touching the
+// source node within a recent window and pick the latest per counterpart
+// client-side, rather than one /ranging/latest call per target.
+const RANGE_MONITOR_WINDOW_MS = 10 * 60 * 1000;
 
 export type RangeMonitorRange = {
   distance: number;
   recordedAt: string;
-  sourceNodeDeviceId: string;
-  targetNodeDeviceId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
 };
 
 export type RangeMonitorRangeRow = {
   range: RangeMonitorRange | null;
-  targetNodeDeviceId: string;
+  targetNodeId: string;
 };
 
 export type RangeMonitorRangesActionResult =
@@ -30,20 +36,20 @@ export type RangeMonitorRangesActionResult =
     };
 
 export async function getRangeMonitorRangesAction({
-  sourceNodeDeviceId,
-  targetNodeDeviceIds,
+  sourceNodeId,
+  targetNodeIds,
 }: {
-  sourceNodeDeviceId: string;
-  targetNodeDeviceIds: string[];
+  sourceNodeId: string;
+  targetNodeIds: string[];
 }): Promise<RangeMonitorRangesActionResult> {
-  if (!sourceNodeDeviceId) {
+  if (!sourceNodeId) {
     return {
       error: "Select a node before monitoring ranges.",
       ok: false,
     };
   }
 
-  if (targetNodeDeviceIds.length === 0) {
+  if (targetNodeIds.length === 0) {
     return {
       ok: true,
       ranges: [],
@@ -59,35 +65,30 @@ export async function getRangeMonitorRangesAction({
   }
 
   try {
-    const ranges = await Promise.all(
-      targetNodeDeviceIds.map(async (targetNodeDeviceId) => {
-        const [forward, reverse] = await Promise.all([
-          getLatestRangingRecord(
-            {
-              source_node_device_ids: [sourceNodeDeviceId],
-              target_node_device_ids: [targetNodeDeviceId],
-            },
-            { accessToken: session.accessToken },
-          ),
-          getLatestRangingRecord(
-            {
-              source_node_device_ids: [targetNodeDeviceId],
-              target_node_device_ids: [sourceNodeDeviceId],
-            },
-            { accessToken: session.accessToken },
-          ),
-        ]);
+    const end = new Date();
+    const start = new Date(end.getTime() - RANGE_MONITOR_WINDOW_MS);
 
-        return {
-          range: pickLatestRange(forward.data, reverse.data),
-          targetNodeDeviceId,
-        };
-      }),
+    const records = await getRangingRecords(
+      {
+        end: end.toISOString(),
+        node_id: sourceNodeId,
+        start: start.toISOString(),
+      },
+      { accessToken: session.accessToken },
+    );
+
+    const latestByTargetId = pickLatestRecordPerCounterpart(
+      records,
+      sourceNodeId,
+      new Set(targetNodeIds),
     );
 
     return {
       ok: true,
-      ranges,
+      ranges: targetNodeIds.map((targetNodeId) => ({
+        range: toRange(latestByTargetId.get(targetNodeId), sourceNodeId, targetNodeId),
+        targetNodeId,
+      })),
     };
   } catch {
     return {
@@ -97,31 +98,48 @@ export async function getRangeMonitorRangesAction({
   }
 }
 
-function pickLatestRange(
-  first: RecordResponse | null,
-  second: RecordResponse | null,
-): RangeMonitorRange | null {
-  const ranges = [toRange(first), toRange(second)].filter(
-    (range): range is RangeMonitorRange => range !== null,
-  );
+function pickLatestRecordPerCounterpart(
+  records: RangingRecordResponse[],
+  sourceNodeId: string,
+  targetNodeIds: Set<string>,
+): Map<string, RangingRecordResponse> {
+  const latestByTargetId = new Map<string, RangingRecordResponse>();
 
-  ranges.sort(
-    (left, right) =>
-      new Date(right.recordedAt).getTime() - new Date(left.recordedAt).getTime(),
-  );
+  for (const record of records) {
+    const counterpart =
+      record.listener_node.id === sourceNodeId
+        ? record.initiator_node
+        : record.listener_node;
 
-  return ranges[0] ?? null;
+    if (!targetNodeIds.has(counterpart.id)) {
+      continue;
+    }
+
+    const existing = latestByTargetId.get(counterpart.id);
+    if (
+      !existing ||
+      new Date(record.recorded_at) > new Date(existing.recorded_at)
+    ) {
+      latestByTargetId.set(counterpart.id, record);
+    }
+  }
+
+  return latestByTargetId;
 }
 
-function toRange(record: RecordResponse | null): RangeMonitorRange | null {
-  if (!record || record.label !== "ranging" || !isRangingRecordData(record.data)) {
+function toRange(
+  record: RangingRecordResponse | undefined,
+  sourceNodeId: string,
+  targetNodeId: string,
+): RangeMonitorRange | null {
+  if (!record) {
     return null;
   }
 
   return {
-    distance: record.data.distance,
+    distance: record.distance,
     recordedAt: record.recorded_at,
-    sourceNodeDeviceId: record.data.source_node_device_id,
-    targetNodeDeviceId: record.data.target_node_device_id,
+    sourceNodeId,
+    targetNodeId,
   };
 }

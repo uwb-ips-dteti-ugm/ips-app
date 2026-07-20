@@ -1,4 +1,5 @@
-import { requestJson, requestText, type ApiRequestOptions } from "./client";
+import { requestJson, type ApiRequestOptions } from "./client";
+import type { MessageResponse } from "./common";
 import type { UserResponse } from "./user";
 
 export type RegisterRequest = {
@@ -17,22 +18,12 @@ export type RefreshTokenRequest = {
   refresh_token: string;
 };
 
-export type SetPasswordAuthRequest =
-  | {
-      username: string;
-      password?: string;
-    }
-  | {
-      username?: string;
-      password: string;
-    };
-
-export type SetPasswordAuthInfoRequest = {
-  username: string;
+export type ChangeMyPasswordRequest = {
+  old_password: string;
+  new_password: string;
 };
 
-export type SetPasswordWithOldPasswordRequest = {
-  old_password: string;
+export type ResetUserPasswordRequest = {
   new_password: string;
 };
 
@@ -75,35 +66,27 @@ export function register(
 }
 
 export function updateMyPassword(
-  request: SetPasswordWithOldPasswordRequest,
+  request: ChangeMyPasswordRequest,
   options?: ApiRequestOptions,
-): Promise<string> {
-  return requestText("/auth/me/password", {
+): Promise<MessageResponse> {
+  return requestJson<MessageResponse>("/auth/me/password", {
     ...options,
     json: request,
     method: "PATCH",
   });
 }
 
-export function updateMyAuthInfo(
-  request: SetPasswordAuthInfoRequest,
-  options?: ApiRequestOptions,
-): Promise<string> {
-  return requestText("/auth/me/info", {
-    ...options,
-    json: request,
-    method: "PATCH",
-  });
-}
-
-export function updateUserPasswordAuth(
+export function resetUserPassword(
   userId: string,
-  request: SetPasswordAuthRequest,
+  request: ResetUserPasswordRequest,
   options?: ApiRequestOptions,
-): Promise<string> {
-  return requestText(`/auth/${encodeURIComponent(userId)}/password-auth`, {
-    ...options,
-    json: request,
-    method: "PATCH",
-  });
+): Promise<MessageResponse> {
+  return requestJson<MessageResponse>(
+    `/auth/${encodeURIComponent(userId)}/password`,
+    {
+      ...options,
+      json: request,
+      method: "PATCH",
+    },
+  );
 }

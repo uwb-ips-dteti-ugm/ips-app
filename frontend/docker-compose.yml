@@ -1,0 +1,20 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ips-app-frontend
+    env_file:
+      - ./.env
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "${PORT_FRONTEND:-3000}:3000"
+    restart: unless-stopped
+
+networks:
+  default:
+    external: true
+    name: ips-app-network

@@ -5,29 +5,6 @@ from pydantic import BaseModel, Field
 from ips_app.domain.models.role import Role
 
 
-class UserAuthType(StrEnum):
-    PASSWORD = "password"
-
-
-class UserPasswordAuth(BaseModel):
-    type: Literal[UserAuthType.PASSWORD] = UserAuthType.PASSWORD
-    username: str
-    password_hash: str
-
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[Any] = None
-    updated_at: Optional[datetime] = None
-    updated_by: Optional[Any] = None
-
-
-UserAuth = Annotated[
-    Union[
-        UserPasswordAuth,
-    ],
-    Field(discriminator="type"),
-]
-
-
 class UserStatus(StrEnum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
@@ -37,10 +14,11 @@ class UserStatus(StrEnum):
 class User(BaseModel):
     id: Optional[Any] = None
     role: Role
-    name: str
-    bio: str = ""
-    auths: List[UserAuth] = Field(default_factory=list)
+    name: str = Field(..., min_length=1)
+    bio: str = Field("", max_length=2000)
     status: UserStatus = UserStatus.ACTIVE
+    username: str = Field(..., min_length=1)
+    password_hash: str = Field(..., min_length=1)
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -48,22 +26,11 @@ class User(BaseModel):
     updated_at: Optional[datetime] = None
     updated_by: Optional[Any] = None
 
-    @property
-    def password_auth(self) -> Optional[UserPasswordAuth]:
-        return next(
-            (
-                auth
-                for auth in self.auths
-                if isinstance(auth, UserPasswordAuth)
-            ),
-            None,
-        )
-
 
 class UserAccessTokenClaims(BaseModel):
     user_id: str
-    name: str
     role_id: str
+    name: str
 
 
 class UserRefreshTokenClaims(BaseModel):

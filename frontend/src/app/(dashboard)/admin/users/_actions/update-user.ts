@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { register } from "@/lib/api/auth";
+import { register, resetUserPassword } from "@/lib/api/auth";
 import { isApiError } from "@/lib/api/client";
 import {
   deleteUser,
+  updateUserInfo,
   updateUserRole,
   updateUserStatus,
   type UserStatus,
@@ -63,6 +64,79 @@ export async function registerUserAction({
     return { ok: true };
   } catch (error) {
     return updateErrorResult(error, "The user could not be added.");
+  }
+}
+
+export async function updateUserInfoAction({
+  bio,
+  name,
+  userId,
+  username,
+}: {
+  bio: string;
+  name: string;
+  userId: string;
+  username: string;
+}): Promise<UserUpdateActionResult> {
+  if (!userId || !name || !username) {
+    return {
+      error: "Name and username are required.",
+      ok: false,
+    };
+  }
+
+  const session = await getAuthSession();
+  if (!session) {
+    return {
+      error: "Your session has expired. Sign in again before updating users.",
+      ok: false,
+    };
+  }
+
+  try {
+    await updateUserInfo(
+      userId,
+      { bio, name, username },
+      { accessToken: session.accessToken },
+    );
+    revalidatePath(USERS_PATH);
+    return { ok: true };
+  } catch (error) {
+    return updateErrorResult(error, "The user could not be updated.");
+  }
+}
+
+export async function resetUserPasswordAction({
+  newPassword,
+  userId,
+}: {
+  newPassword: string;
+  userId: string;
+}): Promise<UserUpdateActionResult> {
+  if (!userId || !newPassword) {
+    return {
+      error: "Enter a new password before saving.",
+      ok: false,
+    };
+  }
+
+  const session = await getAuthSession();
+  if (!session) {
+    return {
+      error: "Your session has expired. Sign in again before updating users.",
+      ok: false,
+    };
+  }
+
+  try {
+    await resetUserPassword(
+      userId,
+      { new_password: newPassword },
+      { accessToken: session.accessToken },
+    );
+    return { ok: true };
+  } catch (error) {
+    return updateErrorResult(error, "The user password could not be reset.");
   }
 }
 

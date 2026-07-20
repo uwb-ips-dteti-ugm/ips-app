@@ -1,5 +1,6 @@
 import { requestJson, type ApiRequestOptions } from "./client";
 import type {
+  AuditedFields,
   JsonObject,
   MessageResponse,
   PaginatedResponse,
@@ -16,13 +17,11 @@ export type SetPermissionRequest = {
   description?: string;
 };
 
-export type PermissionResponse = {
+export type PermissionResponse = AuditedFields & {
   id: string;
   name: string;
   description: string;
   preferences: JsonObject;
-  created_at: string;
-  updated_at: string | null;
 };
 
 export type PermissionsResponse = PaginatedResponse<PermissionResponse>;

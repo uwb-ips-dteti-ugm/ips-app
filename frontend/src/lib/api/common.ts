@@ -8,21 +8,23 @@ export type MessageResponse = {
   message: string;
 };
 
-export type PaginationMeta = {
+export type AuditedFields = {
+  created_at: string;
+  created_by: string | null;
+  updated_at: string | null;
+  updated_by: string | null;
+};
+
+export type PaginatedResponse<T> = {
+  items: T[];
   page: number;
   limit: number;
   total: number;
 };
 
-export type PaginatedResponse<T> = {
-  data: T[];
-  meta: PaginationMeta;
-};
-
 export type PaginationQuery = {
   page?: number;
   limit?: number;
-  cursor_id?: string;
   search?: string;
 };
 

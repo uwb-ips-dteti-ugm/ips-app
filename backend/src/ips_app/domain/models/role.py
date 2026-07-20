@@ -6,10 +6,10 @@ from ips_app.domain.models.permission import Permission
 
 class Role(BaseModel):
     id: Optional[Any] = None
-    name: str
-    description: str = ""
-    preferences: Dict[str, Any] = Field(default_factory=dict)
+    name: str = Field(..., min_length=1)
+    description: str = Field("", max_length=2000)
     is_default: bool = False
+    preferences: Dict[str, Any] = Field(default_factory=dict)
 
     permissions: List[Permission] = Field(default_factory=list)
 

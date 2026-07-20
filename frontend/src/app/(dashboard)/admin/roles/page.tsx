@@ -10,10 +10,10 @@ import {
 import { RolesListContent } from "./_components/RolesListContent";
 import { getRolesPageData } from "./_lib/get-roles-page-data";
 import {
-  getCursorListKey,
-  parseCursorListState,
+  getPageListKey,
+  parsePageListState,
   type PageSearchParams,
-} from "../_lib/cursor-list-state";
+} from "../_lib/page-list-state";
 
 type RolesPageProps = {
   searchParams: Promise<PageSearchParams>;
@@ -26,7 +26,7 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
     redirect("/sign-in");
   }
 
-  const state = parseCursorListState(await searchParams);
+  const state = parsePageListState(await searchParams);
   const data = await getRolesPageData(session.accessToken, state);
 
   if (!data.canViewRoles) {
@@ -40,14 +40,15 @@ export default async function RolesPage({ searchParams }: RolesPageProps) {
       <PageHeader title="Roles" subtitle="View and manage user roles." />
 
       <RolesListContent
-        key={getCursorListKey(state)}
+        key={getPageListKey(state)}
         canDeleteRoles={data.canDeleteRoles}
         canManageRoles={data.canManageRoles}
         canViewPermissions={data.canViewPermissions}
-        meta={data.roles.meta}
+        limit={data.roles.limit}
         permissions={data.permissions}
-        roles={data.roles.data}
+        roles={data.roles.items}
         state={state}
+        total={data.roles.total}
       />
     </PageContent>
   );

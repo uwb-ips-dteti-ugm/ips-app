@@ -94,7 +94,6 @@ export function NodeStatusBadge({ status }: { status: NodeStatus }) {
       "border-[#4988C4]/40 bg-[#BDE8F5]/50 text-[#0F2854] dark:text-[#BDE8F5]",
     pending:
       "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    revoked: "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
     suspended:
       "border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300",
   }[status];

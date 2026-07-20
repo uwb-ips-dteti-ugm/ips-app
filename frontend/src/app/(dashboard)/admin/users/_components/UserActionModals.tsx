@@ -12,7 +12,12 @@ import { useErrorToast } from "@/shared/components/ErrorToast";
 import { SelectField, TextField } from "@/shared/components/FormControls";
 import { Modal, ModalActions } from "@/shared/components/Modal";
 
-import { deleteUserAction, registerUserAction } from "../_actions/update-user";
+import {
+  deleteUserAction,
+  registerUserAction,
+  resetUserPasswordAction,
+  updateUserInfoAction,
+} from "../_actions/update-user";
 import type { UserRoleFilterOption } from "../_lib/get-users-page-data";
 
 type UserModalProps = {
@@ -114,6 +119,126 @@ export function AddUserModal({
           pendingLabel="Adding"
           pending={pending}
           submitDisabled={roles.length === 0}
+          onClose={onClose}
+        />
+      </form>
+    </Modal>
+  );
+}
+
+export function EditUserModal({ onClose, user }: UserModalProps) {
+  const router = useRouter();
+  const { showError } = useErrorToast();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Modal title="Edit User" onClose={onClose}>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const formData = new FormData(event.currentTarget);
+
+          startTransition(async () => {
+            const result = await updateUserInfoAction({
+              bio: getFormString(formData, "bio"),
+              name: getFormString(formData, "name"),
+              userId: user.id,
+              username: getFormString(formData, "username"),
+            });
+
+            if (!result.ok) {
+              showError(result.error);
+              return;
+            }
+
+            onClose();
+            router.refresh();
+          });
+        }}
+      >
+        <TextField label="Name" name="name" defaultValue={user.name} required />
+        <TextField
+          label="Username"
+          name="username"
+          defaultValue={user.username}
+          required
+        />
+        <TextField label="Bio" name="bio" defaultValue={user.bio ?? ""} />
+
+        <ModalActions
+          submitLabel="Save"
+          pendingLabel="Saving"
+          pending={pending}
+          onClose={onClose}
+        />
+      </form>
+    </Modal>
+  );
+}
+
+export function ResetUserPasswordModal({ onClose, user }: UserModalProps) {
+  const { showError } = useErrorToast();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Modal
+      title="Change Password"
+      onClose={onClose}
+      widthClassName="max-w-md"
+    >
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const formData = new FormData(event.currentTarget);
+          const newPassword = getFormString(formData, "new_password");
+          const confirmPassword = getFormString(formData, "confirm_password");
+
+          if (newPassword !== confirmPassword) {
+            showError("Passwords do not match.");
+            return;
+          }
+
+          startTransition(async () => {
+            const result = await resetUserPasswordAction({
+              newPassword,
+              userId: user.id,
+            });
+
+            if (!result.ok) {
+              showError(result.error);
+              return;
+            }
+
+            onClose();
+          });
+        }}
+      >
+        <p className="text-sm leading-6 text-[#0F2854] dark:text-white">
+          Set a new password for{" "}
+          <span className="font-semibold">{user.name}</span>.
+        </p>
+
+        <TextField
+          label="New password"
+          name="new_password"
+          type="password"
+          autoComplete="new-password"
+          required
+        />
+        <TextField
+          label="Confirm password"
+          name="confirm_password"
+          type="password"
+          autoComplete="new-password"
+          required
+        />
+
+        <ModalActions
+          submitLabel="Save"
+          pendingLabel="Saving"
+          pending={pending}
           onClose={onClose}
         />
       </form>

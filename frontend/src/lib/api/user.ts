@@ -1,17 +1,20 @@
 import { requestJson, type ApiRequestOptions } from "./client";
 import type {
+  AuditedFields,
   JsonObject,
   MessageResponse,
   PaginatedResponse,
   PaginationQuery,
 } from "./common";
 import type { PermissionResponse } from "./permission";
+import type { RoleResponse } from "./role";
 
 export type UserStatus = "active" | "suspended" | "banned";
 
 export type SetUserInfoRequest = {
   name?: string;
   bio?: string;
+  username?: string;
 };
 
 export type SetUserRoleRequest = {
@@ -22,23 +25,14 @@ export type SetUserStatusRequest = {
   status: UserStatus;
 };
 
-export type RoleSummaryResponse = {
+export type UserResponse = AuditedFields & {
   id: string;
   name: string;
-  description: string;
-  is_default: boolean;
-};
-
-export type UserResponse = {
-  id: string;
-  name: string;
-  username: string | null;
+  username: string;
   bio: string;
   status: UserStatus;
-  role: RoleSummaryResponse;
+  role: RoleResponse;
   preferences: JsonObject;
-  created_at: string;
-  updated_at: string | null;
 };
 
 export type UsersResponse = PaginatedResponse<UserResponse>;

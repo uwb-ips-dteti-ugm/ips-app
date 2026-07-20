@@ -10,10 +10,10 @@ import {
 import { PermissionsListContent } from "./_components/PermissionsListContent";
 import { getPermissionsPageData } from "./_lib/get-permissions-page-data";
 import {
-  getCursorListKey,
-  parseCursorListState,
+  getPageListKey,
+  parsePageListState,
   type PageSearchParams,
-} from "../_lib/cursor-list-state";
+} from "../_lib/page-list-state";
 
 type PermissionsPageProps = {
   searchParams: Promise<PageSearchParams>;
@@ -28,7 +28,7 @@ export default async function PermissionsPage({
     redirect("/sign-in");
   }
 
-  const state = parseCursorListState(await searchParams);
+  const state = parsePageListState(await searchParams);
   const data = await getPermissionsPageData(session.accessToken, state);
 
   if (!data.canViewPermissions) {
@@ -45,12 +45,13 @@ export default async function PermissionsPage({
       />
 
       <PermissionsListContent
-        key={getCursorListKey(state)}
+        key={getPageListKey(state)}
         canDeletePermissions={data.canDeletePermissions}
         canManagePermissions={data.canManagePermissions}
-        meta={data.permissions.meta}
-        permissions={data.permissions.data}
+        limit={data.permissions.limit}
+        permissions={data.permissions.items}
         state={state}
+        total={data.permissions.total}
       />
     </PageContent>
   );

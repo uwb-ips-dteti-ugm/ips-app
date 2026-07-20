@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
-import type { PaginationMeta } from "@/lib/api/common";
 import type { NodeResponse } from "@/lib/api/node";
 import checkIcon from "@/shared/assets/CheckIcon.svg";
 import editIcon from "@/shared/assets/EditIcon.svg";
@@ -15,7 +14,7 @@ import {
   TableViewport,
 } from "@/shared/components/Table";
 
-import { CursorResourcePagination } from "../../../admin/_components/CursorResourcePagination";
+import { ResourcePagination } from "../../../admin/_components/ResourcePagination";
 import type { NodeNetworkFilterOption } from "../_lib/get-nodes-page-data";
 import type { NodesListState } from "../_lib/nodes-list-state";
 import { ApproveNodeModal } from "./ApproveNodeModal";
@@ -28,10 +27,11 @@ const NODES_AUTO_REFRESH_INTERVAL_MS = 3_000;
 
 type NodesListContentProps = {
   canManageNodes: boolean;
-  meta: PaginationMeta;
+  limit: number;
   networks: NodeNetworkFilterOption[];
   nodes: NodeResponse[];
   state: NodesListState;
+  total: number;
 };
 
 type ActiveNodeModal =
@@ -43,17 +43,16 @@ type ActiveNodeModal =
 
 export function NodesListContent({
   canManageNodes,
-  meta,
+  limit,
   networks,
   nodes,
   state,
+  total,
 }: NodesListContentProps) {
   const router = useRouter();
   const [activeModal, setActiveModal] = useState<ActiveNodeModal>(null);
   const [isAutoRefreshPending, startAutoRefreshTransition] = useTransition();
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const nextCursorId = nodes.at(-1)?.id;
-  const hasNext = Boolean(nextCursorId) && meta.total > nodes.length;
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -108,13 +107,13 @@ export function NodesListContent({
           {isTableLoading ? <TableLoadingOverlay label="Loading nodes" /> : null}
         </TableViewport>
 
-        <CursorResourcePagination
-          cursorId={state.cursorId}
-          hasNext={hasNext}
+        <ResourcePagination
           itemCount={nodes.length}
           itemLabel="node"
-          nextCursorId={nextCursorId}
+          limit={limit}
           onTableLoadingChange={setIsTableLoading}
+          page={state.page}
+          total={total}
         />
       </TableFrame>
 

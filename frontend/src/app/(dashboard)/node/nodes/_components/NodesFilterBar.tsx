@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { FilterBar } from "@/shared/components/FilterBar";
 import { SelectField, TextField } from "@/shared/components/FormControls";
 
-import { useCursorListNavigation } from "../../../admin/_hooks/use-cursor-list-navigation";
-import { LIST_LIMIT_OPTIONS } from "../../../admin/_lib/cursor-list-state";
+import { useListNavigation } from "../../../admin/_hooks/use-list-navigation";
+import { LIST_LIMIT_OPTIONS } from "../../../admin/_lib/page-list-state";
 import type { NodeNetworkFilterOption } from "../_lib/get-nodes-page-data";
 import {
   parseAddressFilter,
@@ -30,7 +30,7 @@ export function NodesFilterBar({
 }: NodesFilterBarProps) {
   const [addressValue, setAddressValue] = useState(filters.address);
   const [searchValue, setSearchValue] = useState(filters.search);
-  const { replaceQuery } = useCursorListNavigation(onTableLoadingChange);
+  const { replaceQuery } = useListNavigation(onTableLoadingChange);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -84,7 +84,6 @@ export function NodesFilterBar({
         <option value="pending">Pending</option>
         <option value="approved">Approved</option>
         <option value="suspended">Suspended</option>
-        <option value="revoked">Revoked</option>
       </SelectField>
 
       <SelectField
@@ -168,7 +167,7 @@ export function NodesFilterBar({
 }
 
 function replaceFilters(
-  replaceQuery: ReturnType<typeof useCursorListNavigation>["replaceQuery"],
+  replaceQuery: ReturnType<typeof useListNavigation>["replaceQuery"],
   filters: NodesListFilters,
 ) {
   replaceQuery((searchParams) => {

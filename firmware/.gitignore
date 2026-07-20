@@ -6,3 +6,5 @@
 .env
 .venv/
 __pycache__/
+
+scripts/upload_firmware.config.json

@@ -12,7 +12,7 @@ import {
   type UsersListFilters,
   writeUsersListFilters,
 } from "../_lib/users-list-state";
-import { useUsersListNavigation } from "./useUsersListNavigation";
+import { useListNavigation } from "../../_hooks/use-list-navigation";
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -30,7 +30,7 @@ export function UsersFilterBar({
   roles,
 }: UsersFilterBarProps) {
   const [searchValue, setSearchValue] = useState(filters.search);
-  const { replaceQuery } = useUsersListNavigation(onTableLoadingChange);
+  const { replaceQuery } = useListNavigation(onTableLoadingChange);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -130,7 +130,7 @@ export function UsersFilterBar({
 }
 
 function replaceFilters(
-  replaceQuery: ReturnType<typeof useUsersListNavigation>["replaceQuery"],
+  replaceQuery: ReturnType<typeof useListNavigation>["replaceQuery"],
   filters: UsersListFilters,
 ) {
   replaceQuery((searchParams) => {
