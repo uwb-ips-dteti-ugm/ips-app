@@ -45,12 +45,19 @@ namespace infrastructure::client::uwb_server
         return normalized;
     }
 
-    String buildDevicePath(const String &path, const char *device_id)
+    String buildDevicePath(const String &path, const char *device_id, const String &board_variant)
     {
         String device_path = path;
         if (!device_path.endsWith("/"))
             device_path += "/";
         device_path += device_id;
+
+        if (board_variant.length() > 0)
+        {
+            device_path += "?board_variant=";
+            device_path += board_variant;
+        }
+
         return device_path;
     }
 
@@ -96,13 +103,15 @@ namespace infrastructure::client::uwb_server
         const char *host,
         uint16_t port,
         const char *path,
-        uint32_t connect_timeout_ms)
+        uint32_t connect_timeout_ms,
+        const char *board_variant)
         : client(client),
           scheme(normalizeScheme(scheme)),
           host(host ? host : ""),
           port(port),
           path(normalizePath(path)),
           connect_timeout_ms(connect_timeout_ms),
+          board_variant(board_variant ? board_variant : ""),
           logger(logger)
     {
         this->host.trim();
@@ -122,7 +131,7 @@ namespace infrastructure::client::uwb_server
             return models::Error::InvalidArgument;
         }
 
-        const String device_path = buildDevicePath(path, device_id);
+        const String device_path = buildDevicePath(path, device_id, board_variant);
         client->disconnect();
 
         if (scheme == "wss")

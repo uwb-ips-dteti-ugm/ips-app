@@ -20,7 +20,8 @@ namespace infrastructure::client::uwb_server
             const char *host,
             uint16_t port,
             const char *path,
-            uint32_t connect_timeout_ms = 5000);
+            uint32_t connect_timeout_ms = 5000,
+            const char *board_variant = "");
         ~WSClientImpl() override = default;
         WSClientImpl(const WSClientImpl &) = delete;
         WSClientImpl &operator=(const WSClientImpl &) = delete;
@@ -46,6 +47,7 @@ namespace infrastructure::client::uwb_server
         uint16_t port;
         String path;
         uint32_t connect_timeout_ms;
+        String board_variant;
         contracts::logger::Leveled *logger;
     };
 }

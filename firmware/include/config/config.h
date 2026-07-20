@@ -27,6 +27,10 @@
 #define UWB_FIRMWARE_SERVER_PATH "/"
 #endif
 
+#ifndef UWB_FIRMWARE_BOARD_VARIANT
+#define UWB_FIRMWARE_BOARD_VARIANT "unknown"
+#endif
+
 namespace config
 {
     constexpr uint32_t serialBaud = 115200;
@@ -50,6 +54,8 @@ namespace config
     constexpr uint16_t uwbServerPort = UWB_FIRMWARE_SERVER_PORT;
     constexpr const char *uwbServerPath = UWB_FIRMWARE_SERVER_PATH;
     constexpr uint32_t uwbServerConnectTimeoutMs = 5000;
+
+    constexpr const char *boardVariant = UWB_FIRMWARE_BOARD_VARIANT;
 
     constexpr uint32_t wifiTaskCheckIntervalMs = 5000;
     constexpr uint32_t wifiTaskStackDepth = 4096;

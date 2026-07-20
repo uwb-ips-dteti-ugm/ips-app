@@ -67,7 +67,8 @@ namespace composition
               config::uwbServerHost,
               config::uwbServerPort,
               config::uwbServerPath,
-              config::uwbServerConnectTimeoutMs),
+              config::uwbServerConnectTimeoutMs,
+              config::boardVariant),
           wifi_service(&wifi_connection, &logger),
           uwb_service(&logger, &uwb_server, &device_control, &ranging, &wifi_connection, &ota),
           wifi_controller(
