@@ -23,7 +23,7 @@ export async function getRangeMonitorPageData(
 ): Promise<RangeMonitorPageData> {
   const permissionNames = await readPermissionNames(accessToken);
   const canViewRangeMonitor =
-    permissionNames.has("node/view") && permissionNames.has("record/view");
+    permissionNames.has("node/view") && permissionNames.has("ranging/view");
 
   if (!canViewRangeMonitor) {
     return {
@@ -34,7 +34,7 @@ export async function getRangeMonitorPageData(
 
   const nodes = await getNodes(
     {
-      limit: 500,
+      limit: 100,
       page: 0,
       status: "approved",
     },
@@ -43,7 +43,7 @@ export async function getRangeMonitorPageData(
 
   return {
     canViewRangeMonitor,
-    nodes: nodes.data.flatMap((node) => {
+    nodes: nodes.items.flatMap((node) => {
       if (!node.network || node.address === null) {
         return [];
       }

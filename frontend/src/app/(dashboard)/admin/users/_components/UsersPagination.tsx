@@ -1,50 +1,45 @@
 "use client";
 
-import { CursorPagination } from "@/shared/components/CursorPagination";
+import { Pagination } from "@/shared/components/Pagination";
 
 import {
-  writeNextUsersCursor,
-  writePreviousUsersCursor,
+  writeNextUsersPage,
+  writePreviousUsersPage,
 } from "../_lib/users-list-state";
-import { useUsersListNavigation } from "./useUsersListNavigation";
+import { useListNavigation } from "../../_hooks/use-list-navigation";
 
 type UsersPaginationProps = {
-  cursorId: string;
-  hasNext: boolean;
   itemCount: number;
-  nextCursorId?: string;
+  limit: number;
   onTableLoadingChange: (isLoading: boolean) => void;
+  page: number;
+  total: number;
 };
 
 export function UsersPagination({
-  cursorId,
-  hasNext,
   itemCount,
-  nextCursorId,
+  limit,
   onTableLoadingChange,
+  page,
+  total,
 }: UsersPaginationProps) {
-  const { isPending, replaceQuery } =
-    useUsersListNavigation(onTableLoadingChange);
+  const { isPending, replaceQuery } = useListNavigation(onTableLoadingChange);
 
   return (
-    <CursorPagination
+    <Pagination
       busy={isPending}
-      hasNext={hasNext && Boolean(nextCursorId)}
-      hasPrevious={Boolean(cursorId)}
+      hasNext={(page + 1) * limit < total}
+      hasPrevious={page > 0}
       itemCount={itemCount}
       itemLabel="user"
-      onNext={() => {
-        if (!nextCursorId) {
-          return;
-        }
-
+      onNext={() =>
         replaceQuery((searchParams) => {
-          writeNextUsersCursor(searchParams, nextCursorId);
-        });
-      }}
+          writeNextUsersPage(searchParams, page);
+        })
+      }
       onPrevious={() =>
         replaceQuery((searchParams) => {
-          writePreviousUsersCursor(searchParams);
+          writePreviousUsersPage(searchParams, page);
         })
       }
     />

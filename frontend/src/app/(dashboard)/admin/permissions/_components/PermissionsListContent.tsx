@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import type { PaginationMeta } from "@/lib/api/common";
 import type { PermissionResponse } from "@/lib/api/permission";
 import editIcon from "@/shared/assets/EditIcon.svg";
 import infoIcon from "@/shared/assets/InfoIcon.svg";
@@ -16,9 +15,9 @@ import {
   TableViewport,
 } from "@/shared/components/Table";
 
-import { CursorResourceFilterBar } from "../../_components/CursorResourceFilterBar";
-import { CursorResourcePagination } from "../../_components/CursorResourcePagination";
-import type { CursorListState } from "../../_lib/cursor-list-state";
+import { ResourceFilterBar } from "../../_components/ResourceFilterBar";
+import { ResourcePagination } from "../../_components/ResourcePagination";
+import type { PageListState } from "../../_lib/page-list-state";
 import {
   AddPermissionModal,
   DeletePermissionModal,
@@ -30,9 +29,10 @@ import { PermissionsTable } from "./PermissionsTable";
 type PermissionsListContentProps = {
   canDeletePermissions: boolean;
   canManagePermissions: boolean;
-  meta: PaginationMeta;
+  limit: number;
   permissions: PermissionResponse[];
-  state: CursorListState;
+  state: PageListState;
+  total: number;
 };
 
 type ActivePermissionModal =
@@ -48,18 +48,17 @@ type ActivePermissionModal =
 export function PermissionsListContent({
   canDeletePermissions,
   canManagePermissions,
-  meta,
+  limit,
   permissions,
   state,
+  total,
 }: PermissionsListContentProps) {
   const [activeModal, setActiveModal] = useState<ActivePermissionModal>(null);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const nextCursorId = permissions.at(-1)?.id;
-  const hasNext = Boolean(nextCursorId) && meta.total > permissions.length;
 
   return (
     <>
-      <CursorResourceFilterBar
+      <ResourceFilterBar
         actions={
           canManagePermissions ? (
             <button
@@ -120,13 +119,13 @@ export function PermissionsListContent({
           ) : null}
         </TableViewport>
 
-        <CursorResourcePagination
-          cursorId={state.cursorId}
-          hasNext={hasNext}
+        <ResourcePagination
           itemCount={permissions.length}
           itemLabel="permission"
-          nextCursorId={nextCursorId}
+          limit={limit}
           onTableLoadingChange={setIsTableLoading}
+          page={state.page}
+          total={total}
         />
       </TableFrame>
 

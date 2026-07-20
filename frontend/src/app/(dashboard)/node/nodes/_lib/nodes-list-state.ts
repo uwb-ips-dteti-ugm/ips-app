@@ -1,6 +1,6 @@
 import type { NodeStatus } from "@/lib/api/node";
 
-import { LIST_LIMIT_OPTIONS } from "../../../admin/_lib/cursor-list-state";
+import { LIST_LIMIT_OPTIONS } from "../../../admin/_lib/page-list-state";
 
 const MAX_UWB_VALUE = 0xffff;
 
@@ -17,8 +17,7 @@ export type NodesListFilters = {
 };
 
 export type NodesListState = NodesListFilters & {
-  cursorId: string;
-  cursorStack: string[];
+  page: number;
 };
 
 export type NodesPageSearchParams = Record<
@@ -31,11 +30,10 @@ export function parseNodesListState(
 ): NodesListState {
   return {
     address: getAddress(searchParams.address),
-    cursorId: getSearchParam(searchParams.cursor_id),
-    cursorStack: getSearchParamValues(searchParams.cursor_stack),
     isOnline: getOnline(searchParams.is_online),
     limit: getLimit(searchParams.limit),
     networkId: getSearchParam(searchParams.network_id),
+    page: getPage(searchParams.page),
     search: getSearchParam(searchParams.search).trim(),
     status: getStatus(searchParams.status),
   };
@@ -44,11 +42,10 @@ export function parseNodesListState(
 export function getNodesListKey(state: NodesListState): string {
   return [
     state.address,
-    state.cursorId,
-    ...state.cursorStack,
     state.isOnline,
     String(state.limit),
     state.networkId,
+    String(state.page),
     state.search,
     state.status,
   ].join(":");
@@ -64,8 +61,26 @@ export function writeNodesListFilters(
   setOptionalParam(searchParams, "search", filters.search.trim());
   setOptionalParam(searchParams, "status", filters.status);
   searchParams.set("limit", String(filters.limit));
-  searchParams.delete("cursor_id");
-  searchParams.delete("cursor_stack");
+  searchParams.delete("page");
+}
+
+export function writeNextNodesPage(
+  searchParams: URLSearchParams,
+  page: number,
+) {
+  searchParams.set("page", String(page + 1));
+}
+
+export function writePreviousNodesPage(
+  searchParams: URLSearchParams,
+  page: number,
+) {
+  const previousPage = Math.max(0, page - 1);
+  setOptionalParam(
+    searchParams,
+    "page",
+    previousPage ? String(previousPage) : "",
+  );
 }
 
 export function parseAddressFilter(value: string): string | null {
@@ -98,9 +113,14 @@ function getLimit(value: string | string[] | undefined): number {
     : LIST_LIMIT_OPTIONS[0];
 }
 
+function getPage(value: string | string[] | undefined): number {
+  const page = Number.parseInt(getSearchParam(value), 10);
+  return Number.isFinite(page) && page > 0 ? page : 0;
+}
+
 function getStatus(value: string | string[] | undefined): NodeStatusFilter {
   const status = getSearchParam(value);
-  return ["pending", "approved", "suspended", "revoked"].includes(status)
+  return ["pending", "approved", "suspended"].includes(status)
     ? (status as NodeStatus)
     : "";
 }
@@ -112,13 +132,6 @@ function getOnline(value: string | string[] | undefined): NodeOnlineFilter {
 
 function getSearchParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
-}
-
-function getSearchParamValues(
-  value: string | string[] | undefined,
-): string[] {
-  const values = Array.isArray(value) ? value : value ? [value] : [];
-  return values.map((item) => item.trim()).filter(Boolean);
 }
 
 function setOptionalParam(

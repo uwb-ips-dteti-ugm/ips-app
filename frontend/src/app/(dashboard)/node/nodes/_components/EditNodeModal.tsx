@@ -94,7 +94,6 @@ export function EditNodeModal({
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="suspended">Suspended</option>
-          <option value="revoked">Revoked</option>
         </SelectField>
 
         <ModalActions

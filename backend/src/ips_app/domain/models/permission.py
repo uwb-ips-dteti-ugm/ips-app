@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 class Permission(BaseModel):
     id: Optional[Any] = None
-    name: str
-    description: str = ""
+    name: str = Field(..., min_length=1)
+    description: str = Field("", max_length=2000)
     preferences: Dict[str, Any] = Field(default_factory=dict)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

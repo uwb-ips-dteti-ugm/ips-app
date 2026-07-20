@@ -22,6 +22,11 @@ namespace models
         UwbResponseFrameTooLong,
         UwbUnexpectedResponseFrame,
         UwbResponseTxFailed,
+        OtaDownloadFailed,
+        OtaSizeMismatch,
+        OtaChecksumMismatch,
+        OtaInsufficientSpace,
+        OtaFlashFailed,
         Unimplemented,
         Unknown
     };
@@ -62,6 +67,16 @@ namespace models
             return "UWB unexpected response frame";
         case Error::UwbResponseTxFailed:
             return "UWB response TX failed";
+        case Error::OtaDownloadFailed:
+            return "OTA download failed";
+        case Error::OtaSizeMismatch:
+            return "OTA size mismatch";
+        case Error::OtaChecksumMismatch:
+            return "OTA checksum mismatch";
+        case Error::OtaInsufficientSpace:
+            return "OTA insufficient space";
+        case Error::OtaFlashFailed:
+            return "OTA flash failed";
         case Error::Unimplemented:
             return "Unimplemented";
         case Error::Unknown:

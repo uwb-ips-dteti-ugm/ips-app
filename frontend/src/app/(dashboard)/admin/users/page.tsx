@@ -44,10 +44,12 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         canDeleteUsers={data.canDeleteUsers}
         canManageUsers={data.canManageUsers}
         canRegisterUsers={data.canRegisterUsers}
-        meta={data.users.meta}
+        canResetUserPasswords={data.canResetUserPasswords}
+        limit={data.users.limit}
         roles={data.roles}
         state={state}
-        users={data.users.data}
+        total={data.users.total}
+        users={data.users.items}
       />
     </PageContent>
   );

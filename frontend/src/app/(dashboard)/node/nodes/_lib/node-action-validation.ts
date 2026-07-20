@@ -74,7 +74,7 @@ export function parseNetworkAssignment(
 }
 
 export function parseNodeStatus(value: string): NodeStatus | null {
-  return ["pending", "approved", "suspended", "revoked"].includes(value)
+  return ["pending", "approved", "suspended"].includes(value)
     ? (value as NodeStatus)
     : null;
 }

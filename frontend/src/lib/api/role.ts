@@ -1,5 +1,6 @@
 import { requestJson, type ApiRequestOptions } from "./client";
 import type {
+  AuditedFields,
   JsonObject,
   MessageResponse,
   PaginatedResponse,
@@ -19,15 +20,13 @@ export type SetRoleRequest = {
   description?: string;
 };
 
-export type RoleResponse = {
+export type RoleResponse = AuditedFields & {
   id: string;
   name: string;
   description: string;
   is_default: boolean;
   permissions: PermissionResponse[];
   preferences: JsonObject;
-  created_at: string;
-  updated_at: string | null;
 };
 
 export type RolesResponse = PaginatedResponse<RoleResponse>;

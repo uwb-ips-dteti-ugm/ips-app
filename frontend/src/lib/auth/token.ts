@@ -16,10 +16,20 @@ export function decodeJwtPayload<T>(token: string): T | null {
   }
 
   try {
-    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as T;
+    return JSON.parse(decodeBase64Url(payload)) as T;
   } catch {
     return null;
   }
+}
+
+// Uses atob() instead of Buffer so this module works in both the Node.js and Edge
+// runtimes (Buffer isn't available in Edge middleware).
+function decodeBase64Url(value: string): string {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 export function isJwtExpired(token: string, skewMs = 30_000): boolean {
