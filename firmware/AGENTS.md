@@ -271,19 +271,28 @@ It accepts connections from the three device IDs hardcoded in `DEVICE_ADDRESSES`
 
 ## Uploading Firmware
 
-There is no CI/CD for OTA — after a local `pio run` build, upload the resulting `.bin` to the backend manually with `scripts/upload_firmware.py`:
+There is no CI/CD for OTA — after a local `pio run` build, upload the resulting `.bin` to the backend manually with `scripts/upload_firmware.py`, run from the project root with no arguments:
 
 ```bash
-python3 -m pip install -r scripts/requirements.txt
-python3 scripts/upload_firmware.py \
-  --file .pio/build/esp32dev-16mb/firmware.bin \
-  --version 1.2.0 \
-  --board-variant esp32dev-16mb \
-  --backend-url http://localhost:8000 \
-  --username admin --password CHANGE_ME
+python3 -m pip install -r firmware/scripts/requirements.txt
+cp firmware/scripts/upload_firmware.config.example.json firmware/scripts/upload_firmware.config.json
+# edit upload_firmware.config.json with your values
+python3 firmware/scripts/upload_firmware.py
 ```
 
-The script computes the file's size and SHA-256 checksum locally, signs in to obtain a bearer token (or accepts `--token` directly), and `POST`s the binary plus metadata as `multipart/form-data` to `/firmware`. The backend re-derives the checksum from the received bytes itself — the client-sent checksum is only used to reject a corrupted upload early. From there, an admin can list and push the uploaded version to all currently connected nodes from the frontend's Firmware page (`POST /firmware/{id}/deploy`), which fans out an OTA command (code `4`) to every node over its existing WebSocket connection.
+Every setting is read from `firmware/scripts/upload_firmware.config.json` (gitignored — copy it from `upload_firmware.config.example.json` and fill in your values; bump `version` before each upload):
+
+```json
+{
+  "version": "1.2.0",
+  "backend_url": "http://localhost:8000",
+  "board_variant": "esp32dev-16mb",
+  "username": "admin",
+  "password": "CHANGE_ME"
+}
+```
+
+`board_variant` (one of the PlatformIO environments, e.g. `esp32dev-8mb`/`esp32dev-16mb`) determines both the binary's location (`firmware/.pio/build/<board_variant>/firmware.bin`) and the value sent to the backend. The script computes the file's size and SHA-256 checksum locally, signs in with `username`/`password` to obtain a bearer token, and `POST`s the binary plus metadata as `multipart/form-data` to `/firmware`. The backend re-derives the checksum from the received bytes itself — the client-sent checksum is only used to reject a corrupted upload early. From there, an admin can list and push the uploaded version to all currently connected nodes from the frontend's Firmware page (`POST /firmware/{id}/deploy`), which fans out an OTA command (code `4`) to every node over its existing WebSocket connection.
 
 ## Development Guide
 

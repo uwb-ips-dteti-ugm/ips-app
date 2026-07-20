@@ -1,31 +1,46 @@
 #!/usr/bin/env python3
-"""Upload a locally compiled firmware binary and its metadata to the backend."""
+"""Upload a locally compiled firmware binary to the backend.
 
-import argparse
+Run from the project root:
+
+    python3 firmware/scripts/upload_firmware.py
+
+Reads all settings from firmware/scripts/upload_firmware.config.json (copy it from
+upload_firmware.config.example.json and fill in your values). Locates the compiled
+binary at firmware/.pio/build/<board_variant>/firmware.bin.
+"""
+
 import hashlib
+import json
 import sys
+from pathlib import Path
 
 try:
     import requests
 except ImportError:
     raise SystemExit("Missing dependency: install with `python3 -m pip install -r scripts/requirements.txt`")
 
+SCRIPTS_DIR = Path(__file__).resolve().parent
+FIRMWARE_DIR = SCRIPTS_DIR.parent
+CONFIG_PATH = SCRIPTS_DIR / "upload_firmware.config.json"
+BOARD_VARIANTS = ["esp32dev-8mb", "esp32dev-16mb"]
+REQUIRED_FIELDS = ("version", "backend_url", "board_variant", "username", "password")
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--file", required=True, help="path to the compiled .bin")
-    parser.add_argument("--version", required=True, help="firmware version, e.g. 1.2.0")
-    parser.add_argument(
-        "--board-variant",
-        required=True,
-        choices=["esp32dev-8mb", "esp32dev-16mb"],
-        help="PlatformIO environment the binary was built for",
-    )
-    parser.add_argument("--backend-url", required=True, help="e.g. http://localhost:8000")
-    parser.add_argument("--token", help="bearer access token (skips sign-in)")
-    parser.add_argument("--username", help="admin username, used if --token is not given")
-    parser.add_argument("--password", help="admin password, used if --token is not given")
-    return parser.parse_args()
+
+def read_config() -> dict:
+    with open(CONFIG_PATH) as handle:
+        config = json.load(handle)
+
+    for field in REQUIRED_FIELDS:
+        if not config.get(field):
+            raise ValueError(f"'{field}' is missing from {CONFIG_PATH}")
+
+    if config["board_variant"] not in BOARD_VARIANTS:
+        raise ValueError(
+            f"'board_variant' must be one of {BOARD_VARIANTS}, got '{config['board_variant']}'"
+        )
+
+    return config
 
 
 def sign_in(backend_url: str, username: str, password: str) -> str:
@@ -59,32 +74,34 @@ def upload_firmware(
 
 
 def main() -> int:
-    args = parse_args()
-
-    if not args.token and not (args.username and args.password):
-        print("FAILED: provide either --token or both --username and --password")
-        return 2
-
     try:
-        with open(args.file, "rb") as handle:
+        config = read_config()
+    except (OSError, ValueError, json.JSONDecodeError) as e:
+        print(f"FAILED: could not read {CONFIG_PATH}: {e}")
+        return 1
+
+    board_variant = config["board_variant"]
+    binary_path = FIRMWARE_DIR / ".pio" / "build" / board_variant / "firmware.bin"
+    try:
+        with open(binary_path, "rb") as handle:
             data = handle.read()
     except OSError as e:
-        print(f"FAILED: could not read {args.file}: {e}")
+        print(f"FAILED: could not read {binary_path}: {e}")
         return 1
 
     size = len(data)
     checksum = hashlib.sha256(data).hexdigest()
+    version = config["version"]
+    backend_url = config["backend_url"]
 
     try:
-        token = args.token or sign_in(args.backend_url, args.username, args.password)
-        upload_firmware(args.backend_url, token, data, args.version, args.board_variant, checksum)
+        token = sign_in(backend_url, config["username"], config["password"])
+        upload_firmware(backend_url, token, data, version, board_variant, checksum)
     except Exception as e:
         print(f"FAILED: {e}")
         return 1
 
-    print(
-        f"OK: uploaded {args.version} ({args.board_variant}, {size} bytes, sha256={checksum})"
-    )
+    print(f"OK: uploaded {version} ({board_variant}, {size} bytes, sha256={checksum})")
     return 0
 
 
