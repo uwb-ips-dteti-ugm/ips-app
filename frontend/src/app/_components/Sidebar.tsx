@@ -45,6 +45,12 @@ export const sidebarConfig = [
         permissionNames: ["node/view", "ranging/view"],
         icon: rangingIcon,
       },
+      {
+        label: "Map",
+        href: "/node/map",
+        permissionNames: ["node/view", "ranging/view"],
+        icon: nodeIcon,
+      },
     ],
   },
   {
