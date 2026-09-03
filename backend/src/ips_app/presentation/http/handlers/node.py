@@ -22,6 +22,7 @@ from ips_app.presentation.http.dto.node import (
     UpdateNodeNetworkAssignmentRequest,
     UpdateNodePositionRequest,
     UpdateNodePreferencesRequest,
+    UpdateNodeRoleRequest,
     UpdateNodeStatusRequest,
 )
 
@@ -164,6 +165,19 @@ class NodeHandler:
         node = await self.usecase.update_node_position(
             id=node_id,
             position=position,
+            updated_by=claims.user_id if claims else None,
+        )
+        return NodeResponse.from_domain(node)
+
+    async def patch_node_role(
+        self,
+        node_id: str,
+        request: UpdateNodeRoleRequest,
+        claims: Optional[UserAccessTokenClaims],
+    ) -> NodeResponse:
+        node = await self.usecase.update_node_role(
+            id=node_id,
+            role=request.role,
             updated_by=claims.user_id if claims else None,
         )
         return NodeResponse.from_domain(node)

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
-from ips_app.domain.models.node import Node, NodeStatus, Position
+from ips_app.domain.models.node import Node, NodeRole, NodeStatus, Position
 
 
 class NodeRepository(ABC):
@@ -102,12 +102,23 @@ class NodeRepository(ABC):
     ) -> Node: ...
 
     @abstractmethod
+    async def update_node_role_by_id(
+        self,
+        id: Any,
+        role: Optional[NodeRole],
+        updated_by: Optional[Any] = None,
+        session: Optional[Any] = None,
+    ) -> Node: ...
+
+    @abstractmethod
     async def read_anchor_nodes_by_network_id(
         self,
         network_id: Any,
         session: Optional[Any] = None,
     ) -> List[Node]:
-        """Approved nodes in the given network that have a fixed `position` set."""
+        """Approved nodes in the given network usable as trilateration anchors:
+        role=ANCHOR with a position set, or (for nodes predating the role
+        field) any node with a position set at all."""
         ...
 
     @abstractmethod

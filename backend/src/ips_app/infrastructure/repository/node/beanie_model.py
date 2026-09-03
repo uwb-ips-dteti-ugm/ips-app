@@ -5,7 +5,7 @@ from beanie import Document, Indexed, Link
 from pydantic import Field
 from pymongo import IndexModel
 
-from ips_app.domain.models.node import Node, NodeStatus, Position
+from ips_app.domain.models.node import Node, NodeRole, NodeStatus, Position
 from ips_app.domain.models.node_network import NodeNetwork
 from ips_app.infrastructure.repository._shared.link import resolved_link
 from ips_app.infrastructure.repository.node_network.beanie_model import (
@@ -21,6 +21,7 @@ class NodeDocument(Document):
     address: Optional[int] = Field(None, ge=0, le=0xFFFF)
     board_variant: Optional[str] = None
     preferences: Dict[str, Any] = Field(default_factory=dict)
+    role: Optional[NodeRole] = None
     position: Optional[Position] = None
 
     status: NodeStatus = Field(default=NodeStatus.PENDING)
@@ -68,6 +69,7 @@ class NodeDocument(Document):
             address=self.address,
             board_variant=self.board_variant,
             preferences=self.preferences,
+            role=self.role,
             position=self.position,
             status=self.status,
             approved_at=self.approved_at,

@@ -20,6 +20,11 @@ class NodeStatus(StrEnum):
     SUSPENDED = "suspended"
 
 
+class NodeRole(StrEnum):
+    ANCHOR = "anchor"
+    TAG = "tag"
+
+
 class Position(BaseModel):
     x: float = Field(..., allow_inf_nan=False)
     y: float = Field(..., allow_inf_nan=False)
@@ -40,6 +45,7 @@ class Node(BaseModel):
     last_connected_at: Optional[datetime] = None
     last_disconnected_at: Optional[datetime] = None
     preferences: Dict[str, Any] = Field(default_factory=dict)
+    role: Optional[NodeRole] = None
     position: Optional[Position] = None
 
     network: Optional[NodeNetwork] = None

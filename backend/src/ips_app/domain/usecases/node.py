@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
-from ips_app.domain.models.node import Node, NodeStatus, Position
+from ips_app.domain.models.node import Node, NodeRole, NodeStatus, Position
 
 
 class NodeUsecase(ABC):
@@ -81,6 +81,14 @@ class NodeUsecase(ABC):
         self,
         id: Any,
         position: Optional[Position],
+        updated_by: Optional[Any] = None,
+    ) -> Node: ...
+
+    @abstractmethod
+    async def update_node_role(
+        self,
+        id: Any,
+        role: Optional[NodeRole],
         updated_by: Optional[Any] = None,
     ) -> Node: ...
 
