@@ -4,7 +4,7 @@ from ips_app.domain.contracts.logger.leveled import LeveledLogger
 from ips_app.domain.contracts.node.control import NodeControl
 from ips_app.domain.contracts.repository.node import NodeRepository
 from ips_app.domain.models.exception import DomainException, UnexpectedDomainException
-from ips_app.domain.models.node import Node, NodeStatus
+from ips_app.domain.models.node import Node, NodeStatus, Position
 from ips_app.domain.usecases.node import NodeUsecase
 
 from ips_app.application._shared.validator import (
@@ -276,6 +276,29 @@ class BaseNodeUsecase(NodeUsecase):
                 tag,
                 "Failed to update node preferences",
                 {"error": str(e), "id": str(id)},
+            )
+            if isinstance(e, DomainException):
+                raise
+            raise UnexpectedDomainException(str(e)) from e
+
+    async def update_node_position(
+        self,
+        id: Any,
+        position: Optional[Position],
+        updated_by: Optional[Any] = None,
+    ) -> Node:
+        tag = f"{self.tag_class}/update_node_position"
+        try:
+            node = await self.repo.update_node_position_by_id(
+                id=id,
+                position=position,
+                updated_by=updated_by,
+            )
+            await self.log.info(tag, "Successfully updated node position", {"id": str(id)})
+            return node
+        except Exception as e:
+            await self.log.error(
+                tag, "Failed to update node position", {"error": str(e), "id": str(id)}
             )
             if isinstance(e, DomainException):
                 raise

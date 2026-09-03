@@ -20,6 +20,12 @@ class NodeStatus(StrEnum):
     SUSPENDED = "suspended"
 
 
+class Position(BaseModel):
+    x: float = Field(..., allow_inf_nan=False)
+    y: float = Field(..., allow_inf_nan=False)
+    z: float = Field(0.0, allow_inf_nan=False)
+
+
 class Node(BaseModel):
     id: Optional[Any] = None
     device_id: str = Field(..., min_length=1)
@@ -34,6 +40,7 @@ class Node(BaseModel):
     last_connected_at: Optional[datetime] = None
     last_disconnected_at: Optional[datetime] = None
     preferences: Dict[str, Any] = Field(default_factory=dict)
+    position: Optional[Position] = None
 
     network: Optional[NodeNetwork] = None
 

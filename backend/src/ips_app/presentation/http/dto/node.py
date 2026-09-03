@@ -40,6 +40,19 @@ class UpdateNodePreferencesRequest(BaseModel):
     preferences: Dict[str, Any]
 
 
+class PositionValue(BaseModel):
+    x: float = Field(..., allow_inf_nan=False)
+    y: float = Field(..., allow_inf_nan=False)
+    z: float = Field(0.0, allow_inf_nan=False)
+
+
+class UpdateNodePositionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    position: Optional[PositionValue] = Field(
+        ..., description="Set to null to clear a node's fixed position (unmark it as an anchor)."
+    )
+
+
 class NodeResponse(AuditedResponse):
     id: str
     device_id: str
@@ -54,6 +67,7 @@ class NodeResponse(AuditedResponse):
     last_connected_at: Optional[datetime]
     last_disconnected_at: Optional[datetime]
     preferences: Dict[str, Any]
+    position: Optional[PositionValue]
     network: Optional[NodeNetworkResponse]
 
     @classmethod
@@ -72,6 +86,7 @@ class NodeResponse(AuditedResponse):
             last_connected_at=node.last_connected_at,
             last_disconnected_at=node.last_disconnected_at,
             preferences=node.preferences,
+            position=PositionValue(**node.position.model_dump()) if node.position else None,
             network=NodeNetworkResponse.from_domain(node.network) if node.network else None,
             created_at=node.created_at,
             created_by=stringify_id(node.created_by),

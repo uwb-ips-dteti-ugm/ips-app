@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
-from ips_app.domain.models.node import Node, NodeStatus
+from ips_app.domain.models.node import Node, NodeStatus, Position
 
 
 class NodeUsecase(ABC):
@@ -73,6 +73,14 @@ class NodeUsecase(ABC):
         self,
         id: Any,
         preferences: Dict[str, Any],
+        updated_by: Optional[Any] = None,
+    ) -> Node: ...
+
+    @abstractmethod
+    async def update_node_position(
+        self,
+        id: Any,
+        position: Optional[Position],
         updated_by: Optional[Any] = None,
     ) -> Node: ...
 
