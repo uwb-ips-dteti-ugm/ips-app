@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -23,12 +24,19 @@ from ips_app.application._shared.validator import (
 from ips_app.application.position.trilateration import (
     MIN_ANCHORS,
     AnchorReading,
+    Point2D,
     solve_trilateration_2d,
 )
 
 # How far back to look for a "recent enough to still be relevant" distance
 # reading between the tag and a given anchor.
 LATEST_READING_WINDOW = timedelta(minutes=10)
+
+# A fresh position is always computed and returned on every call, but only
+# persisted when it represents real movement or enough time has passed --
+# otherwise a 1Hz poller would write a new record every second forever.
+POSITION_MOVEMENT_THRESHOLD_M = 0.30
+POSITION_HEARTBEAT_INTERVAL = timedelta(seconds=60)
 
 
 class BasePositionUsecase(PositionUsecase):
@@ -95,18 +103,37 @@ class BasePositionUsecase(PositionUsecase):
                 )
                 return None
 
-            record = await self.repo.create_position_record(
-                network_id=tag_node.network.id,
-                tag_node_id=tag_node.id,
-                x=solved.x,
-                y=solved.y,
-                tag_height=tag_height,
-            )
-            await self.log.info(
-                tag,
-                "Successfully computed and stored tag position",
-                {"tag_node_id": str(tag_node_id), "x": solved.x, "y": solved.y},
-            )
+            now = datetime.now(timezone.utc)
+            last = await self.repo.read_latest_position_record(tag_node_id=tag_node.id)
+            if self._should_persist(last, solved, now):
+                record = await self.repo.create_position_record(
+                    network_id=tag_node.network.id,
+                    tag_node_id=tag_node.id,
+                    x=solved.x,
+                    y=solved.y,
+                    tag_height=tag_height,
+                    computed_at=now,
+                )
+                await self.log.info(
+                    tag,
+                    "Successfully computed and stored tag position",
+                    {"tag_node_id": str(tag_node_id), "x": solved.x, "y": solved.y},
+                )
+            else:
+                record = PositionRecord(
+                    id=None,
+                    network=tag_node.network,
+                    tag_node=tag_node,
+                    x=solved.x,
+                    y=solved.y,
+                    tag_height=tag_height,
+                    computed_at=now,
+                )
+                await self.log.info(
+                    tag,
+                    "Computed tag position (not persisted, below movement/heartbeat threshold)",
+                    {"tag_node_id": str(tag_node_id), "x": solved.x, "y": solved.y},
+                )
             return record
         except Exception as e:
             await self.log.error(
@@ -174,6 +201,25 @@ class BasePositionUsecase(PositionUsecase):
             if isinstance(e, DomainException):
                 raise
             raise UnexpectedDomainException(str(e)) from e
+
+    def _should_persist(
+        self,
+        last: Optional[PositionRecord],
+        solved: Point2D,
+        now: datetime,
+    ) -> bool:
+        if last is None:
+            return True
+        if math.hypot(solved.x - last.x, solved.y - last.y) >= POSITION_MOVEMENT_THRESHOLD_M:
+            return True
+
+        # Values read back from MongoDB come back tz-naive (no tz_aware codec
+        # option set on the motor client), even though they're always stored
+        # as UTC -- reattach the tzinfo so this compares safely with `now`.
+        last_computed_at = last.computed_at
+        if last_computed_at.tzinfo is None:
+            last_computed_at = last_computed_at.replace(tzinfo=timezone.utc)
+        return (now - last_computed_at) >= POSITION_HEARTBEAT_INTERVAL
 
     async def _collect_anchor_readings(
         self,

@@ -1,8 +1,10 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ips_app.domain.models.position import PositionRecord
+from ips_app.presentation.http.dto.common import stringify_id
 from ips_app.presentation.http.dto.node import NodeResponse
 from ips_app.presentation.http.dto.node_network import NodeNetworkResponse
 
@@ -14,7 +16,7 @@ class ComputeTagPositionRequest(BaseModel):
 
 
 class PositionRecordResponse(BaseModel):
-    id: str
+    id: Optional[str]
     network: NodeNetworkResponse
     tag_node: NodeResponse
     x: float
@@ -25,7 +27,7 @@ class PositionRecordResponse(BaseModel):
     @classmethod
     def from_domain(cls, record: PositionRecord) -> "PositionRecordResponse":
         return cls(
-            id=str(record.id),
+            id=stringify_id(record.id),
             network=NodeNetworkResponse.from_domain(record.network),
             tag_node=NodeResponse.from_domain(record.tag_node),
             x=record.x,
