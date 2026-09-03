@@ -1,14 +1,11 @@
 "use server";
 
+import { computeTagPosition } from "@/lib/api/position";
+import { isApiError } from "@/lib/api/client";
 import { getAuthSession } from "@/lib/auth/session";
 import { fetchLatestRangesByTarget } from "@/lib/utils/ranging-latest";
-import {
-  solveTrilateration2D,
-  type AnchorReading,
-  type Point2D,
-} from "@/lib/utils/trilateration";
+import type { Point2D } from "@/lib/utils/trilateration";
 
-import { LAB_DASAR_ANCHORS } from "../_lib/lab-dasar-room";
 import type { MapAnchorNode } from "../_lib/get-map-page-data";
 
 export type AnchorRangeReading = {
@@ -65,31 +62,18 @@ export async function getTagPositionAction({
       };
     });
 
-    const trilaterationInputs: AnchorReading[] = anchors.flatMap((anchor) => {
-      const range = latestByAnchorId.get(anchor.id);
-      if (!range) {
-        return [];
-      }
-
-      return [
-        {
-          x: anchor.x,
-          y: anchor.y,
-          z: anchor.z,
-          distance: range.distance,
-        },
-      ];
-    });
-
-    const position =
-      trilaterationInputs.length >= LAB_DASAR_ANCHORS.length
-        ? solveTrilateration2D(trilaterationInputs, tagHeight)
-        : null;
+    const record = await computeTagPosition(
+      { tag_height: tagHeight, tag_node_id: tagNodeId },
+      { accessToken: session.accessToken },
+    );
+    const position: Point2D | null = record ? { x: record.x, y: record.y } : null;
 
     return { ok: true, position, readings };
-  } catch {
+  } catch (error) {
     return {
-      error: "The mobile node's position could not be loaded. Please try again.",
+      error: isApiError(error)
+        ? error.message
+        : "The mobile node's position could not be loaded. Please try again.",
       ok: false,
     };
   }

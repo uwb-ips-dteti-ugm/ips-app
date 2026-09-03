@@ -29,7 +29,7 @@ export default async function MapPage() {
     <PageContent>
       <PageHeader
         title="Map"
-        subtitle="Live position of the mobile node within DTETI Lab Dasar, trilaterated from its distance to the three surveyed anchors."
+        subtitle="Live position of the mobile node, trilaterated from its distance to the surveyed anchors."
       />
 
       <MapContent anchors={data.anchors} tagCandidates={data.tagCandidates} />
