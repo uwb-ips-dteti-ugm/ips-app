@@ -6,6 +6,8 @@ import { isApiError } from "@/lib/api/client";
 import {
   updateNodeInfo,
   updateNodeNetworkAssignment,
+  updateNodePosition,
+  updateNodeRole,
   updateNodeStatus,
 } from "@/lib/api/node";
 import { getAuthSession } from "@/lib/auth/session";
@@ -13,7 +15,9 @@ import { getAuthSession } from "@/lib/auth/session";
 import {
   NODES_PATH,
   parseNetworkAssignment,
+  parseNodeRole,
   parseNodeStatus,
+  parsePositionInput,
   validateNodeName,
   type NodeActionResult,
 } from "../_lib/node-action-validation";
@@ -24,6 +28,10 @@ export async function updateNodeAction({
   name,
   networkId,
   nodeId,
+  positionX,
+  positionY,
+  positionZ,
+  role,
   status,
 }: {
   address: string;
@@ -31,6 +39,10 @@ export async function updateNodeAction({
   name: string;
   networkId: string;
   nodeId: string;
+  positionX: string;
+  positionY: string;
+  positionZ: string;
+  role: string;
   status: string;
 }): Promise<NodeActionResult> {
   if (!nodeId) {
@@ -68,6 +80,16 @@ export async function updateNodeAction({
     };
   }
 
+  const parsedPosition = parsePositionInput(positionX, positionY, positionZ);
+  if (!parsedPosition.ok) {
+    return parsedPosition;
+  }
+
+  const parsedRole = parseNodeRole(role);
+  if (!parsedRole.ok) {
+    return parsedRole;
+  }
+
   const session = await getAuthSession();
   if (!session) {
     return {
@@ -96,6 +118,18 @@ export async function updateNodeAction({
     await updateNodeStatus(
       nodeId,
       { status: parsedStatus },
+      { accessToken: session.accessToken },
+    );
+    if (parsedPosition.shouldUpdate) {
+      await updateNodePosition(
+        nodeId,
+        { position: parsedPosition.position },
+        { accessToken: session.accessToken },
+      );
+    }
+    await updateNodeRole(
+      nodeId,
+      { role: parsedRole.role },
       { accessToken: session.accessToken },
     );
     revalidatePath(NODES_PATH);
