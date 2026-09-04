@@ -15,6 +15,7 @@ from ips_app.application.node_connection.node_connection import (
 )
 from ips_app.application.node_network.node_network import BaseNodeNetworkUsecase
 from ips_app.application.permission.permission import BasePermissionUsecase
+from ips_app.application.position.position import BasePositionUsecase
 from ips_app.application.ranging.ranging import BaseRangingUsecase
 from ips_app.application.ranging_scheduler.ranging_scheduler import (
     BaseRangingSchedulerUsecase,
@@ -45,6 +46,10 @@ from ips_app.infrastructure.repository.permission.beanie import (
 from ips_app.infrastructure.repository.permission.beanie_model import (
     PermissionDocument,
 )
+from ips_app.infrastructure.repository.position.beanie import BeaniePositionRepository
+from ips_app.infrastructure.repository.position.beanie_model import (
+    PositionRecordDocument,
+)
 from ips_app.infrastructure.repository.ranging.beanie import BeanieRangingRepository
 from ips_app.infrastructure.repository.ranging.beanie_model import (
     RangingRecordDocument,
@@ -68,6 +73,7 @@ from ips_app.presentation.http.handlers.firmware import FirmwareHandler
 from ips_app.presentation.http.handlers.node import NodeHandler
 from ips_app.presentation.http.handlers.node_network import NodeNetworkHandler
 from ips_app.presentation.http.handlers.permission import PermissionHandler
+from ips_app.presentation.http.handlers.position import PositionHandler
 from ips_app.presentation.http.handlers.ranging import RangingHandler
 from ips_app.presentation.http.handlers.ranging_scheduler_config import (
     RangingSchedulerConfigHandler,
@@ -81,6 +87,7 @@ from ips_app.presentation.http.routes import (
     node,
     node_network,
     permission,
+    position,
     ranging,
     ranging_scheduler_config,
     role,
@@ -101,6 +108,7 @@ DOCUMENT_MODELS = [
     NodeDocument,
     RangingRecordDocument,
     RangingSchedulerConfigDocument,
+    PositionRecordDocument,
     FirmwareDocument,
 ]
 
@@ -139,6 +147,7 @@ def create_app() -> FastAPI:
     repo_node_network = BeanieNodeNetworkRepository()
     repo_node = BeanieNodeRepository()
     repo_ranging = BeanieRangingRepository()
+    repo_position = BeaniePositionRepository()
     firmware_bucket = AsyncIOMotorGridFSBucket(motor[env.APP_MONGO_DB], bucket_name="firmware")
     repo_firmware = GridFsFirmwareRepository(firmware_bucket)
     repo_ranging_scheduler_config = BeanieRangingSchedulerConfigRepository(
@@ -173,6 +182,7 @@ def create_app() -> FastAPI:
     ranging_usecase = BaseRangingUsecase(
         repo_ranging, repo_node, repo_node_network, log
     )
+    position_usecase = BasePositionUsecase(repo_position, repo_node, repo_ranging, log)
     ranging_scheduler_usecase = BaseRangingSchedulerUsecase(repo_node, node_control, log)
     firmware_usecase = BaseFirmwareUsecase(repo_firmware, repo_node, node_control, log)
     ranging_scheduler_config_usecase = BaseRangingSchedulerConfigUsecase(
@@ -186,6 +196,7 @@ def create_app() -> FastAPI:
     node_network_handler = NodeNetworkHandler(node_network_usecase)
     node_handler = NodeHandler(node_usecase, node_connection_usecase, ranging_usecase, log)
     ranging_handler = RangingHandler(ranging_usecase)
+    position_handler = PositionHandler(position_usecase)
     ranging_scheduler_handler = RangingSchedulerHandler(ranging_scheduler_usecase, log)
     firmware_handler = FirmwareHandler(firmware_usecase)
     ranging_scheduler_config_handler = RangingSchedulerConfigHandler(
@@ -217,6 +228,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(node.create_router(node_handler, role_usecase, log))
     app.include_router(ranging.create_router(ranging_handler, role_usecase, log))
+    app.include_router(position.create_router(position_handler, role_usecase, log))
     app.include_router(
         ranging_scheduler_config.create_router(
             ranging_scheduler_config_handler, role_usecase, log

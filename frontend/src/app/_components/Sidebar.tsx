@@ -2,6 +2,7 @@ import type { StaticImageData } from "next/image";
 import type { ReactNode } from "react";
 
 import firmwareIcon from "../_assets/FirmwareIcon.svg";
+import mapIcon from "../_assets/MapIcon.svg";
 import networkIcon from "../_assets/NetworkIcon.svg";
 import nodeIcon from "../_assets/NodeIcon.svg";
 import permissionIcon from "../_assets/PermissionIcon.svg";
@@ -44,6 +45,12 @@ export const sidebarConfig = [
         href: "/node/range-monitor",
         permissionNames: ["node/view", "ranging/view"],
         icon: rangingIcon,
+      },
+      {
+        label: "Map",
+        href: "/node/map",
+        permissionNames: ["node/view", "ranging/view"],
+        icon: mapIcon,
       },
     ],
   },

@@ -7,7 +7,7 @@ from fastapi.websockets import WebSocketDisconnect
 
 from ips_app.domain.contracts.logger.leveled import LeveledLogger
 from ips_app.domain.models.exception import DomainException, ValidatorDomainException
-from ips_app.domain.models.node import NodeStatus
+from ips_app.domain.models.node import NodeStatus, Position
 from ips_app.domain.models.user import UserAccessTokenClaims
 from ips_app.domain.usecases.node import NodeUsecase
 from ips_app.domain.usecases.node_connection import NodeConnectionUsecase
@@ -20,7 +20,9 @@ from ips_app.presentation.http.dto.node import (
     RegisteredNodesResponse,
     UpdateNodeInfoRequest,
     UpdateNodeNetworkAssignmentRequest,
+    UpdateNodePositionRequest,
     UpdateNodePreferencesRequest,
+    UpdateNodeRoleRequest,
     UpdateNodeStatusRequest,
 )
 
@@ -145,6 +147,37 @@ class NodeHandler:
         node = await self.usecase.update_node_preferences(
             id=node_id,
             preferences=request.preferences,
+            updated_by=claims.user_id if claims else None,
+        )
+        return NodeResponse.from_domain(node)
+
+    async def patch_node_position(
+        self,
+        node_id: str,
+        request: UpdateNodePositionRequest,
+        claims: Optional[UserAccessTokenClaims],
+    ) -> NodeResponse:
+        position = (
+            Position(x=request.position.x, y=request.position.y, z=request.position.z)
+            if request.position
+            else None
+        )
+        node = await self.usecase.update_node_position(
+            id=node_id,
+            position=position,
+            updated_by=claims.user_id if claims else None,
+        )
+        return NodeResponse.from_domain(node)
+
+    async def patch_node_role(
+        self,
+        node_id: str,
+        request: UpdateNodeRoleRequest,
+        claims: Optional[UserAccessTokenClaims],
+    ) -> NodeResponse:
+        node = await self.usecase.update_node_role(
+            id=node_id,
+            role=request.role,
             updated_by=claims.user_id if claims else None,
         )
         return NodeResponse.from_domain(node)

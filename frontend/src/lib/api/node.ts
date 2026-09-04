@@ -9,6 +9,7 @@ import type {
 import type { NodeNetworkResponse } from "./node-network";
 
 export type NodeStatus = "pending" | "approved" | "suspended";
+export type NodeRole = "anchor" | "tag";
 
 export type AddNodeRequest = {
   address?: number;
@@ -33,6 +34,20 @@ export type SetNodeStatusRequest = {
   status: NodeStatus;
 };
 
+export type PositionValue = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type SetNodePositionRequest = {
+  position: PositionValue | null;
+};
+
+export type SetNodeRoleRequest = {
+  role: NodeRole | null;
+};
+
 export type NodeResponse = AuditedFields & {
   address: number | null;
   approved_at: string | null;
@@ -45,7 +60,9 @@ export type NodeResponse = AuditedFields & {
   last_seen_at: string | null;
   name: string;
   network: NodeNetworkResponse | null;
+  position: PositionValue | null;
   preferences: JsonObject;
+  role: NodeRole | null;
   status: NodeStatus;
 };
 
@@ -164,6 +181,36 @@ export function updateNodeNetworkAssignment(
 ): Promise<NodeResponse> {
   return requestJson<NodeResponse>(
     `/nodes/${encodeURIComponent(nodeId)}/network`,
+    {
+      ...options,
+      json: request,
+      method: "PATCH",
+    },
+  );
+}
+
+export function updateNodePosition(
+  nodeId: string,
+  request: SetNodePositionRequest,
+  options?: ApiRequestOptions,
+): Promise<NodeResponse> {
+  return requestJson<NodeResponse>(
+    `/nodes/${encodeURIComponent(nodeId)}/position`,
+    {
+      ...options,
+      json: request,
+      method: "PATCH",
+    },
+  );
+}
+
+export function updateNodeRole(
+  nodeId: string,
+  request: SetNodeRoleRequest,
+  options?: ApiRequestOptions,
+): Promise<NodeResponse> {
+  return requestJson<NodeResponse>(
+    `/nodes/${encodeURIComponent(nodeId)}/role`,
     {
       ...options,
       json: request,

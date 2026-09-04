@@ -14,7 +14,9 @@ from ips_app.presentation.http.dto.node import (
     RegisteredNodesResponse,
     UpdateNodeInfoRequest,
     UpdateNodeNetworkAssignmentRequest,
+    UpdateNodePositionRequest,
     UpdateNodePreferencesRequest,
+    UpdateNodeRoleRequest,
     UpdateNodeStatusRequest,
 )
 from ips_app.presentation.http.handlers.node import NodeHandler
@@ -168,6 +170,30 @@ def create_router(
         claims: Optional[UserAccessTokenClaims] = Depends(get_claims),
     ) -> NodeResponse:
         return await handler.patch_node_preferences(node_id, request, claims)
+
+    @router.patch(
+        "/{node_id}/position",
+        response_model=NodeResponse,
+        dependencies=[logger(log, "NodeRoutes/patch_node_position"), guard_manage],
+    )
+    async def patch_node_position(
+        node_id: str,
+        request: UpdateNodePositionRequest,
+        claims: Optional[UserAccessTokenClaims] = Depends(get_claims),
+    ) -> NodeResponse:
+        return await handler.patch_node_position(node_id, request, claims)
+
+    @router.patch(
+        "/{node_id}/role",
+        response_model=NodeResponse,
+        dependencies=[logger(log, "NodeRoutes/patch_node_role"), guard_manage],
+    )
+    async def patch_node_role(
+        node_id: str,
+        request: UpdateNodeRoleRequest,
+        claims: Optional[UserAccessTokenClaims] = Depends(get_claims),
+    ) -> NodeResponse:
+        return await handler.patch_node_role(node_id, request, claims)
 
     @router.delete(
         "/{node_id}",

@@ -13,7 +13,7 @@ from ips_app.domain.models.exception import (
     UnexpectedDomainException,
     ValidatorDomainException,
 )
-from ips_app.domain.models.node import Node, NodeStatus
+from ips_app.domain.models.node import Node, NodeRole, NodeStatus, Position
 from ips_app.infrastructure.repository._shared.duplicate import duplicate_key_fields
 from ips_app.infrastructure.repository._shared.link import find_one_with_links
 from ips_app.infrastructure.repository._shared.object_id import get_by_id, to_object_id
@@ -296,6 +296,91 @@ class BeanieNodeRepository(NodeRepository):
                 session=session,
             )
             return doc.to_domain()
+        except DomainException:
+            raise
+        except Exception as e:
+            raise UnexpectedDomainException(str(e)) from e
+
+    async def update_node_position_by_id(
+        self,
+        id: Any,
+        position: Optional[Position],
+        updated_by: Optional[Any] = None,
+        session: Optional[Any] = None,
+    ) -> Node:
+        try:
+            doc = await self._read_node_document(id, session, fetch_links=True)
+            await doc.set(
+                {
+                    "position": position.model_dump() if position else None,
+                    "updated_at": datetime.now(timezone.utc),
+                    "updated_by": updated_by,
+                },
+                session=session,
+            )
+            return doc.to_domain()
+        except DomainException:
+            raise
+        except Exception as e:
+            raise UnexpectedDomainException(str(e)) from e
+
+    async def update_node_role_by_id(
+        self,
+        id: Any,
+        role: Optional[NodeRole],
+        updated_by: Optional[Any] = None,
+        session: Optional[Any] = None,
+    ) -> Node:
+        try:
+            doc = await self._read_node_document(id, session, fetch_links=True)
+            await doc.set(
+                {
+                    "role": role.value if role else None,
+                    "updated_at": datetime.now(timezone.utc),
+                    "updated_by": updated_by,
+                },
+                session=session,
+            )
+            return doc.to_domain()
+        except DomainException:
+            raise
+        except Exception as e:
+            raise UnexpectedDomainException(str(e)) from e
+
+    async def read_anchor_nodes_by_network_id(
+        self,
+        network_id: Any,
+        session: Optional[Any] = None,
+    ) -> List[Node]:
+        try:
+            query_filter: Dict[str, Any] = {
+                NODE_NETWORK_ID_FIELD: to_object_id(network_id),
+                "status": NodeStatus.APPROVED.value,
+                "position": {"$ne": None},
+                # role=ANCHOR is the explicit, intended path; nodes with no
+                # role set at all (predating this field) still qualify as
+                # long as they have a position, so existing deployments
+                # don't lose their anchors until roles get backfilled. A
+                # node explicitly marked role=TAG is excluded even with a
+                # leftover position value.
+                "$or": [
+                    {"role": NodeRole.ANCHOR.value},
+                    {"role": None},
+                ],
+            }
+            unresolved_ids = [
+                doc.id
+                for doc in await NodeDocument.find(query_filter, session=session).to_list()
+            ]
+            if not unresolved_ids:
+                return []
+
+            docs = await NodeDocument.find(
+                {"_id": {"$in": unresolved_ids}},
+                fetch_links=True,
+                session=session,
+            ).to_list()
+            return [doc.to_domain() for doc in docs]
         except DomainException:
             raise
         except Exception as e:
