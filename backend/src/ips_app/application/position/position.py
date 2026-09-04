@@ -35,7 +35,7 @@ LATEST_READING_WINDOW = timedelta(minutes=10)
 # A fresh position is always computed and returned on every call, but only
 # persisted when it represents real movement or enough time has passed --
 # otherwise a 1Hz poller would write a new record every second forever.
-POSITION_MOVEMENT_THRESHOLD_M = 0.30
+POSITION_MOVEMENT_THRESHOLD_M = 0.20
 POSITION_HEARTBEAT_INTERVAL = timedelta(seconds=60)
 
 
