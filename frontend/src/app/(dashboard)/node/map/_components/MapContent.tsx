@@ -10,6 +10,7 @@ import {
   type AnchorRangeReading,
   getTagPositionAction,
 } from "../_actions/get-tag-position";
+import { getTagPositionHistoryAction } from "../_actions/get-tag-position-history";
 import type { MapAnchorNode, MapTagCandidate } from "../_lib/get-map-page-data";
 import {
   DEFAULT_TAG_HEIGHT_M,
@@ -18,8 +19,16 @@ import {
 } from "../_lib/lab-dasar-room";
 
 const POSITION_REFRESH_INTERVAL_MS = 500;
+const HISTORY_REFRESH_INTERVAL_MS = 3_000;
 const VIEWPORT_PADDING_M = 1.2;
 const STALE_READING_MS = 5_000;
+
+// How long a comet-tail point stays visible before fully fading out. Kept
+// short (recent motion only) -- the separate "history" line is what shows
+// the complete persisted path.
+const TRAIL_FADE_MS = 10_000;
+
+type ViewMode = "trail" | "history";
 
 // Glides the marker between polls instead of snapping to each new point --
 // kept a bit under POSITION_REFRESH_INTERVAL_MS so a transition always
@@ -28,6 +37,8 @@ const POSITION_TRANSITION_STYLE = {
   transition: "cx 0.45s linear, cy 0.45s linear, x 0.45s linear, y 0.45s linear",
 };
 
+type TrailPoint = Point2D & { at: number };
+
 type MapContentProps = {
   anchors: MapAnchorNode[];
   tagCandidates: MapTagCandidate[];
@@ -35,6 +46,9 @@ type MapContentProps = {
 
 export function MapContent({ anchors, tagCandidates }: MapContentProps) {
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("trail");
+  const [historyPoints, setHistoryPoints] = useState<Point2D[]>([]);
+  const [historySince, setHistorySince] = useState(() => new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [position, setPosition] = useState<Point2D | null>(null);
@@ -45,6 +59,7 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
   const [tagHeightInput, setTagHeightInput] = useState(
     String(DEFAULT_TAG_HEIGHT_M),
   );
+  const [trail, setTrail] = useState<TrailPoint[]>([]);
 
   const tagHeight = useMemo(() => {
     const parsed = Number.parseFloat(tagHeightInput);
@@ -57,6 +72,9 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
     setReadings([]);
     setLastUpdatedAt(null);
     setError(null);
+    setTrail([]);
+    setHistoryPoints([]);
+    setHistorySince(new Date());
   }, []);
 
   useEffect(() => {
@@ -88,7 +106,16 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
         setError(null);
         setPosition(result.position);
         setReadings(result.readings);
-        setLastUpdatedAt(new Date());
+        const now = Date.now();
+        setLastUpdatedAt(new Date(now));
+        if (result.position) {
+          const newPoint = result.position;
+          const cutoff = now - TRAIL_FADE_MS;
+          setTrail((current) => [
+            ...current.filter((point) => point.at >= cutoff),
+            { ...newPoint, at: now },
+          ]);
+        }
       }
 
       if (showLoading) {
@@ -115,6 +142,45 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
     // list to avoid restarting the poll loop every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTagId, tagHeight]);
+
+  useEffect(() => {
+    if (viewMode !== "history" || !selectedTagId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: number | undefined;
+
+    async function refreshHistory(): Promise<void> {
+      const result = await getTagPositionHistoryAction({
+        since: historySince,
+        tagNodeId: selectedTagId,
+      });
+
+      if (cancelled) {
+        return;
+      }
+
+      if (result.ok) {
+        setHistoryPoints(result.points);
+      }
+
+      if (!cancelled) {
+        timeoutId = window.setTimeout(() => {
+          void refreshHistory();
+        }, HISTORY_REFRESH_INTERVAL_MS);
+      }
+    }
+
+    void refreshHistory();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [historySince, selectedTagId, viewMode]);
 
   if (anchors.length === 0) {
     return (
@@ -156,11 +222,28 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
           onChange={(event) => setTagHeightInput(event.currentTarget.value)}
           className="w-32"
         />
+
+        <SelectField
+          id="map-view-mode"
+          label="View"
+          name="view_mode"
+          value={viewMode}
+          onChange={(event) => setViewMode(event.currentTarget.value as ViewMode)}
+          className="w-40"
+        >
+          <option value="trail">Trail mode</option>
+          <option value="history">Show history</option>
+        </SelectField>
       </FilterBar>
 
       <div className="flex min-h-0 flex-1 gap-4">
         <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-[#D9EEF7] bg-white dark:border-[#1C4D8D] dark:bg-[#07111F]">
-          <RoomMap anchors={anchors} position={position} />
+          <RoomMap
+            anchors={anchors}
+            history={viewMode === "history" ? historyPoints : []}
+            position={position}
+            trail={viewMode === "trail" ? trail : []}
+          />
         </div>
 
         <div className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto rounded-md border border-[#D9EEF7] bg-white p-4 dark:border-[#1C4D8D] dark:bg-[#07111F]">
@@ -257,10 +340,14 @@ function StatusPanel({
 
 function RoomMap({
   anchors,
+  history,
   position,
+  trail,
 }: {
   anchors: MapAnchorNode[];
+  history: Point2D[];
   position: Point2D | null;
+  trail: TrailPoint[];
 }) {
   const [hoveredAnchorId, setHoveredAnchorId] = useState<string | null>(null);
   const [pinnedAnchorId, setPinnedAnchorId] = useState<string | null>(null);
@@ -302,6 +389,17 @@ function RoomMap({
 
   const positionPixel = position ? toViewBox(position) : null;
 
+  const historyPolylinePoints = useMemo(
+    () =>
+      history
+        .map((point) => {
+          const p = toViewBox(point);
+          return `${p.x},${p.y}`;
+        })
+        .join(" "),
+    [history, toViewBox],
+  );
+
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
@@ -310,6 +408,8 @@ function RoomMap({
       role="img"
       aria-label="Lab Dasar floor map"
     >
+      <style>{`@keyframes trail-fade { from { opacity: 0.55; } to { opacity: 0; } }`}</style>
+
       <rect x={0} y={0} width={width} height={height} className="fill-white dark:fill-[#07111F]" />
 
       <polygon
@@ -329,6 +429,17 @@ function RoomMap({
           className="stroke-[#BDE8F5] dark:stroke-[#4988C4]"
         />
       ))}
+
+      {history.length >= 2 ? (
+        <polyline
+          points={historyPolylinePoints}
+          fill="none"
+          strokeWidth={0.05}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          className="stroke-[#4988C4] dark:stroke-[#BDE8F5]"
+        />
+      ) : null}
 
       {anchors.map((anchor) => {
         const p = toViewBox(anchor);
@@ -369,6 +480,20 @@ function RoomMap({
               />
             ) : null}
           </g>
+        );
+      })}
+
+      {trail.map((point) => {
+        const p = toViewBox(point);
+        return (
+          <circle
+            key={point.at}
+            cx={p.x}
+            cy={p.y}
+            r={0.14}
+            style={{ animation: `trail-fade ${TRAIL_FADE_MS}ms linear forwards` }}
+            className="fill-[#D85858]"
+          />
         );
       })}
 
