@@ -17,9 +17,16 @@ import {
   LAB_DASAR_ROOM_POLYGON,
 } from "../_lib/lab-dasar-room";
 
-const POSITION_REFRESH_INTERVAL_MS = 1_000;
+const POSITION_REFRESH_INTERVAL_MS = 500;
 const VIEWPORT_PADDING_M = 1.2;
 const STALE_READING_MS = 5_000;
+
+// Glides the marker between polls instead of snapping to each new point --
+// kept a bit under POSITION_REFRESH_INTERVAL_MS so a transition always
+// finishes before the next update arrives.
+const POSITION_TRANSITION_STYLE = {
+  transition: "cx 0.45s linear, cy 0.45s linear, x 0.45s linear, y 0.45s linear",
+};
 
 type MapContentProps = {
   anchors: MapAnchorNode[];
@@ -371,6 +378,7 @@ function RoomMap({
             cx={positionPixel.x}
             cy={positionPixel.y}
             r={0.28}
+            style={POSITION_TRANSITION_STYLE}
             className="animate-pulse fill-[#D85858] stroke-white stroke-[0.06] dark:stroke-[#07111F]"
           />
           <CoordinateLabel
@@ -379,6 +387,7 @@ function RoomMap({
             text={formatCoordinate(position)}
             background="fill-[#D85858]"
             textColor="fill-white"
+            transition
           />
         </g>
       ) : null}
@@ -390,16 +399,19 @@ function CoordinateLabel({
   background,
   text,
   textColor,
+  transition,
   x,
   y,
 }: {
   background: string;
   text: string;
   textColor: string;
+  transition?: boolean;
   x: number;
   y: number;
 }) {
   const width = text.length * 0.19 + 0.24;
+  const style = transition ? POSITION_TRANSITION_STYLE : undefined;
 
   return (
     <g>
@@ -409,6 +421,7 @@ function CoordinateLabel({
         width={width}
         height={0.44}
         rx={0.08}
+        style={style}
         className={background}
       />
       <text
@@ -416,6 +429,7 @@ function CoordinateLabel({
         y={y + 0.11}
         fontSize={0.26}
         textAnchor="middle"
+        style={style}
         className={`${textColor} font-semibold`}
       >
         {text}
