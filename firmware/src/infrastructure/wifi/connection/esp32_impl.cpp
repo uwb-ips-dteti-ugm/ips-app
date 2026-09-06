@@ -31,6 +31,13 @@ namespace infrastructure::wifi::connection
     void ESP32Impl::connect(const char *ssid, const char *password)
     {
         WiFi.mode(WIFI_STA);
+        // WiFi modem sleep (the Arduino core's default power-save mode) periodically parks the
+        // radio between beacon intervals and has been observed to stall the CPU/SPI bus for
+        // tens of milliseconds at a time. That is fatal to the DW3000 delayed-TX scheduling in
+        // ranging::stateless::DW3000Impl::listen, which needs low, consistent microsecond-scale
+        // latency between reading the poll RX timestamp and issuing the delayed response. Disable
+        // it so ranging timing isn't at the mercy of WiFi power-save scheduling.
+        WiFi.setSleep(false);
         WiFi.begin(ssid, password);
     }
 

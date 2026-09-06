@@ -1,17 +1,7 @@
 "use server";
 
-import {
-  getRangingRecords,
-  type RangingRecordResponse,
-} from "@/lib/api/ranging";
+import { fetchLatestRangesByTarget } from "@/lib/utils/ranging-latest";
 import { getAuthSession } from "@/lib/auth/session";
-
-// The backend can only filter ranging records by a single node_id (returning
-// records where that node is either side of the pair), not "the latest
-// between specifically A and B" -- so we fetch everything touching the
-// source node within a recent window and pick the latest per counterpart
-// client-side, rather than one /ranging/latest call per target.
-const RANGE_MONITOR_WINDOW_MS = 10 * 60 * 1000;
 
 export type RangeMonitorRange = {
   distance: number;
@@ -65,28 +55,16 @@ export async function getRangeMonitorRangesAction({
   }
 
   try {
-    const end = new Date();
-    const start = new Date(end.getTime() - RANGE_MONITOR_WINDOW_MS);
-
-    const records = await getRangingRecords(
-      {
-        end: end.toISOString(),
-        node_id: sourceNodeId,
-        start: start.toISOString(),
-      },
-      { accessToken: session.accessToken },
-    );
-
-    const latestByTargetId = pickLatestRecordPerCounterpart(
-      records,
+    const latestByTargetId = await fetchLatestRangesByTarget({
+      accessToken: session.accessToken,
       sourceNodeId,
-      new Set(targetNodeIds),
-    );
+      targetNodeIds,
+    });
 
     return {
       ok: true,
       ranges: targetNodeIds.map((targetNodeId) => ({
-        range: toRange(latestByTargetId.get(targetNodeId), sourceNodeId, targetNodeId),
+        range: latestByTargetId.get(targetNodeId) ?? null,
         targetNodeId,
       })),
     };
@@ -96,50 +74,4 @@ export async function getRangeMonitorRangesAction({
       ok: false,
     };
   }
-}
-
-function pickLatestRecordPerCounterpart(
-  records: RangingRecordResponse[],
-  sourceNodeId: string,
-  targetNodeIds: Set<string>,
-): Map<string, RangingRecordResponse> {
-  const latestByTargetId = new Map<string, RangingRecordResponse>();
-
-  for (const record of records) {
-    const counterpart =
-      record.listener_node.id === sourceNodeId
-        ? record.initiator_node
-        : record.listener_node;
-
-    if (!targetNodeIds.has(counterpart.id)) {
-      continue;
-    }
-
-    const existing = latestByTargetId.get(counterpart.id);
-    if (
-      !existing ||
-      new Date(record.recorded_at) > new Date(existing.recorded_at)
-    ) {
-      latestByTargetId.set(counterpart.id, record);
-    }
-  }
-
-  return latestByTargetId;
-}
-
-function toRange(
-  record: RangingRecordResponse | undefined,
-  sourceNodeId: string,
-  targetNodeId: string,
-): RangeMonitorRange | null {
-  if (!record) {
-    return null;
-  }
-
-  return {
-    distance: record.distance,
-    recordedAt: record.recorded_at,
-    sourceNodeId,
-    targetNodeId,
-  };
 }

@@ -45,6 +45,10 @@ export function EditNodeModal({
               name: getFormString(formData, "name"),
               networkId: getFormString(formData, "network_id"),
               nodeId: node.id,
+              positionX: getFormString(formData, "position_x"),
+              positionY: getFormString(formData, "position_y"),
+              positionZ: getFormString(formData, "position_z"),
+              role: getFormString(formData, "role"),
               status: getFormString(formData, "status"),
             });
 
@@ -95,6 +99,44 @@ export function EditNodeModal({
           <option value="approved">Approved</option>
           <option value="suspended">Suspended</option>
         </SelectField>
+
+        <SelectField label="Role" name="role" defaultValue={node.role ?? ""}>
+          <option value="">Unset</option>
+          <option value="anchor">Anchor (fixed reference point)</option>
+          <option value="tag">Tag (mobile, tracked)</option>
+        </SelectField>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">
+            Fixed position (anchors only)
+          </span>
+          <div className="grid grid-cols-3 gap-2">
+            <TextField
+              label="X (m)"
+              name="position_x"
+              type="number"
+              step="any"
+              defaultValue={node.position?.x ?? ""}
+              placeholder="Unset"
+            />
+            <TextField
+              label="Y (m)"
+              name="position_y"
+              type="number"
+              step="any"
+              defaultValue={node.position?.y ?? ""}
+              placeholder="Unset"
+            />
+            <TextField
+              label="Z (m)"
+              name="position_z"
+              type="number"
+              step="any"
+              defaultValue={node.position?.z ?? ""}
+              placeholder="Unset"
+            />
+          </div>
+        </div>
 
         <ModalActions
           submitLabel="Save"
