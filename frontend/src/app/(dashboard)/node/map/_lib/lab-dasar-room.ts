@@ -34,9 +34,16 @@ const SURVEYED_BOUNDARY: Point2D[] = [
 
 const FULL_WIDTH_M = 22.39;
 
+// The bottom wall also has a structural column protruding into the room
+// (the notch around x=10.68-12.49), same treatment as the two top-wall
+// pillars above: traced inward, across, and back out to the wall line.
 export const LAB_DASAR_ROOM_POLYGON: Point2D[] = [
   ...SURVEYED_BOUNDARY,
   { x: FULL_WIDTH_M, y: 0 },
+  { x: 12.49, y: 0 },
+  { x: 12.49, y: 0.81 },
+  { x: 10.68, y: 0.81 },
+  { x: 10.68, y: 0 },
 ];
 
 export const LAB_DASAR_BOUNDS = {
