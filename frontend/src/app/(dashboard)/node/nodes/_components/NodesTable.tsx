@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { NodeResponse, NodeStatus } from "@/lib/api/node";
+import { getNodeConnectionStatus } from "@/lib/utils/node-connection";
 import {
   DataTable,
   EmptyTableState,
@@ -74,7 +75,7 @@ export function NodesTable({ nodes, renderActions }: NodesTableProps) {
 }
 
 function NodeConnectionBadge({ node }: { node: NodeResponse }) {
-  const status = getConnectionStatus(node);
+  const status = getNodeConnectionStatus(node);
   const className = {
     never:
       "border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300",
@@ -119,31 +120,6 @@ export function formatTimestamp(value: string | null, fallback: string): string 
     dateStyle: "medium",
     timeStyle: "short",
   }).format(timestamp);
-}
-
-function getConnectionStatus(
-  node: NodeResponse,
-): "never" | "offline" | "online" {
-  const connectedAt = parseTimestamp(node.last_connected_at);
-  if (connectedAt === null) {
-    return "never";
-  }
-
-  const disconnectedAt = parseTimestamp(node.last_disconnected_at);
-  if (disconnectedAt === null) {
-    return "online";
-  }
-
-  return connectedAt > disconnectedAt ? "online" : "offline";
-}
-
-function parseTimestamp(value: string | null): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const timestamp = new Date(value).getTime();
-  return Number.isNaN(timestamp) ? null : timestamp;
 }
 
 function formatUwbValue(value: number): string {
