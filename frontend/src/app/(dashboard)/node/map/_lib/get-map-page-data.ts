@@ -1,10 +1,15 @@
 import { getNodes } from "@/lib/api/node";
 import { getMyPermissions } from "@/lib/api/user";
 
-import { LAB_DASAR_ANCHORS, type LabDasarAnchorConfig } from "./lab-dasar-room";
+const UNSET_POSITION_FALLBACK = { x: 0, y: 0, z: 0 };
 
-export type MapAnchorNode = LabDasarAnchorConfig & {
+export type MapAnchorNode = {
+  deviceId: string;
   id: string;
+  label: string;
+  x: number;
+  y: number;
+  z: number;
 };
 
 export type MapTagCandidate = {
@@ -34,33 +39,32 @@ export async function getMapPageData(accessToken: string): Promise<MapPageData> 
     { accessToken },
   );
 
-  const anchorConfigByDeviceId = new Map(
-    LAB_DASAR_ANCHORS.map((anchor) => [anchor.deviceId, anchor]),
-  );
-
   const anchors: MapAnchorNode[] = [];
   let anchorNetworkId: string | null = null;
 
   for (const node of nodes.items) {
-    const anchorConfig = anchorConfigByDeviceId.get(node.device_id);
-    if (!anchorConfig) {
+    if (node.role !== "anchor") {
       continue;
     }
 
     // The node's persisted position (editable via the node admin UI, and what
-    // the backend trilateration solve actually uses) is the source of truth
-    // once set. The survey constant is only a fallback for anchors that
-    // haven't had their position edited yet.
-    const position = node.position ?? anchorConfig;
+    // the backend trilateration solve actually uses) is the source of truth.
+    // An anchor that hasn't had its position set yet falls back to the
+    // origin rather than being dropped from the map.
+    const position = node.position ?? UNSET_POSITION_FALLBACK;
 
-    anchors.push({ ...anchorConfig, ...position, id: node.id });
+    anchors.push({
+      deviceId: node.device_id,
+      label: node.name,
+      ...position,
+      id: node.id,
+    });
     anchorNetworkId = node.network?.id ?? anchorNetworkId;
   }
 
   const tagCandidates: MapTagCandidate[] = anchorNetworkId
     ? nodes.items.flatMap((node) => {
-        const isAnchor = anchorConfigByDeviceId.has(node.device_id);
-        if (isAnchor || node.network?.id !== anchorNetworkId || node.address === null) {
+        if (node.role === "anchor" || node.network?.id !== anchorNetworkId || node.address === null) {
           return [];
         }
 

@@ -1,4 +1,4 @@
-import type { AnchorPosition, Point2D } from "@/lib/utils/trilateration";
+import type { Point2D } from "@/lib/utils/trilateration";
 
 // Surveyed by hand with a 10m ruler, piece by piece along the walls
 // (2026-08-27). The room isn't rectangular: the left wall has two shallow
@@ -43,19 +43,5 @@ export const LAB_DASAR_BOUNDS = {
   width: FULL_WIDTH_M,
   height: 12.66,
 };
-
-export type LabDasarAnchorConfig = AnchorPosition & {
-  deviceId: string;
-  label: string;
-};
-
-// device_id -> surveyed anchor position (meters, z = height off the floor).
-// Anchors are fixed once mounted, so this is a static config rather than
-// something edited at runtime.
-export const LAB_DASAR_ANCHORS: LabDasarAnchorConfig[] = [
-  { deviceId: "083A8D3E19B0", label: "UWB Labdas 1", x: 0.0, y: 0.0, z: 1.38 },
-  { deviceId: "4022D8066694", label: "UWB Labdas 2", x: 4.44, y: 4.0, z: 0.76 },
-  { deviceId: "4022D807D460", label: "UWB Labdas 3", x: 1.35, y: 6.85, z: 0.75 },
-];
 
 export const DEFAULT_TAG_HEIGHT_M = 1.0;
