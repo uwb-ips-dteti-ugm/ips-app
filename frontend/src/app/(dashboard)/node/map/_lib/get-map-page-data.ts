@@ -1,8 +1,6 @@
 import { getNodes } from "@/lib/api/node";
 import { getMyPermissions } from "@/lib/api/user";
 
-const UNSET_POSITION_FALLBACK = { x: 0, y: 0, z: 0 };
-
 export type MapAnchorNode = {
   deviceId: string;
   id: string;
@@ -43,20 +41,17 @@ export async function getMapPageData(accessToken: string): Promise<MapPageData> 
   let anchorNetworkId: string | null = null;
 
   for (const node of nodes.items) {
-    if (node.role !== "anchor") {
+    // An anchor only appears on the map once it's actually usable as one:
+    // marked as an anchor and given a surveyed position (the same
+    // node.position the backend trilateration solve reads).
+    if (node.role !== "anchor" || node.position === null) {
       continue;
     }
-
-    // The node's persisted position (editable via the node admin UI, and what
-    // the backend trilateration solve actually uses) is the source of truth.
-    // An anchor that hasn't had its position set yet falls back to the
-    // origin rather than being dropped from the map.
-    const position = node.position ?? UNSET_POSITION_FALLBACK;
 
     anchors.push({
       deviceId: node.device_id,
       label: node.name,
-      ...position,
+      ...node.position,
       id: node.id,
     });
     anchorNetworkId = node.network?.id ?? anchorNetworkId;
