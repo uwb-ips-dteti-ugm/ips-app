@@ -47,7 +47,13 @@ export async function getMapPageData(accessToken: string): Promise<MapPageData> 
       continue;
     }
 
-    anchors.push({ ...anchorConfig, id: node.id });
+    // The node's persisted position (editable via the node admin UI, and what
+    // the backend trilateration solve actually uses) is the source of truth
+    // once set. The survey constant is only a fallback for anchors that
+    // haven't had their position edited yet.
+    const position = node.position ?? anchorConfig;
+
+    anchors.push({ ...anchorConfig, ...position, id: node.id });
     anchorNetworkId = node.network?.id ?? anchorNetworkId;
   }
 
