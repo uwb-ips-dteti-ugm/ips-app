@@ -451,6 +451,7 @@ function RoomMap({
             key={anchor.deviceId}
             className="cursor-pointer outline-none"
             style={{ WebkitTapHighlightColor: "transparent" }}
+            opacity={anchor.isOffline ? 0.35 : 1}
             tabIndex={-1}
             onMouseEnter={() => setHoveredAnchorId(anchor.deviceId)}
             onMouseLeave={() => setHoveredAnchorId(null)}

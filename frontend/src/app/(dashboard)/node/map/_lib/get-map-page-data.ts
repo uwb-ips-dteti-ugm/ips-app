@@ -1,9 +1,11 @@
 import { getNodes } from "@/lib/api/node";
 import { getMyPermissions } from "@/lib/api/user";
+import { getNodeConnectionStatus } from "@/lib/utils/node-connection";
 
 export type MapAnchorNode = {
   deviceId: string;
   id: string;
+  isOffline: boolean;
   label: string;
   x: number;
   y: number;
@@ -50,9 +52,10 @@ export async function getMapPageData(accessToken: string): Promise<MapPageData> 
 
     anchors.push({
       deviceId: node.device_id,
+      id: node.id,
+      isOffline: getNodeConnectionStatus(node) !== "online",
       label: node.name,
       ...node.position,
-      id: node.id,
     });
     anchorNetworkId = node.network?.id ?? anchorNetworkId;
   }
