@@ -182,15 +182,6 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
     };
   }, [historySince, selectedTagId, viewMode]);
 
-  if (anchors.length === 0) {
-    return (
-      <div className="rounded-md border border-[#D9EEF7] bg-white p-6 text-sm text-[#4988C4] dark:border-[#1C4D8D] dark:bg-[#07111F] dark:text-[#BDE8F5]">
-        None of the three surveyed Lab Dasar anchors are approved and online
-        yet. Approve UWB Labdas 1/2/3 on the Nodes page first.
-      </div>
-    );
-  }
-
   return (
     <>
       <FilterBar>
@@ -257,6 +248,7 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
 
         <div className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto rounded-md border border-[#D9EEF7] bg-white p-4 dark:border-[#1C4D8D] dark:bg-[#07111F]">
           <StatusPanel
+            anchors={anchors}
             error={error}
             lastUpdatedAt={lastUpdatedAt}
             position={position}
@@ -284,18 +276,29 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
 }
 
 function StatusPanel({
+  anchors,
   error,
   lastUpdatedAt,
   position,
   readings,
   selectedTagId,
 }: {
+  anchors: MapAnchorNode[];
   error: string | null;
   lastUpdatedAt: Date | null;
   position: Point2D | null;
   readings: AnchorRangeReading[];
   selectedTagId: string;
 }) {
+  if (anchors.length === 0) {
+    return (
+      <p className="text-sm text-[#4988C4] dark:text-[#BDE8F5]">
+        No anchors are configured yet. On the Nodes page, set a node&apos;s
+        role to Anchor and give it a position.
+      </p>
+    );
+  }
+
   if (!selectedTagId) {
     return (
       <p className="text-sm text-[#4988C4] dark:text-[#BDE8F5]">
