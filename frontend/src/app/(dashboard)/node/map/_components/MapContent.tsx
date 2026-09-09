@@ -220,6 +220,15 @@ export function MapContent({ anchors, tagCandidates }: MapContentProps) {
           step={0.1}
           value={tagHeightInput}
           onChange={(event) => setTagHeightInput(event.currentTarget.value)}
+          onFocus={(event) => {
+            // Covers keyboard focus (e.g. Tab): a mouse click positions the
+            // caret *after* the focus event, which would otherwise collapse
+            // this selection -- deferring to the next tick lets select() run
+            // after that happens.
+            const input = event.currentTarget;
+            window.setTimeout(() => input.select(), 0);
+          }}
+          onClick={(event) => event.currentTarget.select()}
           className="w-32"
         />
 
